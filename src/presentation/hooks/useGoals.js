@@ -14,8 +14,8 @@ export function useGoals() {
     setGoals(GoalViewModel.fromGoalsMap(allGoals))
   }, [])
 
-  const saveGoal = useCallback((day, morningAmount, afternoonAmount) => {
-    goalService.saveGoal(day, morningAmount, afternoonAmount)
+  const saveGoal = useCallback((day, morningAmount, afternoonAmount, morningActual, afternoonActual) => {
+    goalService.saveGoal(day, morningAmount, afternoonAmount, morningActual, afternoonActual)
     loadGoals()
   }, [loadGoals])
 

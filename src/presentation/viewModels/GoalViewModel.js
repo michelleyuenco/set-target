@@ -5,6 +5,10 @@ export class GoalViewModel {
     this.day = goal.day
     this.morningAmount = goal.morningAmount
     this.afternoonAmount = goal.afternoonAmount
+    this.morningActual = goal.morningActual
+    this.afternoonActual = goal.afternoonActual
+    this.morningWage = goal.morningWage
+    this.afternoonWage = goal.afternoonWage
     this.hasGoals = goal.hasGoals()
   }
 
@@ -14,6 +18,14 @@ export class GoalViewModel {
 
   get formattedAfternoon() {
     return Money.of(this.afternoonAmount).format()
+  }
+
+  get formattedMorningActual() {
+    return Money.of(this.morningActual).format()
+  }
+
+  get formattedAfternoonActual() {
+    return Money.of(this.afternoonActual).format()
   }
 
   static fromGoal(goal) {

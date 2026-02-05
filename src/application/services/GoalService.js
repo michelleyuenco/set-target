@@ -9,8 +9,8 @@ export class GoalService {
     this.getGoalByDayUseCase = new GetGoalByDay(goalRepository)
   }
 
-  saveGoal(day, morningAmount, afternoonAmount) {
-    return this.saveGoalUseCase.execute(day, morningAmount, afternoonAmount)
+  saveGoal(day, morningAmount, afternoonAmount, morningActual, afternoonActual) {
+    return this.saveGoalUseCase.execute(day, morningAmount, afternoonAmount, morningActual, afternoonActual)
   }
 
   getAllGoals() {

@@ -6,6 +6,7 @@ function App() {
   const [selectedDay, setSelectedDay] = useState(null)
   const [morningGoal, setMorningGoal] = useState('')
   const [afternoonGoal, setAfternoonGoal] = useState('')
+  const [hourlyRate, setHourlyRate] = useState('')
 
   const days = Array.from({ length: 31 }, (_, i) => i + 1)
 
@@ -14,6 +15,7 @@ function App() {
     const dayGoals = goals[day] || {}
     setMorningGoal(dayGoals.morning || '')
     setAfternoonGoal(dayGoals.afternoon || '')
+    setHourlyRate(dayGoals.rate || '')
   }
 
   const handleSave = () => {
@@ -22,12 +24,14 @@ function App() {
         ...prev,
         [selectedDay]: {
           morning: morningGoal,
-          afternoon: afternoonGoal
+          afternoon: afternoonGoal,
+          rate: hourlyRate
         }
       }))
       setSelectedDay(null)
       setMorningGoal('')
       setAfternoonGoal('')
+      setHourlyRate('')
     }
   }
 
@@ -35,6 +39,7 @@ function App() {
     setSelectedDay(null)
     setMorningGoal('')
     setAfternoonGoal('')
+    setHourlyRate('')
   }
 
   const formatCurrency = (value) => {
@@ -68,6 +73,11 @@ function App() {
                       <span className="label">PM:</span> {formatCurrency(dayGoals.afternoon)}
                     </div>
                   )}
+                  {dayGoals.rate && (
+                    <div className="goal rate">
+                      <span className="label">Rate:</span> ${dayGoals.rate}/hr
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -96,6 +106,20 @@ function App() {
                 onChange={(e) => setAfternoonGoal(e.target.value)}
                 placeholder="e.g., 3000"
               />
+            </div>
+            <div className="input-group">
+              <label>Hourly Rate ($)</label>
+              <div className="rate-selector">
+                {[65, 75, 80].map(rate => (
+                  <button
+                    key={rate}
+                    className={hourlyRate === rate ? 'active' : ''}
+                    onClick={() => setHourlyRate(hourlyRate === rate ? '' : rate)}
+                  >
+                    ${rate}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="button-group">
               <button className="cancel-btn" onClick={handleCancel}>Cancel</button>

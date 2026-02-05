@@ -5,8 +5,8 @@ export class SaveGoal {
     this.goalRepository = goalRepository
   }
 
-  execute(day, morningAmount, afternoonAmount) {
-    const goal = new Goal(day, morningAmount, afternoonAmount)
+  execute(day, morningAmount, afternoonAmount, morningActual, afternoonActual) {
+    const goal = new Goal(day, morningAmount, afternoonAmount, morningActual, afternoonActual)
 
     if (goal.hasGoals()) {
       this.goalRepository.save(goal)
