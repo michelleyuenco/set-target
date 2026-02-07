@@ -11,9 +11,10 @@ body {
 .app {
   width: 100%;
   height: 100vh;
-  padding: 20px 16px;
+  padding: 12px 16px 0;
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
 
 .month-nav {
@@ -21,14 +22,14 @@ body {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .month-nav h1 {
   text-align: center;
   color: #1a1a2e;
   margin: 0;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   min-width: 200px;
 }
@@ -58,13 +59,21 @@ body {
   cursor: not-allowed;
 }
 
-.calendar-header {
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.weekday-header {
   text-align: center;
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 700;
   color: #6b7280;
-  padding: 6px 0;
-  align-self: end;
+  line-height: 1;
+  padding: 0 0 2px 0;
 }
 
 .calendar-grid {
@@ -73,19 +82,21 @@ body {
   grid-auto-rows: 1fr;
   gap: 8px;
   flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .day-cell {
   border: 1.5px solid #e0e0e0;
   border-radius: 8px;
-  padding: 6px;
+  padding: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
   background: #fff;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   min-width: 0;
+  min-height: 0;
 }
 
 .day-cell:hover {
@@ -126,9 +137,11 @@ body {
 
 .day-number {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 12px;
   color: #1a1a2e;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
 .goals-display {
@@ -137,6 +150,8 @@ body {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .goal {
@@ -189,40 +204,48 @@ body {
   gap: 2px;
   flex: 1;
   min-width: 0;
+  min-height: 0;
 }
 
 .shift {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 3px 5px;
+  gap: 6px;
+  padding: 2px 4px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   min-width: 0;
+  flex: 1;
+  min-height: 28px;
+  max-height: 32px;
 }
 
 .shift-label {
   font-weight: 700;
   color: #64748b;
-  font-size: 9px;
+  font-size: 8px;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .shift-details {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
+  flex: 1;
   overflow: hidden;
 }
 
 .wage-value {
   font-weight: 700;
-  font-size: 10px;
+  font-size: 9px;
   white-space: nowrap;
+  line-height: 1.2;
 }
 
 .wage-value.wage-hit {
@@ -238,26 +261,35 @@ body {
 }
 
 .commission-inline {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
   color: #16a34a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .labor-total {
-  margin-top: 3px;
-  padding: 4px 5px;
+  margin-top: 2px;
+  padding: 3px 4px;
   background: #1e293b;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: white;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.labor-total:hover {
+  background: #0f172a;
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .wage-badge {
@@ -282,6 +314,92 @@ body {
 .wage-badge.wage-hit {
   background: #d1fae5;
   color: #047857;
+}
+
+.unmet-target {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #fee2e2;
+  border: 1.5px solid #dc2626;
+  position: relative;
+  font-size: 8px;
+  cursor: default;
+  transition: all 0.2s ease;
+  min-height: 28px;
+  max-height: 32px;
+  width: 50px;
+  flex-shrink: 0;
+}
+
+.unmet-target.buyable {
+  background: #d1fae5;
+  border-color: #10b981;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.unmet-target.buyable:hover {
+  background: #a7f3d0;
+  border-color: #059669;
+  transform: scale(1.05);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+}
+
+.unmet-label {
+  font-size: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  opacity: 0.8;
+  line-height: 1;
+}
+
+.unmet-target .unmet-label {
+  color: #991b1b;
+}
+
+.unmet-target.buyable .unmet-label {
+  color: #065f46;
+}
+
+.unmet-amount {
+  font-size: 8px;
+  font-weight: 700;
+  margin-top: 2px;
+  line-height: 1;
+}
+
+.unmet-target .unmet-amount {
+  color: #dc2626;
+}
+
+.unmet-target.buyable .unmet-amount {
+  color: #047857;
+}
+
+.buyback-star {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  font-size: 10px;
+  color: #fbbf24;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  animation: pulse-star 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-star {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
 }
 
 .shift-section {
@@ -347,6 +465,11 @@ body {
   width: 100%;
   max-width: 380px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.modal-compact {
+  max-width: 420px;
+  padding: 18px;
 }
 
 .modal h2 {
@@ -436,19 +559,161 @@ body {
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
+/* Compact Modal Styles */
+.shifts-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.shift-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.shift-row .shift-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  min-width: 65px;
+  flex-shrink: 0;
+}
+
+.shift-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.input-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.input-compact label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.input-compact input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.input-compact input::-webkit-outer-spin-button,
+.input-compact input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input-compact input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.input-compact input::placeholder {
+  color: #d1d5db;
+  font-weight: 400;
+}
+
+.wage-compact {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wage-compact.wage-none {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.wage-compact.wage-partial {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.wage-compact.wage-hit {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.shift-section-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.custom-commission-toggle {
+  padding: 0 10px;
+}
+
+.custom-commission-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.custom-commission-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.custom-commission-toggle span {
+  user-select: none;
+}
+
+.custom-commission-inputs {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+}
+
 .monthly-summary {
-  margin-top: 16px;
-  padding: 16px 20px;
+  flex-shrink: 0;
+  padding: 10px 20px;
   background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%);
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.3);
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -2px 12px rgba(109, 40, 217, 0.25);
+  margin: 0 -16px;
 }
 
 .monthly-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .monthly-row .monthly-label {
@@ -467,12 +732,24 @@ body {
   color: #86efac;
 }
 
+.monthly-row.commission35-row .monthly-value {
+  color: #fde047;
+}
+
+.monthly-row.commission-custom-row .monthly-value {
+  color: #fb923c;
+}
+
+.monthly-row.excess-row .monthly-value {
+  color: #7dd3fc;
+}
+
 .monthly-total {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 8px;
-  padding-top: 10px;
+  margin-top: 4px;
+  padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 
@@ -483,9 +760,29 @@ body {
 }
 
 .monthly-amount {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
   color: white;
+}
+
+.buyback-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.buyback-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
 }
 
 /* Responsive adjustments */
@@ -495,34 +792,49 @@ body {
   }
 
   .day-cell {
-    padding: 4px;
+    padding: 3px;
     border-radius: 6px;
   }
 
   .day-number {
-    font-size: 12px;
+    font-size: 11px;
     margin-bottom: 2px;
   }
 
   .shift {
-    padding: 2px 4px;
+    padding: 2px 3px;
+    min-height: 26px;
   }
 
   .shift-label {
-    font-size: 8px;
+    font-size: 7px;
   }
 
   .wage-value {
-    font-size: 9px;
-  }
-
-  .commission-inline {
     font-size: 8px;
   }
 
+  .commission-inline {
+    font-size: 7px;
+  }
+
   .labor-total {
-    padding: 3px 4px;
-    font-size: 10px;
+    padding: 2px 3px;
+    font-size: 9px;
+  }
+
+  .unmet-target {
+    padding: 2px 4px;
+    min-height: 26px;
+    width: 45px;
+  }
+
+  .unmet-label {
+    font-size: 5px;
+  }
+
+  .unmet-amount {
+    font-size: 7px;
   }
 
   .month-nav h1 {
@@ -531,7 +843,7 @@ body {
   }
 
   .monthly-summary {
-    padding: 12px 16px;
+    padding: 8px 20px;
   }
 
   .monthly-row .monthly-label {
@@ -543,7 +855,16 @@ body {
   }
 
   .monthly-amount {
-    font-size: 20px;
+    font-size: 18px;
+  }
+
+  .app {
+    padding: 10px 12px 0;
+    gap: 3px;
+  }
+
+  .monthly-summary {
+    margin: 0 -12px;
   }
 }
 
@@ -576,4 +897,280 @@ body {
     font-size: 9px;
     padding: 2px 3px;
   }
+}
+
+/* Buyback Modal Styles */
+.modal-buyback {
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.buyback-info {
+  background: #f0f9ff;
+  border: 2px solid #3b82f6;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.info-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.no-targets {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+}
+
+.no-targets p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.targets-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.target-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.target-item:hover {
+  border-color: #3b82f6;
+  background: #f0f9ff;
+}
+
+.target-item.selected {
+  border-color: #3b82f6;
+  background: #dbeafe;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.target-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.target-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.target-amount {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.target-commission {
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
+}
+
+.buyback-summary {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.summary-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.summary-value.commission {
+  color: #059669;
+}
+
+.warning {
+  margin-top: 8px;
+  padding: 8px;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.button-group button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-group button:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Wage Breakdown Modal Styles */
+.wage-breakdown-modal {
+  max-width: 450px;
+}
+
+.breakdown-date {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+.breakdown-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.breakdown-section {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.section-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.breakdown-row.commission-row {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.breakdown-row.buyback-row {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.breakdown-label {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.breakdown-value {
+  color: #1a1a2e;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.breakdown-value.commission {
+  color: #16a34a;
+}
+
+.breakdown-value.buyback-info {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.breakdown-summary {
+  background: #ede9fe;
+  border: 2px solid #8b5cf6;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 14px;
+}
+
+.summary-label {
+  color: #6d28d9;
+  font-weight: 600;
+}
+
+.summary-value {
+  color: #6d28d9;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.summary-value.commission {
+  color: #16a34a;
+}
+
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 2px solid #a78bfa;
+}
+
+.total-label {
+  color: #4c1d95;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.total-value {
+  color: #4c1d95;
+  font-weight: 800;
+  font-size: 18px;
 }

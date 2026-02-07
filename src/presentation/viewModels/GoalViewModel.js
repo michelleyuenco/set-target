@@ -9,6 +9,12 @@ export class GoalViewModel {
     this.afternoonActual = goal.afternoonActual
     this.morningWage = goal.morningWage
     this.afternoonWage = goal.afternoonWage
+    this.morningBoughtBack = goal.morningBoughtBack
+    this.afternoonBoughtBack = goal.afternoonBoughtBack
+    this.morningCustomRate = goal.morningCustomRate
+    this.afternoonCustomRate = goal.afternoonCustomRate
+    this.morningCustomAmount = goal.morningCustomAmount
+    this.afternoonCustomAmount = goal.afternoonCustomAmount
     this.hasGoals = goal.hasGoals()
   }
 

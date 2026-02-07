@@ -9,8 +9,57 @@ export class GoalService {
     this.getGoalByDayUseCase = new GetGoalByDay(goalRepository)
   }
 
-  saveGoal(day, morningAmount, afternoonAmount, morningActual, afternoonActual) {
-    return this.saveGoalUseCase.execute(day, morningAmount, afternoonAmount, morningActual, afternoonActual)
+  saveGoal(
+    day,
+    morningAmount,
+    afternoonAmount,
+    morningActual,
+    afternoonActual,
+    morningBoughtBack,
+    afternoonBoughtBack,
+    morningCustomRate,
+    afternoonCustomRate,
+    morningCustomAmount,
+    afternoonCustomAmount
+  ) {
+    return this.saveGoalUseCase.execute(
+      day,
+      morningAmount,
+      afternoonAmount,
+      morningActual,
+      afternoonActual,
+      morningBoughtBack,
+      afternoonBoughtBack,
+      morningCustomRate,
+      afternoonCustomRate,
+      morningCustomAmount,
+      afternoonCustomAmount
+    )
+  }
+
+  buybackTarget(day, shift) {
+    const goal = this.getGoalByDayUseCase.execute(day)
+    if (!goal) return null
+
+    if (shift === 'morning') {
+      goal.morningBoughtBack = true
+    } else if (shift === 'afternoon') {
+      goal.afternoonBoughtBack = true
+    }
+
+    return this.saveGoalUseCase.execute(
+      day,
+      goal.morningAmount,
+      goal.afternoonAmount,
+      goal.morningActual,
+      goal.afternoonActual,
+      goal.morningBoughtBack,
+      goal.afternoonBoughtBack,
+      goal.morningCustomRate,
+      goal.afternoonCustomRate,
+      goal.morningCustomAmount,
+      goal.afternoonCustomAmount
+    )
   }
 
   getAllGoals() {

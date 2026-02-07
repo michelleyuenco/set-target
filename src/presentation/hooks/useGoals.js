@@ -14,8 +14,32 @@ export function useGoals() {
     setGoals(GoalViewModel.fromGoalsMap(allGoals))
   }, [])
 
-  const saveGoal = useCallback((day, morningAmount, afternoonAmount, morningActual, afternoonActual) => {
-    goalService.saveGoal(day, morningAmount, afternoonAmount, morningActual, afternoonActual)
+  const saveGoal = useCallback((
+    day,
+    morningAmount,
+    afternoonAmount,
+    morningActual,
+    afternoonActual,
+    morningBoughtBack,
+    afternoonBoughtBack,
+    morningCustomRate,
+    afternoonCustomRate,
+    morningCustomAmount,
+    afternoonCustomAmount
+  ) => {
+    goalService.saveGoal(
+      day,
+      morningAmount,
+      afternoonAmount,
+      morningActual,
+      afternoonActual,
+      morningBoughtBack,
+      afternoonBoughtBack,
+      morningCustomRate,
+      afternoonCustomRate,
+      morningCustomAmount,
+      afternoonCustomAmount
+    )
     loadGoals()
   }, [loadGoals])
 
@@ -24,9 +48,15 @@ export function useGoals() {
     return GoalViewModel.fromGoal(goal)
   }, [])
 
+  const buybackTarget = useCallback((day, shift) => {
+    goalService.buybackTarget(day, shift)
+    loadGoals()
+  }, [loadGoals])
+
   return {
     goals,
     saveGoal,
-    getGoalByDay
+    getGoalByDay,
+    buybackTarget
   }
 }

@@ -1,10 +1,28 @@
 export class Goal {
-  constructor(day, morningAmount = null, afternoonAmount = null, morningActual = null, afternoonActual = null) {
+  constructor(
+    day,
+    morningAmount = null,
+    afternoonAmount = null,
+    morningActual = null,
+    afternoonActual = null,
+    morningBoughtBack = false,
+    afternoonBoughtBack = false,
+    morningCustomRate = null,
+    afternoonCustomRate = null,
+    morningCustomAmount = null,
+    afternoonCustomAmount = null
+  ) {
     this.day = day
     this.morningAmount = this.parseAmount(morningAmount)
     this.afternoonAmount = this.parseAmount(afternoonAmount)
     this.morningActual = this.parseAmount(morningActual)
     this.afternoonActual = this.parseAmount(afternoonActual)
+    this.morningBoughtBack = morningBoughtBack || false
+    this.afternoonBoughtBack = afternoonBoughtBack || false
+    this.morningCustomRate = this.parseAmount(morningCustomRate)
+    this.afternoonCustomRate = this.parseAmount(afternoonCustomRate)
+    this.morningCustomAmount = this.parseAmount(morningCustomAmount)
+    this.afternoonCustomAmount = this.parseAmount(afternoonCustomAmount)
   }
 
   parseAmount(value) {
@@ -39,11 +57,29 @@ export class Goal {
       morningAmount: this.morningAmount,
       afternoonAmount: this.afternoonAmount,
       morningActual: this.morningActual,
-      afternoonActual: this.afternoonActual
+      afternoonActual: this.afternoonActual,
+      morningBoughtBack: this.morningBoughtBack,
+      afternoonBoughtBack: this.afternoonBoughtBack,
+      morningCustomRate: this.morningCustomRate,
+      afternoonCustomRate: this.afternoonCustomRate,
+      morningCustomAmount: this.morningCustomAmount,
+      afternoonCustomAmount: this.afternoonCustomAmount
     }
   }
 
   static fromJSON(data) {
-    return new Goal(data.day, data.morningAmount, data.afternoonAmount, data.morningActual, data.afternoonActual)
+    return new Goal(
+      data.day,
+      data.morningAmount,
+      data.afternoonAmount,
+      data.morningActual,
+      data.afternoonActual,
+      data.morningBoughtBack,
+      data.afternoonBoughtBack,
+      data.morningCustomRate,
+      data.afternoonCustomRate,
+      data.morningCustomAmount,
+      data.afternoonCustomAmount
+    )
   }
 }
