@@ -65,6 +65,36 @@ export function App() {
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
+  // Calculate total monthly salary and commission
+  const calculateMonthlyEarnings = () => {
+    let wages = 0
+    let commission = 0
+    const pad = (n) => String(n).padStart(2, '0')
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`
+      const goal = goals[dateStr]
+      if (goal?.hasGoals) {
+        const morningWage = goal.morningWage || 65
+        const afternoonWage = goal.afternoonWage || 65
+        wages += (morningWage * 4) + (afternoonWage * 4)
+
+        // 4.5% commission when target is met
+        if (morningWage === 80 && goal.morningActual > 0) {
+          commission += goal.morningActual * 0.045
+        }
+        if (afternoonWage === 80 && goal.afternoonActual > 0) {
+          commission += goal.afternoonActual * 0.045
+        }
+      }
+    }
+    return { wages, commission: Math.round(commission * 100) / 100 }
+  }
+
+  const { wages: monthlyWages, commission: monthlyCommission } = calculateMonthlyEarnings()
+  const monthlyTotal = monthlyWages + monthlyCommission
+
   return (
     <div className="app">
       <div className="month-nav">
@@ -80,6 +110,23 @@ export function App() {
         selectedDay={selectedDay}
         onDayClick={handleDayClick}
       />
+
+      <div className="monthly-summary">
+        <div className="monthly-row">
+          <span className="monthly-label">Wages:</span>
+          <span className="monthly-value">${monthlyWages.toLocaleString()}</span>
+        </div>
+        {monthlyCommission > 0 && (
+          <div className="monthly-row commission-row">
+            <span className="monthly-label">Commission (4.5%):</span>
+            <span className="monthly-value">+${monthlyCommission.toLocaleString()}</span>
+          </div>
+        )}
+        <div className="monthly-total">
+          <span className="monthly-label">Total:</span>
+          <span className="monthly-amount">${monthlyTotal.toLocaleString()}</span>
+        </div>
+      </div>
 
       {selectedDay && (
         <GoalModal

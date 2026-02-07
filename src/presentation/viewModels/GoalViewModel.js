@@ -28,6 +28,26 @@ export class GoalViewModel {
     return Money.of(this.afternoonActual).format()
   }
 
+  get totalTarget() {
+    const morning = this.morningAmount || 0
+    const afternoon = this.afternoonAmount || 0
+    return morning + afternoon
+  }
+
+  get totalActual() {
+    const morning = this.morningActual || 0
+    const afternoon = this.afternoonActual || 0
+    return morning + afternoon
+  }
+
+  get formattedTotalTarget() {
+    return Money.of(this.totalTarget).format()
+  }
+
+  get formattedTotalActual() {
+    return Money.of(this.totalActual).format()
+  }
+
   static fromGoal(goal) {
     if (!goal) return null
     return new GoalViewModel(goal)
