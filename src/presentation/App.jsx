@@ -23,6 +23,7 @@ export function App() {
   const [editingGoal, setEditingGoal] = useState(null)
   const [showBuybackModal, setShowBuybackModal] = useState(false)
   const [breakdownDay, setBreakdownDay] = useState(null)
+  const [summaryExpanded, setSummaryExpanded] = useState(false)
 
   const isCurrentMonth = viewYear === currentYear && viewMonth === currentMonth
   const minYear = currentMonth === 0 ? currentYear - 1 : currentYear
@@ -172,7 +173,7 @@ export function App() {
     const availableExcess = Math.max(0, excessRevenue - totalBuybackCost)
 
     return {
-      wages,
+      wages: Math.round(wages * 100) / 100,
       commission45: Math.round(commission45 * 100) / 100,
       commission35: Math.round(commission35 * 100) / 100,
       commissionCustom: Math.round(commissionCustom * 100) / 100,
@@ -183,7 +184,7 @@ export function App() {
   }
 
   const { wages: monthlyWages, commission45, commission35, commissionCustom, customRates, excessRevenue: monthlyExcess, availableExcess } = calculateMonthlyEarnings()
-  const monthlyTotal = monthlyWages + commission45 + commission35 + commissionCustom
+  const monthlyTotal = Math.round((monthlyWages + commission45 + commission35 + commissionCustom) * 100) / 100
 
   return (
     <div className="app">
@@ -204,36 +205,43 @@ export function App() {
         onWageClick={handleWageClick}
       />
 
-      <div className="monthly-summary">
-        <div className="monthly-row">
-          <span className="monthly-label">Wages:</span>
-          <span className="monthly-value">${monthlyWages.toLocaleString()}</span>
+      <div className={`monthly-summary ${summaryExpanded ? 'expanded' : 'collapsed'}`}>
+        <div className="summary-toggle" onClick={() => setSummaryExpanded(!summaryExpanded)}>
+          <span className="toggle-arrow">{summaryExpanded ? '\u25BC' : '\u25B2'}</span>
         </div>
-        {commission45 > 0 && (
-          <div className="monthly-row commission-row">
-            <span className="monthly-label">Commission (4.5%):</span>
-            <span className="monthly-value">+${commission45.toLocaleString()}</span>
-          </div>
-        )}
-        {commission35 > 0 && (
-          <div className="monthly-row commission35-row">
-            <span className="monthly-label">Commission (3.5%):</span>
-            <span className="monthly-value">+${commission35.toLocaleString()}</span>
-          </div>
-        )}
-        {commissionCustom > 0 && (
-          <div className="monthly-row commission-custom-row">
-            <span className="monthly-label">
-              Commission ({customRates.length === 1 ? `${customRates[0]}%` : customRates.map(r => `${r}%`).join(', ')}):
-            </span>
-            <span className="monthly-value">+${commissionCustom.toLocaleString()}</span>
-          </div>
-        )}
-        {availableExcess > 0 && (
-          <div className="monthly-row excess-row">
-            <span className="monthly-label">Excess Revenue:</span>
-            <span className="monthly-value">${availableExcess.toLocaleString()}</span>
-          </div>
+        {summaryExpanded && (
+          <>
+            <div className="monthly-row">
+              <span className="monthly-label">Wages:</span>
+              <span className="monthly-value">${monthlyWages.toLocaleString()}</span>
+            </div>
+            {commission45 > 0 && (
+              <div className="monthly-row commission-row">
+                <span className="monthly-label">Commission (4.5%):</span>
+                <span className="monthly-value">+${commission45.toLocaleString()}</span>
+              </div>
+            )}
+            {commission35 > 0 && (
+              <div className="monthly-row commission35-row">
+                <span className="monthly-label">Commission (3.5%):</span>
+                <span className="monthly-value">+${commission35.toLocaleString()}</span>
+              </div>
+            )}
+            {commissionCustom > 0 && (
+              <div className="monthly-row commission-custom-row">
+                <span className="monthly-label">
+                  Commission ({customRates.length === 1 ? `${customRates[0]}%` : customRates.map(r => `${r}%`).join(', ')}):
+                </span>
+                <span className="monthly-value">+${commissionCustom.toLocaleString()}</span>
+              </div>
+            )}
+            {availableExcess > 0 && (
+              <div className="monthly-row excess-row">
+                <span className="monthly-label">Excess Revenue:</span>
+                <span className="monthly-value">${availableExcess.toLocaleString()}</span>
+              </div>
+            )}
+          </>
         )}
         <div className="monthly-total">
           <span className="monthly-label">Total:</span>

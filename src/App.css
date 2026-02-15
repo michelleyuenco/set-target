@@ -221,7 +221,6 @@ body {
   min-width: 0;
   flex: 1;
   min-height: 28px;
-  max-height: 32px;
 }
 
 .shift-label {
@@ -235,10 +234,12 @@ body {
 .shift-details {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 2px;
   min-width: 0;
   flex: 1;
   overflow: hidden;
+  flex-wrap: wrap;
 }
 
 .wage-value {
@@ -268,6 +269,70 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
+}
+
+.unmet-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  white-space: nowrap;
+  line-height: 1.2;
+  cursor: default;
+  position: relative;
+  flex-basis: 100%;
+  justify-content: center;
+}
+
+.unmet-badge-label {
+  font-size: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #991b1b;
+  letter-spacing: 0.2px;
+}
+
+.unmet-badge-amount {
+  font-size: 8px;
+  font-weight: 700;
+  color: #dc2626;
+}
+
+.unmet-badge.buyable {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+  cursor: pointer;
+}
+
+.unmet-badge.buyable .unmet-badge-label {
+  color: #065f46;
+}
+
+.unmet-badge.buyable .unmet-badge-amount {
+  color: #059669;
+}
+
+.unmet-badge.buyable:hover {
+  background: #a7f3d0;
+  border-color: #34d399;
+}
+
+.unmet-badge .buyback-star {
+  position: static;
+  margin-left: 1px;
+  font-size: 8px;
+  animation: pulse-star 1.5s ease-in-out infinite;
+}
+
+.commission-inline.buyback-commission {
+  color: #7c3aed;
+}
+
+.commission-inline.custom-commission {
+  color: #db2777;
 }
 
 .labor-total {
@@ -331,8 +396,7 @@ body {
   transition: all 0.2s ease;
   min-height: 28px;
   max-height: 32px;
-  width: 50px;
-  flex-shrink: 0;
+  flex: 1;
 }
 
 .unmet-target.buyable {
@@ -707,6 +771,29 @@ body {
   border-radius: 12px 12px 0 0;
   box-shadow: 0 -2px 12px rgba(109, 40, 217, 0.25);
   margin: 0 -16px;
+  transition: padding 0.2s ease;
+}
+
+.monthly-summary.collapsed {
+  padding: 6px 20px;
+}
+
+.summary-toggle {
+  display: flex;
+  justify-content: center;
+  cursor: pointer;
+  padding: 2px 0;
+  user-select: none;
+}
+
+.toggle-arrow {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  transition: color 0.2s ease;
+}
+
+.summary-toggle:hover .toggle-arrow {
+  color: rgba(255, 255, 255, 1);
 }
 
 .monthly-row {
@@ -733,11 +820,11 @@ body {
 }
 
 .monthly-row.commission35-row .monthly-value {
-  color: #fde047;
+  color: #c4b5fd;
 }
 
 .monthly-row.commission-custom-row .monthly-value {
-  color: #fb923c;
+  color: #f9a8d4;
 }
 
 .monthly-row.excess-row .monthly-value {
@@ -826,7 +913,6 @@ body {
   .unmet-target {
     padding: 2px 4px;
     min-height: 26px;
-    width: 45px;
   }
 
   .unmet-label {
@@ -844,6 +930,10 @@ body {
 
   .monthly-summary {
     padding: 8px 20px;
+  }
+
+  .monthly-summary.collapsed {
+    padding: 4px 20px;
   }
 
   .monthly-row .monthly-label {

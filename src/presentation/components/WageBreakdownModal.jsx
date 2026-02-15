@@ -75,11 +75,11 @@ export function WageBreakdownModal({ day, goal, onClose }) {
   const morningCustom = getMorningCustomCommission()
   const afternoonCustom = getAfternoonCustomCommission()
 
-  const totalLabor = morningLabor + afternoonLabor
-  const totalCommission45 = morningCommission + afternoonCommission
-  const totalBuybackCommission = morningBuyback.commission + afternoonBuyback.commission
-  const totalCustomCommission = morningCustom.commission + afternoonCustom.commission
-  const grandTotal = totalLabor + totalCommission45 + totalBuybackCommission + totalCustomCommission
+  const totalLabor = Math.round((morningLabor + afternoonLabor) * 100) / 100
+  const totalCommission45 = Math.round((morningCommission + afternoonCommission) * 100) / 100
+  const totalBuybackCommission = Math.round((morningBuyback.commission + afternoonBuyback.commission) * 100) / 100
+  const totalCustomCommission = Math.round((morningCustom.commission + afternoonCustom.commission) * 100) / 100
+  const grandTotal = Math.round((totalLabor + totalCommission45 + totalBuybackCommission + totalCustomCommission) * 100) / 100
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -93,30 +93,30 @@ export function WageBreakdownModal({ day, goal, onClose }) {
             <div className="section-header">Morning Shift (11:50 AM - 4:00 PM)</div>
             <div className="breakdown-row">
               <span className="breakdown-label">${morningWage}/hr × 4.17 hours</span>
-              <span className="breakdown-value">${morningLabor}</span>
+              <span className="breakdown-value">${morningLabor.toFixed(2)}</span>
             </div>
             {morningCommission > 0 && (
               <div className="breakdown-row commission-row">
                 <span className="breakdown-label">Commission (4.5%)</span>
-                <span className="breakdown-value commission">+${morningCommission}</span>
+                <span className="breakdown-value commission">+${morningCommission.toFixed(2)}</span>
               </div>
             )}
             {morningBuyback.amount > 0 && (
               <>
                 <div className="breakdown-row buyback-row">
                   <span className="breakdown-label">Target Bought Back</span>
-                  <span className="breakdown-value buyback-info">${morningBuyback.amount.toLocaleString()}</span>
+                  <span className="breakdown-value buyback-info">${morningBuyback.amount.toFixed(2)}</span>
                 </div>
                 <div className="breakdown-row commission-row">
                   <span className="breakdown-label">Buyback Commission (3.5%)</span>
-                  <span className="breakdown-value commission">+${morningBuyback.commission}</span>
+                  <span className="breakdown-value commission">+${morningBuyback.commission.toFixed(2)}</span>
                 </div>
               </>
             )}
             {morningCustom.commission > 0 && (
               <div className="breakdown-row commission-row">
                 <span className="breakdown-label">Custom Commission ({morningCustom.rate}%)</span>
-                <span className="breakdown-value commission">+${morningCustom.commission}</span>
+                <span className="breakdown-value commission">+${morningCustom.commission.toFixed(2)}</span>
               </div>
             )}
           </div>
@@ -126,30 +126,30 @@ export function WageBreakdownModal({ day, goal, onClose }) {
             <div className="section-header">Afternoon Shift (4:00 PM - 8:10 PM)</div>
             <div className="breakdown-row">
               <span className="breakdown-label">${afternoonWage}/hr × 4.17 hours</span>
-              <span className="breakdown-value">${afternoonLabor}</span>
+              <span className="breakdown-value">${afternoonLabor.toFixed(2)}</span>
             </div>
             {afternoonCommission > 0 && (
               <div className="breakdown-row commission-row">
                 <span className="breakdown-label">Commission (4.5%)</span>
-                <span className="breakdown-value commission">+${afternoonCommission}</span>
+                <span className="breakdown-value commission">+${afternoonCommission.toFixed(2)}</span>
               </div>
             )}
             {afternoonBuyback.amount > 0 && (
               <>
                 <div className="breakdown-row buyback-row">
                   <span className="breakdown-label">Target Bought Back</span>
-                  <span className="breakdown-value buyback-info">${afternoonBuyback.amount.toLocaleString()}</span>
+                  <span className="breakdown-value buyback-info">${afternoonBuyback.amount.toFixed(2)}</span>
                 </div>
                 <div className="breakdown-row commission-row">
                   <span className="breakdown-label">Buyback Commission (3.5%)</span>
-                  <span className="breakdown-value commission">+${afternoonBuyback.commission}</span>
+                  <span className="breakdown-value commission">+${afternoonBuyback.commission.toFixed(2)}</span>
                 </div>
               </>
             )}
             {afternoonCustom.commission > 0 && (
               <div className="breakdown-row commission-row">
                 <span className="breakdown-label">Custom Commission ({afternoonCustom.rate}%)</span>
-                <span className="breakdown-value commission">+${afternoonCustom.commission}</span>
+                <span className="breakdown-value commission">+${afternoonCustom.commission.toFixed(2)}</span>
               </div>
             )}
           </div>
@@ -158,29 +158,29 @@ export function WageBreakdownModal({ day, goal, onClose }) {
           <div className="breakdown-summary">
             <div className="summary-row">
               <span className="summary-label">Labor Total:</span>
-              <span className="summary-value">${totalLabor}</span>
+              <span className="summary-value">${totalLabor.toFixed(2)}</span>
             </div>
             {totalCommission45 > 0 && (
               <div className="summary-row">
                 <span className="summary-label">Commission (4.5%):</span>
-                <span className="summary-value commission">+${totalCommission45}</span>
+                <span className="summary-value commission">+${totalCommission45.toFixed(2)}</span>
               </div>
             )}
             {totalBuybackCommission > 0 && (
               <div className="summary-row">
                 <span className="summary-label">Buyback Commission (3.5%):</span>
-                <span className="summary-value commission">+${totalBuybackCommission}</span>
+                <span className="summary-value commission">+${totalBuybackCommission.toFixed(2)}</span>
               </div>
             )}
             {totalCustomCommission > 0 && (
               <div className="summary-row">
                 <span className="summary-label">Custom Commission:</span>
-                <span className="summary-value commission">+${totalCustomCommission}</span>
+                <span className="summary-value commission">+${totalCustomCommission.toFixed(2)}</span>
               </div>
             )}
             <div className="summary-total">
               <span className="total-label">Daily Total:</span>
-              <span className="total-value">${grandTotal.toLocaleString()}</span>
+              <span className="total-value">${grandTotal.toFixed(2)}</span>
             </div>
           </div>
         </div>

@@ -105,7 +105,7 @@ export function DayCell({ day, goal, isSelected, isToday, availableExcess, onCli
   const totalBuybackCommission = morningBuyback.commission + afternoonBuyback.commission
   const totalCustomCommission = morningCustomCommission + afternoonCustomCommission
   const totalCommission = morningCommission + afternoonCommission + totalBuybackCommission + totalCustomCommission
-  const totalEarnings = laborCost + totalCommission
+  const totalEarnings = Math.round((laborCost + totalCommission) * 100) / 100
 
   return (
     <div className={cellClass} onClick={onClick}>
@@ -116,21 +116,27 @@ export function DayCell({ day, goal, isSelected, isToday, availableExcess, onCli
             <div className="shift">
               <span className="shift-label">AM</span>
               <span className="shift-details">
+                <span className={`wage-value ${wageClass(goal.morningWage)}`}>${goal.morningWage}/hr</span>
                 {isMorningUnmet ? (
-                  <div
-                    className={`unmet-target ${canBuyMorning ? 'buyable' : ''}`}
+                  <span
+                    className={`unmet-badge ${canBuyMorning ? 'buyable' : ''}`}
                     onClick={(e) => canBuyMorning && handleBuyback('morning', e)}
-                    title={canBuyMorning ? 'Click to buy back' : 'Insufficient excess revenue'}
+                    title={canBuyMorning ? 'Click to buy back' : `Unmet target: $${goal.morningAmount}`}
                   >
-                    <span className="unmet-label">Unmet</span>
-                    <span className="unmet-amount">${goal.morningAmount}</span>
+                    <span className="unmet-badge-label">Unmet</span>
+                    <span className="unmet-badge-amount">${goal.morningAmount}</span>
                     {canBuyMorning && <span className="buyback-star">★</span>}
-                  </div>
+                  </span>
                 ) : (
                   <>
-                    <span className={`wage-value ${wageClass(goal.morningWage)}`}>${goal.morningWage}/hr</span>
                     {morningCommission > 0 && (
-                      <span className="commission-inline">+${morningCommission}</span>
+                      <span className="commission-inline" title="Standard 4.5%">+${morningCommission}</span>
+                    )}
+                    {morningBuyback.commission > 0 && (
+                      <span className="commission-inline buyback-commission" title="Buyback 3.5%">+${morningBuyback.commission}</span>
+                    )}
+                    {morningCustomCommission > 0 && (
+                      <span className="commission-inline custom-commission" title={`Custom ${goal.morningCustomRate}%`}>+${morningCustomCommission}</span>
                     )}
                   </>
                 )}
@@ -139,21 +145,27 @@ export function DayCell({ day, goal, isSelected, isToday, availableExcess, onCli
             <div className="shift">
               <span className="shift-label">PM</span>
               <span className="shift-details">
+                <span className={`wage-value ${wageClass(goal.afternoonWage)}`}>${goal.afternoonWage}/hr</span>
                 {isAfternoonUnmet ? (
-                  <div
-                    className={`unmet-target ${canBuyAfternoon ? 'buyable' : ''}`}
+                  <span
+                    className={`unmet-badge ${canBuyAfternoon ? 'buyable' : ''}`}
                     onClick={(e) => canBuyAfternoon && handleBuyback('afternoon', e)}
-                    title={canBuyAfternoon ? 'Click to buy back' : 'Insufficient excess revenue'}
+                    title={canBuyAfternoon ? 'Click to buy back' : `Unmet target: $${goal.afternoonAmount}`}
                   >
-                    <span className="unmet-label">Unmet</span>
-                    <span className="unmet-amount">${goal.afternoonAmount}</span>
+                    <span className="unmet-badge-label">Unmet</span>
+                    <span className="unmet-badge-amount">${goal.afternoonAmount}</span>
                     {canBuyAfternoon && <span className="buyback-star">★</span>}
-                  </div>
+                  </span>
                 ) : (
                   <>
-                    <span className={`wage-value ${wageClass(goal.afternoonWage)}`}>${goal.afternoonWage}/hr</span>
                     {afternoonCommission > 0 && (
-                      <span className="commission-inline">+${afternoonCommission}</span>
+                      <span className="commission-inline" title="Standard 4.5%">+${afternoonCommission}</span>
+                    )}
+                    {afternoonBuyback.commission > 0 && (
+                      <span className="commission-inline buyback-commission" title="Buyback 3.5%">+${afternoonBuyback.commission}</span>
+                    )}
+                    {afternoonCustomCommission > 0 && (
+                      <span className="commission-inline custom-commission" title={`Custom ${goal.afternoonCustomRate}%`}>+${afternoonCustomCommission}</span>
                     )}
                   </>
                 )}
