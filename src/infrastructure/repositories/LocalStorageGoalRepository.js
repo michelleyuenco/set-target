@@ -38,6 +38,10 @@ export class LocalStorageGoalRepository extends GoalRepository {
     this.saveToStorage(goals)
   }
 
+  getRawData() {
+    return this.loadFromStorage()
+  }
+
   loadFromStorage() {
     try {
       const data = localStorage.getItem(STORAGE_KEY)

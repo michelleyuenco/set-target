@@ -1,18 +1,19 @@
 import { useState, useEffect, useCallback } from 'react'
-import { goalService } from '../../di/container'
+import { getActiveGoalService } from '../../di/container'
 import { GoalViewModel } from '../viewModels/GoalViewModel'
 
-export function useGoals() {
+export function useGoals(authUser) {
   const [goals, setGoals] = useState({})
+
+  const loadGoals = useCallback(() => {
+    const service = getActiveGoalService()
+    const allGoals = service.getAllGoals()
+    setGoals(GoalViewModel.fromGoalsMap(allGoals))
+  }, [])
 
   useEffect(() => {
     loadGoals()
-  }, [])
-
-  const loadGoals = useCallback(() => {
-    const allGoals = goalService.getAllGoals()
-    setGoals(GoalViewModel.fromGoalsMap(allGoals))
-  }, [])
+  }, [loadGoals, authUser])
 
   const saveGoal = useCallback((
     day,
@@ -25,9 +26,16 @@ export function useGoals() {
     morningCustomRate,
     afternoonCustomRate,
     morningCustomAmount,
-    afternoonCustomAmount
+    afternoonCustomAmount,
+    morningStartTime,
+    morningEndTime,
+    afternoonStartTime,
+    afternoonEndTime,
+    morningConfirmed,
+    afternoonConfirmed
   ) => {
-    goalService.saveGoal(
+    const service = getActiveGoalService()
+    service.saveGoal(
       day,
       morningAmount,
       afternoonAmount,
@@ -38,25 +46,40 @@ export function useGoals() {
       morningCustomRate,
       afternoonCustomRate,
       morningCustomAmount,
-      afternoonCustomAmount
+      afternoonCustomAmount,
+      morningStartTime,
+      morningEndTime,
+      afternoonStartTime,
+      afternoonEndTime,
+      morningConfirmed,
+      afternoonConfirmed
     )
     loadGoals()
   }, [loadGoals])
 
   const getGoalByDay = useCallback((day) => {
-    const goal = goalService.getGoalByDay(day)
+    const service = getActiveGoalService()
+    const goal = service.getGoalByDay(day)
     return GoalViewModel.fromGoal(goal)
   }, [])
 
   const buybackTarget = useCallback((day, shift) => {
-    goalService.buybackTarget(day, shift)
+    const service = getActiveGoalService()
+    service.buybackTarget(day, shift)
     loadGoals()
   }, [loadGoals])
+
+  const exportData = useCallback(() => {
+    const service = getActiveGoalService()
+    return service.exportData()
+  }, [])
 
   return {
     goals,
     saveGoal,
     getGoalByDay,
-    buybackTarget
+    buybackTarget,
+    exportData,
+    loadGoals
   }
 }

@@ -4,6 +4,7 @@ import { GetGoalByDay } from '../useCases/GetGoalByDay'
 
 export class GoalService {
   constructor(goalRepository) {
+    this.goalRepository = goalRepository
     this.saveGoalUseCase = new SaveGoal(goalRepository)
     this.getGoalsUseCase = new GetGoals(goalRepository)
     this.getGoalByDayUseCase = new GetGoalByDay(goalRepository)
@@ -20,7 +21,13 @@ export class GoalService {
     morningCustomRate,
     afternoonCustomRate,
     morningCustomAmount,
-    afternoonCustomAmount
+    afternoonCustomAmount,
+    morningStartTime,
+    morningEndTime,
+    afternoonStartTime,
+    afternoonEndTime,
+    morningConfirmed,
+    afternoonConfirmed
   ) {
     return this.saveGoalUseCase.execute(
       day,
@@ -33,7 +40,13 @@ export class GoalService {
       morningCustomRate,
       afternoonCustomRate,
       morningCustomAmount,
-      afternoonCustomAmount
+      afternoonCustomAmount,
+      morningStartTime,
+      morningEndTime,
+      afternoonStartTime,
+      afternoonEndTime,
+      morningConfirmed,
+      afternoonConfirmed
     )
   }
 
@@ -58,7 +71,13 @@ export class GoalService {
       goal.morningCustomRate,
       goal.afternoonCustomRate,
       goal.morningCustomAmount,
-      goal.afternoonCustomAmount
+      goal.afternoonCustomAmount,
+      goal.morningStartTime,
+      goal.morningEndTime,
+      goal.afternoonStartTime,
+      goal.afternoonEndTime,
+      goal.morningConfirmed,
+      goal.afternoonConfirmed
     )
   }
 
@@ -68,5 +87,16 @@ export class GoalService {
 
   getGoalByDay(day) {
     return this.getGoalByDayUseCase.execute(day)
+  }
+
+  exportData() {
+    const rawGoals = this.goalRepository.getRawData()
+    return {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      source: 'local-storage',
+      recordCount: Object.keys(rawGoals).length,
+      goals: rawGoals
+    }
   }
 }

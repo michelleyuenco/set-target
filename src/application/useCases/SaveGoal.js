@@ -16,7 +16,13 @@ export class SaveGoal {
     morningCustomRate,
     afternoonCustomRate,
     morningCustomAmount,
-    afternoonCustomAmount
+    afternoonCustomAmount,
+    morningStartTime,
+    morningEndTime,
+    afternoonStartTime,
+    afternoonEndTime,
+    morningConfirmed,
+    afternoonConfirmed
   ) {
     // Preserve existing buyback status if not provided
     const existingGoal = this.goalRepository.getByDay(day)
@@ -34,7 +40,13 @@ export class SaveGoal {
       morningCustomRate,
       afternoonCustomRate,
       morningCustomAmount,
-      afternoonCustomAmount
+      afternoonCustomAmount,
+      morningStartTime,
+      morningEndTime,
+      afternoonStartTime,
+      afternoonEndTime,
+      morningConfirmed,
+      afternoonConfirmed
     )
 
     if (goal.hasGoals()) {

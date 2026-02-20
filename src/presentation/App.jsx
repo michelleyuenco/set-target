@@ -1,9 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useGoals } from './hooks/useGoals'
+import { useAuth } from './hooks/useAuth'
 import { CalendarGrid } from './components/CalendarGrid'
 import { GoalModal } from './components/GoalModal'
 import { BuybackModal } from './components/BuybackModal'
 import { WageBreakdownModal } from './components/WageBreakdownModal'
+import { LoginModal } from './components/LoginModal'
+import { AuthButton } from './components/AuthButton'
+import { DataMigrationModal } from './components/DataMigrationModal'
+import { initFirestoreService, clearFirestoreService, getLocalGoalService, getFirestoreRepository } from '../di/container'
+import { DataMigrationService } from '../application/services/DataMigrationService'
+import { DEFAULT_SHIFT_HOURS } from '../domain/entities/Goal'
 import '../App.css'
 
 const MONTH_NAMES = [
@@ -16,14 +23,53 @@ export function App() {
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth()
 
+  const { user, loading: authLoading, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut } = useAuth()
   const [viewYear, setViewYear] = useState(currentYear)
   const [viewMonth, setViewMonth] = useState(currentMonth)
-  const { goals, saveGoal, getGoalByDay, buybackTarget } = useGoals()
+  const [firestoreReady, setFirestoreReady] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [showMigrationModal, setShowMigrationModal] = useState(false)
+
+  const { goals, saveGoal, getGoalByDay, buybackTarget, exportData, loadGoals } = useGoals(user)
   const [selectedDay, setSelectedDay] = useState(null)
   const [editingGoal, setEditingGoal] = useState(null)
   const [showBuybackModal, setShowBuybackModal] = useState(false)
   const [breakdownDay, setBreakdownDay] = useState(null)
   const [summaryExpanded, setSummaryExpanded] = useState(false)
+
+  // Initialize or clear Firestore service when auth state changes
+  useEffect(() => {
+    if (authLoading) return
+
+    if (user) {
+      setSyncing(true)
+      initFirestoreService(user.uid)
+        .then(async (service) => {
+          const firestoreRepo = service.goalRepository
+          const localService = getLocalGoalService()
+          const localData = localService.goalRepository.getRawData()
+          const hasLocalData = Object.keys(localData).length > 0
+
+          // Auto-sync: if Firestore is empty and localStorage has data, sync automatically
+          if (!firestoreRepo.hasData() && hasLocalData) {
+            await DataMigrationService.syncLocalToFirestore(localService.goalRepository, firestoreRepo)
+          }
+
+          setFirestoreReady(true)
+          setSyncing(false)
+          loadGoals()
+        })
+        .catch((err) => {
+          console.error('Firestore init failed:', err)
+          setSyncing(false)
+        })
+    } else {
+      clearFirestoreService()
+      setFirestoreReady(false)
+      loadGoals()
+    }
+  }, [user, authLoading])
 
   const isCurrentMonth = viewYear === currentYear && viewMonth === currentMonth
   const minYear = currentMonth === 0 ? currentYear - 1 : currentYear
@@ -61,7 +107,13 @@ export function App() {
     morningCustomRate,
     afternoonCustomRate,
     morningCustomAmount,
-    afternoonCustomAmount
+    afternoonCustomAmount,
+    morningStartTime,
+    morningEndTime,
+    afternoonStartTime,
+    afternoonEndTime,
+    morningConfirmed,
+    afternoonConfirmed
   ) => {
     saveGoal(
       selectedDay,
@@ -74,7 +126,13 @@ export function App() {
       morningCustomRate,
       afternoonCustomRate,
       morningCustomAmount,
-      afternoonCustomAmount
+      afternoonCustomAmount,
+      morningStartTime,
+      morningEndTime,
+      afternoonStartTime,
+      afternoonEndTime,
+      morningConfirmed,
+      afternoonConfirmed
     )
     setSelectedDay(null)
     setEditingGoal(null)
@@ -96,8 +154,46 @@ export function App() {
     buybackTarget(dateStr, shift)
   }
 
+  const handleExport = () => {
+    const data = exportData()
+    const json = JSON.stringify(data, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `shift-records-export-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const handleWageClick = (dateStr) => {
     setBreakdownDay(dateStr)
+  }
+
+  const handleSignIn = async (email, password) => {
+    await signInWithEmail(email, password)
+    setShowLoginModal(false)
+  }
+
+  const handleSignUp = async (email, password) => {
+    await signUpWithEmail(email, password)
+    setShowLoginModal(false)
+  }
+
+  const handleGoogleSignIn = async () => {
+    await signInWithGoogle()
+    setShowLoginModal(false)
+  }
+
+  const handleSignOut = async () => {
+    await signOut()
+  }
+
+  const handleMigrationComplete = () => {
+    setShowMigrationModal(false)
+    loadGoals()
   }
 
   const formatSelectedDay = (dateStr) => {
@@ -108,14 +204,13 @@ export function App() {
 
   // Calculate total monthly salary and commission
   const calculateMonthlyEarnings = () => {
-    const SHIFT_HOURS = 4 + (10 / 60) // 4.167 hours (4h 10m)
     let wages = 0
-    let commission45 = 0  // 4.5% commission for naturally met targets
-    let commission35 = 0  // 3.5% commission for bought back targets
-    let commissionCustom = 0  // Custom commission percentages
+    let commission45 = 0
+    let commission35 = 0
+    let commissionCustom = 0
     let excessRevenue = 0
     let totalBuybackCost = 0
-    const customRates = new Set()  // Track unique custom rates used
+    const customRates = new Set()
     const pad = (n) => String(n).padStart(2, '0')
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
 
@@ -123,53 +218,51 @@ export function App() {
       const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`
       const goal = goals[dateStr]
       if (goal?.hasGoals) {
-        const morningWage = goal.morningWage || 65
-        const afternoonWage = goal.afternoonWage || 65
-        wages += Math.round((morningWage * SHIFT_HOURS + afternoonWage * SHIFT_HOURS) * 100) / 100
+        // Only calculate wages for confirmed shifts
+        if (goal.morningConfirmed) {
+          const morningWage = goal.morningWage || 65
+          const morningHours = goal.morningShiftHours ?? DEFAULT_SHIFT_HOURS
+          wages += Math.round(morningWage * morningHours * 100) / 100
 
-        // Morning shift calculations
-        if (morningWage === 80 && goal.morningActual > 0) {
-          // 4.5% commission when target is naturally met
-          commission45 += goal.morningActual * 0.045
-          // Calculate excess revenue (actual - target)
-          if (goal.morningAmount && goal.morningActual > goal.morningAmount) {
-            excessRevenue += goal.morningActual - goal.morningAmount
+          if (morningWage === 80 && goal.morningActual > 0) {
+            commission45 += goal.morningActual * 0.045
+            if (goal.morningAmount && goal.morningActual > goal.morningAmount) {
+              excessRevenue += goal.morningActual - goal.morningAmount
+            }
+          } else if (goal.morningBoughtBack && goal.morningAmount) {
+            commission35 += goal.morningAmount * 0.035
+            totalBuybackCost += goal.morningAmount
           }
-        } else if (goal.morningBoughtBack && goal.morningAmount) {
-          // 3.5% commission for bought back targets
-          commission35 += goal.morningAmount * 0.035
-          totalBuybackCost += goal.morningAmount
-        }
 
-        // Morning custom commission
-        if (goal.morningCustomRate && goal.morningCustomAmount) {
-          commissionCustom += goal.morningCustomAmount * (goal.morningCustomRate / 100)
-          customRates.add(Number(goal.morningCustomRate))
-        }
-
-        // Afternoon shift calculations
-        if (afternoonWage === 80 && goal.afternoonActual > 0) {
-          // 4.5% commission when target is naturally met
-          commission45 += goal.afternoonActual * 0.045
-          // Calculate excess revenue (actual - target)
-          if (goal.afternoonAmount && goal.afternoonActual > goal.afternoonAmount) {
-            excessRevenue += goal.afternoonActual - goal.afternoonAmount
+          if (goal.morningCustomRate && goal.morningCustomAmount) {
+            commissionCustom += goal.morningCustomAmount * (goal.morningCustomRate / 100)
+            customRates.add(Number(goal.morningCustomRate))
           }
-        } else if (goal.afternoonBoughtBack && goal.afternoonAmount) {
-          // 3.5% commission for bought back targets
-          commission35 += goal.afternoonAmount * 0.035
-          totalBuybackCost += goal.afternoonAmount
         }
 
-        // Afternoon custom commission
-        if (goal.afternoonCustomRate && goal.afternoonCustomAmount) {
-          commissionCustom += goal.afternoonCustomAmount * (goal.afternoonCustomRate / 100)
-          customRates.add(Number(goal.afternoonCustomRate))
+        if (goal.afternoonConfirmed) {
+          const afternoonWage = goal.afternoonWage || 65
+          const afternoonHours = goal.afternoonShiftHours ?? DEFAULT_SHIFT_HOURS
+          wages += Math.round(afternoonWage * afternoonHours * 100) / 100
+
+          if (afternoonWage === 80 && goal.afternoonActual > 0) {
+            commission45 += goal.afternoonActual * 0.045
+            if (goal.afternoonAmount && goal.afternoonActual > goal.afternoonAmount) {
+              excessRevenue += goal.afternoonActual - goal.afternoonAmount
+            }
+          } else if (goal.afternoonBoughtBack && goal.afternoonAmount) {
+            commission35 += goal.afternoonAmount * 0.035
+            totalBuybackCost += goal.afternoonAmount
+          }
+
+          if (goal.afternoonCustomRate && goal.afternoonCustomAmount) {
+            commissionCustom += goal.afternoonCustomAmount * (goal.afternoonCustomRate / 100)
+            customRates.add(Number(goal.afternoonCustomRate))
+          }
         }
       }
     }
 
-    // Deduct buyback costs from excess revenue
     const availableExcess = Math.max(0, excessRevenue - totalBuybackCost)
 
     return {
@@ -186,8 +279,28 @@ export function App() {
   const { wages: monthlyWages, commission45, commission35, commissionCustom, customRates, excessRevenue: monthlyExcess, availableExcess } = calculateMonthlyEarnings()
   const monthlyTotal = Math.round((monthlyWages + commission45 + commission35 + commissionCustom) * 100) / 100
 
+  if (authLoading) {
+    return (
+      <div className="app">
+        <div className="loading-screen">Loading...</div>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
+      <div className="app-header">
+        <AuthButton
+          user={user}
+          onSignInClick={() => setShowLoginModal(true)}
+          onSignOut={handleSignOut}
+        />
+      </div>
+
+      {syncing && (
+        <div className="syncing-banner">Syncing data...</div>
+      )}
+
       <div className="month-nav">
         <button className="nav-btn" onClick={handlePrev} disabled={!canGoPrev}>&larr;</button>
         <h1>{MONTH_NAMES[viewMonth]} {viewYear}</h1>
@@ -247,6 +360,18 @@ export function App() {
           <span className="monthly-label">Total:</span>
           <span className="monthly-amount">${monthlyTotal.toLocaleString()}</span>
         </div>
+        {summaryExpanded && (
+          <>
+            <button className="export-btn" onClick={handleExport}>
+              Export All Records
+            </button>
+            {user && firestoreReady && (
+              <button className="export-btn sync-cloud-btn" onClick={() => setShowMigrationModal(true)}>
+                Sync / Import Data
+              </button>
+            )}
+          </>
+        )}
       </div>
 
       {selectedDay && (
@@ -260,6 +385,12 @@ export function App() {
           initialAfternoonCustomRate={editingGoal?.afternoonCustomRate}
           initialMorningCustomAmount={editingGoal?.morningCustomAmount}
           initialAfternoonCustomAmount={editingGoal?.afternoonCustomAmount}
+          initialMorningStartTime={editingGoal?.morningStartTime}
+          initialMorningEndTime={editingGoal?.morningEndTime}
+          initialAfternoonStartTime={editingGoal?.afternoonStartTime}
+          initialAfternoonEndTime={editingGoal?.afternoonEndTime}
+          initialMorningConfirmed={editingGoal?.morningConfirmed}
+          initialAfternoonConfirmed={editingGoal?.afternoonConfirmed}
           onSave={handleSave}
           onCancel={handleCancel}
         />
@@ -281,6 +412,22 @@ export function App() {
           day={formatSelectedDay(breakdownDay)}
           goal={getGoalByDay(breakdownDay)}
           onClose={() => setBreakdownDay(null)}
+        />
+      )}
+
+      {showLoginModal && (
+        <LoginModal
+          onSignIn={handleSignIn}
+          onSignUp={handleSignUp}
+          onGoogleSignIn={handleGoogleSignIn}
+          onClose={() => setShowLoginModal(false)}
+        />
+      )}
+
+      {showMigrationModal && (
+        <DataMigrationModal
+          onComplete={handleMigrationComplete}
+          onClose={() => setShowMigrationModal(false)}
         />
       )}
     </div>

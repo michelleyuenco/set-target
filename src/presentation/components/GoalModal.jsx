@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Goal } from '../../domain/entities/Goal'
+import { Goal, DEFAULT_MORNING_START, DEFAULT_MORNING_END, DEFAULT_AFTERNOON_START, DEFAULT_AFTERNOON_END } from '../../domain/entities/Goal'
 
 export function GoalModal({
   day,
@@ -11,6 +11,12 @@ export function GoalModal({
   initialAfternoonCustomRate,
   initialMorningCustomAmount,
   initialAfternoonCustomAmount,
+  initialMorningStartTime,
+  initialMorningEndTime,
+  initialAfternoonStartTime,
+  initialAfternoonEndTime,
+  initialMorningConfirmed,
+  initialAfternoonConfirmed,
   onSave,
   onCancel
 }) {
@@ -24,6 +30,12 @@ export function GoalModal({
   const [afternoonCustomAmount, setAfternoonCustomAmount] = useState('')
   const [showMorningCustom, setShowMorningCustom] = useState(false)
   const [showAfternoonCustom, setShowAfternoonCustom] = useState(false)
+  const [morningStartTime, setMorningStartTime] = useState(DEFAULT_MORNING_START)
+  const [morningEndTime, setMorningEndTime] = useState(DEFAULT_MORNING_END)
+  const [afternoonStartTime, setAfternoonStartTime] = useState(DEFAULT_AFTERNOON_START)
+  const [afternoonEndTime, setAfternoonEndTime] = useState(DEFAULT_AFTERNOON_END)
+  const [morningConfirmed, setMorningConfirmed] = useState(false)
+  const [afternoonConfirmed, setAfternoonConfirmed] = useState(false)
 
   useEffect(() => {
     setMorningGoal(initialMorning || '')
@@ -36,6 +48,12 @@ export function GoalModal({
     setAfternoonCustomAmount(initialAfternoonCustomAmount || '')
     setShowMorningCustom(!!(initialMorningCustomRate || initialMorningCustomAmount))
     setShowAfternoonCustom(!!(initialAfternoonCustomRate || initialAfternoonCustomAmount))
+    setMorningStartTime(initialMorningStartTime || DEFAULT_MORNING_START)
+    setMorningEndTime(initialMorningEndTime || DEFAULT_MORNING_END)
+    setAfternoonStartTime(initialAfternoonStartTime || DEFAULT_AFTERNOON_START)
+    setAfternoonEndTime(initialAfternoonEndTime || DEFAULT_AFTERNOON_END)
+    setMorningConfirmed(!!initialMorningConfirmed)
+    setAfternoonConfirmed(!!initialAfternoonConfirmed)
   }, [
     initialMorning,
     initialAfternoon,
@@ -44,7 +62,13 @@ export function GoalModal({
     initialMorningCustomRate,
     initialAfternoonCustomRate,
     initialMorningCustomAmount,
-    initialAfternoonCustomAmount
+    initialAfternoonCustomAmount,
+    initialMorningStartTime,
+    initialMorningEndTime,
+    initialAfternoonStartTime,
+    initialAfternoonEndTime,
+    initialMorningConfirmed,
+    initialAfternoonConfirmed
   ])
 
   const handleSave = () => {
@@ -56,7 +80,13 @@ export function GoalModal({
       morningCustomRate,
       afternoonCustomRate,
       morningCustomAmount,
-      afternoonCustomAmount
+      afternoonCustomAmount,
+      morningStartTime,
+      morningEndTime,
+      afternoonStartTime,
+      afternoonEndTime,
+      morningConfirmed,
+      afternoonConfirmed
     )
   }
 
@@ -68,6 +98,16 @@ export function GoalModal({
 
   const morningWage = getWage(morningGoal, morningActual)
   const afternoonWage = getWage(afternoonGoal, afternoonActual)
+
+  const morningHours = Goal.calculateHoursFromTimes(morningStartTime, morningEndTime)
+  const afternoonHours = Goal.calculateHoursFromTimes(afternoonStartTime, afternoonEndTime)
+
+  const formatHours = (hours) => {
+    const h = Math.floor(hours)
+    const m = Math.round((hours - h) * 60)
+    if (m === 0) return `${h}h`
+    return `${h}h ${m}m`
+  }
 
   const wageClass = (wage) => {
     if (wage === 80) return 'wage-hit'
@@ -81,9 +121,18 @@ export function GoalModal({
         <h2>{day}</h2>
 
         <div className="shifts-compact">
-          <div className="shift-section-wrapper">
+          <div className={`shift-section-wrapper ${!morningConfirmed ? 'shift-unconfirmed' : ''}`}>
+            <div className="shift-confirm-toggle">
+              <label className="shift-confirm">
+                <input
+                  type="checkbox"
+                  checked={morningConfirmed}
+                  onChange={(e) => setMorningConfirmed(e.target.checked)}
+                />
+                <span>Shift A (Morning)</span>
+              </label>
+            </div>
             <div className="shift-row">
-              <div className="shift-label">Morning</div>
               <div className="shift-inputs">
                 <div className="input-compact">
                   <label>Target</label>
@@ -92,6 +141,7 @@ export function GoalModal({
                     value={morningGoal}
                     onChange={(e) => setMorningGoal(e.target.value)}
                     placeholder="0"
+                    disabled={!morningConfirmed}
                   />
                 </div>
                 <div className="input-compact">
@@ -101,6 +151,7 @@ export function GoalModal({
                     value={morningActual}
                     onChange={(e) => setMorningActual(e.target.value)}
                     placeholder="0"
+                    disabled={!morningConfirmed}
                   />
                 </div>
                 <div className={`wage-compact ${wageClass(morningWage)}`}>
@@ -108,11 +159,35 @@ export function GoalModal({
                 </div>
               </div>
             </div>
+            <div className="shift-time-row">
+              <div className="time-input-group">
+                <label>Start</label>
+                <input
+                  type="time"
+                  value={morningStartTime}
+                  onChange={(e) => setMorningStartTime(e.target.value)}
+                  disabled={!morningConfirmed}
+                />
+              </div>
+              <div className="time-input-group">
+                <label>End</label>
+                <input
+                  type="time"
+                  value={morningEndTime}
+                  onChange={(e) => setMorningEndTime(e.target.value)}
+                  disabled={!morningConfirmed}
+                />
+              </div>
+              <div className="shift-duration">
+                {formatHours(morningHours)}
+              </div>
+            </div>
             <div className="custom-commission-toggle">
               <label>
                 <input
                   type="checkbox"
                   checked={showMorningCustom}
+                  disabled={!morningConfirmed}
                   onChange={(e) => {
                     setShowMorningCustom(e.target.checked)
                     if (!e.target.checked) {
@@ -134,6 +209,7 @@ export function GoalModal({
                     value={morningCustomRate}
                     onChange={(e) => setMorningCustomRate(e.target.value)}
                     placeholder="5"
+                    disabled={!morningConfirmed}
                   />
                 </div>
                 <div className="input-compact">
@@ -143,15 +219,25 @@ export function GoalModal({
                     value={morningCustomAmount}
                     onChange={(e) => setMorningCustomAmount(e.target.value)}
                     placeholder="1000"
+                    disabled={!morningConfirmed}
                   />
                 </div>
               </div>
             )}
           </div>
 
-          <div className="shift-section-wrapper">
+          <div className={`shift-section-wrapper ${!afternoonConfirmed ? 'shift-unconfirmed' : ''}`}>
+            <div className="shift-confirm-toggle">
+              <label className="shift-confirm">
+                <input
+                  type="checkbox"
+                  checked={afternoonConfirmed}
+                  onChange={(e) => setAfternoonConfirmed(e.target.checked)}
+                />
+                <span>Shift B (Afternoon)</span>
+              </label>
+            </div>
             <div className="shift-row">
-              <div className="shift-label">Afternoon</div>
               <div className="shift-inputs">
                 <div className="input-compact">
                   <label>Target</label>
@@ -160,6 +246,7 @@ export function GoalModal({
                     value={afternoonGoal}
                     onChange={(e) => setAfternoonGoal(e.target.value)}
                     placeholder="0"
+                    disabled={!afternoonConfirmed}
                   />
                 </div>
                 <div className="input-compact">
@@ -169,6 +256,7 @@ export function GoalModal({
                     value={afternoonActual}
                     onChange={(e) => setAfternoonActual(e.target.value)}
                     placeholder="0"
+                    disabled={!afternoonConfirmed}
                   />
                 </div>
                 <div className={`wage-compact ${wageClass(afternoonWage)}`}>
@@ -176,11 +264,35 @@ export function GoalModal({
                 </div>
               </div>
             </div>
+            <div className="shift-time-row">
+              <div className="time-input-group">
+                <label>Start</label>
+                <input
+                  type="time"
+                  value={afternoonStartTime}
+                  onChange={(e) => setAfternoonStartTime(e.target.value)}
+                  disabled={!afternoonConfirmed}
+                />
+              </div>
+              <div className="time-input-group">
+                <label>End</label>
+                <input
+                  type="time"
+                  value={afternoonEndTime}
+                  onChange={(e) => setAfternoonEndTime(e.target.value)}
+                  disabled={!afternoonConfirmed}
+                />
+              </div>
+              <div className="shift-duration">
+                {formatHours(afternoonHours)}
+              </div>
+            </div>
             <div className="custom-commission-toggle">
               <label>
                 <input
                   type="checkbox"
                   checked={showAfternoonCustom}
+                  disabled={!afternoonConfirmed}
                   onChange={(e) => {
                     setShowAfternoonCustom(e.target.checked)
                     if (!e.target.checked) {
@@ -202,6 +314,7 @@ export function GoalModal({
                     value={afternoonCustomRate}
                     onChange={(e) => setAfternoonCustomRate(e.target.value)}
                     placeholder="5"
+                    disabled={!afternoonConfirmed}
                   />
                 </div>
                 <div className="input-compact">
@@ -211,6 +324,7 @@ export function GoalModal({
                     value={afternoonCustomAmount}
                     onChange={(e) => setAfternoonCustomAmount(e.target.value)}
                     placeholder="1000"
+                    disabled={!afternoonConfirmed}
                   />
                 </div>
               </div>

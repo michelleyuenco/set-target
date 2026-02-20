@@ -1,32 +1,52 @@
+import { DEFAULT_SHIFT_HOURS } from '../../domain/entities/Goal'
+
 export function WageBreakdownModal({ day, goal, onClose }) {
   if (!goal?.hasGoals) return null
 
-  // Shift hours: 11:50 AM - 4:00 PM and 4:00 PM - 8:10 PM = 4h 10m each
-  const SHIFT_HOURS = 4 + (10 / 60) // 4.167 hours
+  const hasMorning = goal.morningConfirmed
+  const hasAfternoon = goal.afternoonConfirmed
+
+  if (!hasMorning && !hasAfternoon) return null
+
+  // Use actual shift hours from goal, falling back to default
+  const morningHours = goal.morningShiftHours ?? DEFAULT_SHIFT_HOURS
+  const afternoonHours = goal.afternoonShiftHours ?? DEFAULT_SHIFT_HOURS
+
+  const formatTime12 = (time24) => {
+    const [h, m] = time24.split(':').map(Number)
+    const period = h >= 12 ? 'PM' : 'AM'
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+    return `${h12}:${String(m).padStart(2, '0')} ${period}`
+  }
+
+  const formatHoursLabel = (hours) => {
+    return Math.round(hours * 100) / 100
+  }
+
+  const morningTimeLabel = `${formatTime12(goal.morningStartTime)} - ${formatTime12(goal.morningEndTime)}`
+  const afternoonTimeLabel = `${formatTime12(goal.afternoonStartTime)} - ${formatTime12(goal.afternoonEndTime)}`
 
   const morningWage = goal.morningWage || 65
   const afternoonWage = goal.afternoonWage || 65
-  const morningLabor = Math.round(morningWage * SHIFT_HOURS * 100) / 100
-  const afternoonLabor = Math.round(afternoonWage * SHIFT_HOURS * 100) / 100
+  const morningLabor = hasMorning ? Math.round(morningWage * morningHours * 100) / 100 : 0
+  const afternoonLabor = hasAfternoon ? Math.round(afternoonWage * afternoonHours * 100) / 100 : 0
 
-  // Calculate 4.5% commissions (naturally met targets)
   const getMorningCommission = () => {
-    if (goal.morningWage === 80 && goal.morningActual > 0) {
+    if (hasMorning && goal.morningWage === 80 && goal.morningActual > 0) {
       return Math.round(goal.morningActual * 0.045 * 100) / 100
     }
     return 0
   }
 
   const getAfternoonCommission = () => {
-    if (goal.afternoonWage === 80 && goal.afternoonActual > 0) {
+    if (hasAfternoon && goal.afternoonWage === 80 && goal.afternoonActual > 0) {
       return Math.round(goal.afternoonActual * 0.045 * 100) / 100
     }
     return 0
   }
 
-  // Calculate buyback amounts and 3.5% commissions
   const getMorningBuyback = () => {
-    if (goal.morningBoughtBack && goal.morningAmount) {
+    if (hasMorning && goal.morningBoughtBack && goal.morningAmount) {
       return {
         amount: goal.morningAmount,
         commission: Math.round(goal.morningAmount * 0.035 * 100) / 100
@@ -36,7 +56,7 @@ export function WageBreakdownModal({ day, goal, onClose }) {
   }
 
   const getAfternoonBuyback = () => {
-    if (goal.afternoonBoughtBack && goal.afternoonAmount) {
+    if (hasAfternoon && goal.afternoonBoughtBack && goal.afternoonAmount) {
       return {
         amount: goal.afternoonAmount,
         commission: Math.round(goal.afternoonAmount * 0.035 * 100) / 100
@@ -45,9 +65,8 @@ export function WageBreakdownModal({ day, goal, onClose }) {
     return { amount: 0, commission: 0 }
   }
 
-  // Calculate custom commissions
   const getMorningCustomCommission = () => {
-    if (goal.morningCustomRate && goal.morningCustomAmount) {
+    if (hasMorning && goal.morningCustomRate && goal.morningCustomAmount) {
       return {
         rate: goal.morningCustomRate,
         amount: goal.morningCustomAmount,
@@ -58,7 +77,7 @@ export function WageBreakdownModal({ day, goal, onClose }) {
   }
 
   const getAfternoonCustomCommission = () => {
-    if (goal.afternoonCustomRate && goal.afternoonCustomAmount) {
+    if (hasAfternoon && goal.afternoonCustomRate && goal.afternoonCustomAmount) {
       return {
         rate: goal.afternoonCustomRate,
         amount: goal.afternoonCustomAmount,
@@ -88,71 +107,73 @@ export function WageBreakdownModal({ day, goal, onClose }) {
         <div className="breakdown-date">{day}</div>
 
         <div className="breakdown-sections">
-          {/* Morning Shift */}
-          <div className="breakdown-section">
-            <div className="section-header">Morning Shift (11:50 AM - 4:00 PM)</div>
-            <div className="breakdown-row">
-              <span className="breakdown-label">${morningWage}/hr × 4.17 hours</span>
-              <span className="breakdown-value">${morningLabor.toFixed(2)}</span>
-            </div>
-            {morningCommission > 0 && (
-              <div className="breakdown-row commission-row">
-                <span className="breakdown-label">Commission (4.5%)</span>
-                <span className="breakdown-value commission">+${morningCommission.toFixed(2)}</span>
+          {hasMorning && (
+            <div className="breakdown-section">
+              <div className="section-header">Shift A ({morningTimeLabel})</div>
+              <div className="breakdown-row">
+                <span className="breakdown-label">${morningWage}/hr × {formatHoursLabel(morningHours)} hours</span>
+                <span className="breakdown-value">${morningLabor.toFixed(2)}</span>
               </div>
-            )}
-            {morningBuyback.amount > 0 && (
-              <>
-                <div className="breakdown-row buyback-row">
-                  <span className="breakdown-label">Target Bought Back</span>
-                  <span className="breakdown-value buyback-info">${morningBuyback.amount.toFixed(2)}</span>
-                </div>
+              {morningCommission > 0 && (
                 <div className="breakdown-row commission-row">
-                  <span className="breakdown-label">Buyback Commission (3.5%)</span>
-                  <span className="breakdown-value commission">+${morningBuyback.commission.toFixed(2)}</span>
+                  <span className="breakdown-label">Commission (4.5%)</span>
+                  <span className="breakdown-value commission">+${morningCommission.toFixed(2)}</span>
                 </div>
-              </>
-            )}
-            {morningCustom.commission > 0 && (
-              <div className="breakdown-row commission-row">
-                <span className="breakdown-label">Custom Commission ({morningCustom.rate}%)</span>
-                <span className="breakdown-value commission">+${morningCustom.commission.toFixed(2)}</span>
-              </div>
-            )}
-          </div>
+              )}
+              {morningBuyback.amount > 0 && (
+                <>
+                  <div className="breakdown-row buyback-row">
+                    <span className="breakdown-label">Target Bought Back</span>
+                    <span className="breakdown-value buyback-info">${morningBuyback.amount.toFixed(2)}</span>
+                  </div>
+                  <div className="breakdown-row commission-row">
+                    <span className="breakdown-label">Buyback Commission (3.5%)</span>
+                    <span className="breakdown-value commission">+${morningBuyback.commission.toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+              {morningCustom.commission > 0 && (
+                <div className="breakdown-row commission-row">
+                  <span className="breakdown-label">Custom Commission ({morningCustom.rate}%)</span>
+                  <span className="breakdown-value commission">+${morningCustom.commission.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* Afternoon Shift */}
-          <div className="breakdown-section">
-            <div className="section-header">Afternoon Shift (4:00 PM - 8:10 PM)</div>
-            <div className="breakdown-row">
-              <span className="breakdown-label">${afternoonWage}/hr × 4.17 hours</span>
-              <span className="breakdown-value">${afternoonLabor.toFixed(2)}</span>
-            </div>
-            {afternoonCommission > 0 && (
-              <div className="breakdown-row commission-row">
-                <span className="breakdown-label">Commission (4.5%)</span>
-                <span className="breakdown-value commission">+${afternoonCommission.toFixed(2)}</span>
+          {hasAfternoon && (
+            <div className="breakdown-section">
+              <div className="section-header">Shift B ({afternoonTimeLabel})</div>
+              <div className="breakdown-row">
+                <span className="breakdown-label">${afternoonWage}/hr × {formatHoursLabel(afternoonHours)} hours</span>
+                <span className="breakdown-value">${afternoonLabor.toFixed(2)}</span>
               </div>
-            )}
-            {afternoonBuyback.amount > 0 && (
-              <>
-                <div className="breakdown-row buyback-row">
-                  <span className="breakdown-label">Target Bought Back</span>
-                  <span className="breakdown-value buyback-info">${afternoonBuyback.amount.toFixed(2)}</span>
-                </div>
+              {afternoonCommission > 0 && (
                 <div className="breakdown-row commission-row">
-                  <span className="breakdown-label">Buyback Commission (3.5%)</span>
-                  <span className="breakdown-value commission">+${afternoonBuyback.commission.toFixed(2)}</span>
+                  <span className="breakdown-label">Commission (4.5%)</span>
+                  <span className="breakdown-value commission">+${afternoonCommission.toFixed(2)}</span>
                 </div>
-              </>
-            )}
-            {afternoonCustom.commission > 0 && (
-              <div className="breakdown-row commission-row">
-                <span className="breakdown-label">Custom Commission ({afternoonCustom.rate}%)</span>
-                <span className="breakdown-value commission">+${afternoonCustom.commission.toFixed(2)}</span>
-              </div>
-            )}
-          </div>
+              )}
+              {afternoonBuyback.amount > 0 && (
+                <>
+                  <div className="breakdown-row buyback-row">
+                    <span className="breakdown-label">Target Bought Back</span>
+                    <span className="breakdown-value buyback-info">${afternoonBuyback.amount.toFixed(2)}</span>
+                  </div>
+                  <div className="breakdown-row commission-row">
+                    <span className="breakdown-label">Buyback Commission (3.5%)</span>
+                    <span className="breakdown-value commission">+${afternoonBuyback.commission.toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+              {afternoonCustom.commission > 0 && (
+                <div className="breakdown-row commission-row">
+                  <span className="breakdown-label">Custom Commission ({afternoonCustom.rate}%)</span>
+                  <span className="breakdown-value commission">+${afternoonCustom.commission.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Summary */}
           <div className="breakdown-summary">

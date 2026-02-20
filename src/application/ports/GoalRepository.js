@@ -14,4 +14,8 @@ export class GoalRepository {
   delete(day) {
     throw new Error('Method not implemented')
   }
+
+  getRawData() {
+    throw new Error('Method not implemented')
+  }
 }

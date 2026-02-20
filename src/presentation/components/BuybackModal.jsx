@@ -6,31 +6,31 @@ export function BuybackModal({ goals, viewYear, viewMonth, availableExcess, onBu
   const pad = (n) => String(n).padStart(2, '0')
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
 
-  // Get all unmet targets
+  // Get all unmet targets - only for confirmed shifts
   const unmetTargets = []
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`
     const goal = goals[dateStr]
 
     if (goal?.hasGoals) {
-      // Morning shift: unmet and not bought back
-      if (goal.morningAmount && goal.morningWage !== 80 && !goal.morningBoughtBack) {
+      // Morning shift: confirmed, unmet and not bought back
+      if (goal.morningConfirmed && goal.morningAmount && goal.morningWage !== 80 && !goal.morningBoughtBack) {
         unmetTargets.push({
           dateStr,
           shift: 'morning',
           amount: goal.morningAmount,
-          label: `${viewMonth + 1}/${day} Morning`,
+          label: `${viewMonth + 1}/${day} Shift A`,
           displayAmount: `$${goal.morningAmount.toLocaleString()}`
         })
       }
 
-      // Afternoon shift: unmet and not bought back
-      if (goal.afternoonAmount && goal.afternoonWage !== 80 && !goal.afternoonBoughtBack) {
+      // Afternoon shift: confirmed, unmet and not bought back
+      if (goal.afternoonConfirmed && goal.afternoonAmount && goal.afternoonWage !== 80 && !goal.afternoonBoughtBack) {
         unmetTargets.push({
           dateStr,
           shift: 'afternoon',
           amount: goal.afternoonAmount,
-          label: `${viewMonth + 1}/${day} Afternoon`,
+          label: `${viewMonth + 1}/${day} Shift B`,
           displayAmount: `$${goal.afternoonAmount.toLocaleString()}`
         })
       }

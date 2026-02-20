@@ -15,6 +15,14 @@ export class GoalViewModel {
     this.afternoonCustomRate = goal.afternoonCustomRate
     this.morningCustomAmount = goal.morningCustomAmount
     this.afternoonCustomAmount = goal.afternoonCustomAmount
+    this.morningStartTime = goal.morningStartTime
+    this.morningEndTime = goal.morningEndTime
+    this.afternoonStartTime = goal.afternoonStartTime
+    this.afternoonEndTime = goal.afternoonEndTime
+    this.morningShiftHours = goal.morningShiftHours
+    this.afternoonShiftHours = goal.afternoonShiftHours
+    this.morningConfirmed = goal.morningConfirmed
+    this.afternoonConfirmed = goal.afternoonConfirmed
     this.hasGoals = goal.hasGoals()
   }
 
