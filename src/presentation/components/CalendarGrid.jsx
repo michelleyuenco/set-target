@@ -2,7 +2,7 @@ import { DayCell } from './DayCell'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-export function CalendarGrid({ year, month, goals, selectedDay, availableExcess, onDayClick, onBuyback, onWageClick }) {
+export function CalendarGrid({ year, month, goals, selectedDay, availableExcess, excessAllocation, onDayClick, onBuyback, onWageClick }) {
   const today = new Date()
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
@@ -37,6 +37,7 @@ export function CalendarGrid({ year, month, goals, selectedDay, availableExcess,
             isSelected={selectedDay === dateStr}
             isToday={dateStr === todayStr}
             availableExcess={availableExcess}
+            excessAllocation={excessAllocation}
             onClick={() => onDayClick(dateStr)}
             onBuyback={(shift) => onBuyback(dateStr, shift)}
             onWageClick={() => onWageClick(dateStr)}

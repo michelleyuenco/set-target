@@ -1,15 +1,30 @@
 import { createContext, useState, useEffect } from 'react'
 import { authService } from '../../infrastructure/firebase/authService'
+import { adminService } from '../../infrastructure/firebase/adminService'
+import { userProfileService } from '../../infrastructure/firebase/userProfileService'
 
 export const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged((firebaseUser) => {
+    const unsubscribe = authService.onAuthStateChanged(async (firebaseUser) => {
       setUser(firebaseUser)
+      if (firebaseUser) {
+        // Save user profile and check admin status in parallel
+        const [adminResult] = await Promise.all([
+          adminService.checkIsAdmin(firebaseUser.email),
+          userProfileService.saveProfile(firebaseUser).catch((err) => {
+            console.error('Failed to save user profile:', err)
+          })
+        ])
+        setIsAdmin(adminResult)
+      } else {
+        setIsAdmin(false)
+      }
       setLoading(false)
     })
     return unsubscribe
@@ -35,6 +50,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user,
       loading,
+      isAdmin,
       signUpWithEmail,
       signInWithEmail,
       signInWithGoogle,

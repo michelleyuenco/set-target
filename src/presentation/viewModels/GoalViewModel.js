@@ -23,6 +23,7 @@ export class GoalViewModel {
     this.afternoonShiftHours = goal.afternoonShiftHours
     this.morningConfirmed = goal.morningConfirmed
     this.afternoonConfirmed = goal.afternoonConfirmed
+    this.adminConfirmed = goal.adminConfirmed
     this.hasGoals = goal.hasGoals()
   }
 

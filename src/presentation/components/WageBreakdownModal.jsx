@@ -33,14 +33,14 @@ export function WageBreakdownModal({ day, goal, onClose }) {
 
   const getMorningCommission = () => {
     if (hasMorning && goal.morningWage === 80 && goal.morningActual > 0) {
-      return Math.round(goal.morningActual * 0.045 * 100) / 100
+      return Math.round(goal.morningAmount * 0.045 * 100) / 100
     }
     return 0
   }
 
   const getAfternoonCommission = () => {
     if (hasAfternoon && goal.afternoonWage === 80 && goal.afternoonActual > 0) {
-      return Math.round(goal.afternoonActual * 0.045 * 100) / 100
+      return Math.round(goal.afternoonAmount * 0.045 * 100) / 100
     }
     return 0
   }

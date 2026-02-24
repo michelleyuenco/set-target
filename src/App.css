@@ -11,17 +11,17 @@ body {
 .app {
   width: 100%;
   height: 100vh;
-  padding: 12px 16px 0;
+  padding: 8px 16px 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .month-nav {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 12px;
   flex-shrink: 0;
 }
 
@@ -29,18 +29,18 @@ body {
   text-align: center;
   color: #1a1a2e;
   margin: 0;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
-  min-width: 200px;
+  min-width: 180px;
 }
 
 .nav-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   border: 1.5px solid #e0e0e0;
   background: #fff;
-  font-size: 18px;
+  font-size: 15px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -63,27 +63,31 @@ body {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   flex-shrink: 0;
 }
 
 .weekday-header {
   text-align: center;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   color: #6b7280;
   line-height: 1;
-  padding: 0 0 2px 0;
+  padding: 0;
 }
 
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  grid-auto-rows: 1fr;
+  grid-auto-rows: minmax(80px, 1fr);
   gap: 8px;
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.15) transparent;
 }
 
 .day-cell {
@@ -212,7 +216,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  padding: 2px 4px;
+  padding: 3px 4px;
   border-radius: 4px;
   font-size: 9px;
   font-weight: 600;
@@ -231,11 +235,210 @@ body {
   line-height: 1;
 }
 
-.shift-details {
+.shift-target {
+  font-size: 7px;
+  color: #94a3b8;
+  font-weight: 500;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.no-target-badge {
+  font-size: 6px;
+  color: #f59e0b;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+  padding: 1px 3px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Shift state stripes */
+.shift.shift-met {
+  border-left: 3px solid #16a34a;
+  background: linear-gradient(90deg, #f0fdf4 0%, #f8fafc 20%);
+}
+
+.shift.shift-bought-back {
+  border-left: 3px solid #7c3aed;
+  background: linear-gradient(90deg, #f5f3ff 0%, #f8fafc 20%);
+}
+
+.shift.shift-unmet {
+  border-left: 3px solid #dc2626;
+  background: linear-gradient(90deg, #fef2f2 0%, #f8fafc 20%);
+}
+
+.shift.shift-unmet-buyable {
+  border-left: 3px solid #16a34a;
+  background: linear-gradient(90deg, #f0fdf4 0%, #f8fafc 20%);
+  box-shadow: inset 0 0 4px rgba(16, 185, 129, 0.15);
+}
+
+/* Excess revenue badge */
+.excess-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1.2;
+  flex-basis: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.excess-badge-label {
+  font-size: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+.excess-badge-amount {
+  font-size: 7px;
+  font-weight: 700;
+}
+
+.excess-badge-suffix {
+  font-size: 6px;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.2px;
+}
+
+.excess-badge.excess-consumed .excess-badge-suffix {
+  color: #94a3b8;
+}
+
+/* Numerical usage detail line (shown when excess is partially/fully consumed) */
+.excess-badge-detail {
+  flex-basis: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 2px;
+  font-size: 5.5px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  margin-top: -1px;
+  padding-bottom: 2px;
+}
+
+.excess-detail-used {
+  opacity: 0.7;
+}
+
+.excess-detail-sep {
+  opacity: 0.4;
+  font-size: 5px;
+}
+
+.excess-detail-remaining {
+  font-weight: 700;
+}
+
+.excess-badge.excess-partial .excess-detail-used {
+  color: #b45309;
+}
+
+.excess-badge.excess-partial .excess-detail-remaining {
+  color: #0e7490;
+}
+
+.excess-badge.excess-consumed .excess-detail-used {
+  color: #94a3b8;
+}
+
+.excess-badge.excess-consumed .excess-detail-remaining {
+  color: #94a3b8;
+}
+
+.excess-badge.excess-available {
+  background: #e0f7fa;
+  border: 1px solid #67e8f9;
+}
+
+.excess-badge.excess-available .excess-badge-label {
+  color: #0e7490;
+}
+
+.excess-badge.excess-available .excess-badge-amount {
+  color: #0891b2;
+}
+
+.excess-badge.excess-consumed {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.excess-badge.excess-consumed .excess-badge-label {
+  color: #94a3b8;
+}
+
+.excess-badge.excess-consumed .excess-badge-amount {
+  color: #94a3b8;
+}
+
+/* Partially used excess */
+.excess-badge.excess-partial {
+  background: linear-gradient(90deg, #fef3c7 0%, #e0f7fa 100%);
+  border: 1px solid #fbbf24;
+  position: relative;
+  overflow: hidden;
+}
+
+.excess-badge.excess-partial .excess-badge-label {
+  color: #92400e;
+}
+
+.excess-badge.excess-partial .excess-badge-amount {
+  color: #b45309;
+}
+
+/* Excess usage progress bar */
+.excess-usage-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 0 0 2px 2px;
+  overflow: hidden;
+}
+
+.excess-usage-fill {
+  display: block;
+  height: 100%;
+  border-radius: 0 0 2px 2px;
+}
+
+.excess-badge.excess-partial .excess-usage-fill {
+  background: #f59e0b;
+}
+
+.excess-badge.excess-consumed .excess-usage-fill {
+  background: #94a3b8;
+}
+
+/* Make consumed badge also relative for bar */
+.excess-badge.excess-consumed {
+  position: relative;
+  overflow: hidden;
+}
+
+.shift-details {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  column-gap: 3px;
+  row-gap: 4px;
   min-width: 0;
   flex: 1;
   overflow: hidden;
@@ -853,28 +1056,29 @@ body {
 
 .monthly-summary {
   flex-shrink: 0;
-  padding: 10px 20px;
+  padding: 8px 20px;
   background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%);
-  border-radius: 12px 12px 0 0;
+  border-radius: 10px 10px 0 0;
   box-shadow: 0 -2px 12px rgba(109, 40, 217, 0.25);
   margin: 0 -16px;
   transition: padding 0.2s ease;
 }
 
 .monthly-summary.collapsed {
-  padding: 6px 20px;
+  padding: 2px 20px;
 }
 
 .summary-toggle {
   display: flex;
   justify-content: center;
   cursor: pointer;
-  padding: 2px 0;
+  padding: 0;
   user-select: none;
+  line-height: 1;
 }
 
 .toggle-arrow {
-  font-size: 10px;
+  font-size: 8px;
   color: rgba(255, 255, 255, 0.6);
   transition: color 0.2s ease;
 }
@@ -887,17 +1091,17 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 2px 0;
+  padding: 1px 0;
 }
 
 .monthly-row .monthly-label {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.8);
 }
 
 .monthly-row .monthly-value {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   color: white;
 }
@@ -914,40 +1118,87 @@ body {
   color: #f9a8d4;
 }
 
-.monthly-row.excess-row .monthly-value {
+.excess-section {
+  background: rgba(125, 211, 252, 0.08);
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: 6px;
+  padding: 5px 8px;
+  margin: 3px 0;
+}
+
+.excess-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.excess-label {
+  font-size: 0.85rem;
   color: #7dd3fc;
+}
+
+.excess-value {
+  font-weight: 600;
+  color: #7dd3fc;
+}
+
+.excess-toggle-hint {
+  font-size: 0.65rem;
+  opacity: 0.5;
+}
+
+.excess-detail-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding-left: 8px;
+}
+
+.excess-detail-label {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.excess-detail-value {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.excess-detail-row.excess-used .excess-detail-value {
+  color: #fca5a5;
 }
 
 .monthly-total {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 4px;
-  padding-top: 6px;
+  margin-top: 2px;
+  padding-top: 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .monthly-total .monthly-label {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.9);
 }
 
 .monthly-amount {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 800;
   color: white;
 }
 
 .buyback-btn {
   width: 100%;
-  margin-top: 12px;
-  padding: 10px 16px;
+  margin-top: 8px;
+  padding: 7px 14px;
   background: rgba(255, 255, 255, 0.2);
   border: 2px solid rgba(255, 255, 255, 0.4);
-  border-radius: 8px;
+  border-radius: 6px;
   color: white;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -961,13 +1212,13 @@ body {
 
 .export-btn {
   width: 100%;
-  margin-top: 8px;
-  padding: 8px 16px;
+  margin-top: 6px;
+  padding: 6px 14px;
   background: rgba(255, 255, 255, 0.12);
   border: 1.5px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
+  border-radius: 6px;
   color: rgba(255, 255, 255, 0.85);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -981,8 +1232,13 @@ body {
 
 /* Responsive adjustments */
 @media (max-width: 800px) {
+  .calendar-weekdays {
+    gap: 4px;
+  }
+
   .calendar-grid {
     gap: 4px;
+    grid-auto-rows: minmax(70px, 1fr);
   }
 
   .day-cell {
@@ -1004,12 +1260,47 @@ body {
     font-size: 7px;
   }
 
+  .shift-target {
+    font-size: 6px;
+  }
+
+  .no-target-badge {
+    font-size: 5px;
+  }
+
   .wage-value {
     font-size: 8px;
   }
 
   .commission-inline {
     font-size: 7px;
+  }
+
+  .shift.shift-met,
+  .shift.shift-bought-back,
+  .shift.shift-unmet,
+  .shift.shift-unmet-buyable {
+    border-left-width: 2px;
+  }
+
+  .excess-badge-label {
+    font-size: 5px;
+  }
+
+  .excess-badge-amount {
+    font-size: 6px;
+  }
+
+  .excess-badge-detail {
+    font-size: 5px;
+  }
+
+  .excess-badge-suffix {
+    font-size: 5px;
+  }
+
+  .excess-badge {
+    padding: 0 2px;
   }
 
   .labor-total {
@@ -1031,68 +1322,490 @@ body {
   }
 
   .month-nav h1 {
-    font-size: 16px;
-    min-width: 150px;
+    font-size: 15px;
+    min-width: 140px;
   }
 
-  .monthly-summary {
-    padding: 8px 20px;
-  }
-
-  .monthly-summary.collapsed {
-    padding: 4px 20px;
-  }
-
-  .monthly-row .monthly-label {
-    font-size: 12px;
-  }
-
-  .monthly-row .monthly-value {
+  .nav-btn {
+    width: 26px;
+    height: 26px;
     font-size: 14px;
   }
 
+  .monthly-summary {
+    padding: 6px 16px;
+  }
+
+  .monthly-summary.collapsed {
+    padding: 2px 16px;
+  }
+
+  .monthly-row .monthly-label {
+    font-size: 11px;
+  }
+
+  .monthly-row .monthly-value {
+    font-size: 13px;
+  }
+
+  .monthly-total .monthly-label {
+    font-size: 12px;
+  }
+
   .monthly-amount {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .app {
-    padding: 10px 12px 0;
-    gap: 3px;
+    padding: 6px 12px 0;
+    gap: 2px;
   }
 
   .monthly-summary {
     margin: 0 -12px;
   }
+
+  .app-header {
+    min-height: 20px;
+  }
 }
 
 @media (max-width: 500px) {
-  .calendar-grid {
-    gap: 3px;
+  /* ── App container ── */
+  .app {
+    padding: 4px 6px 0;
+    gap: 1px;
   }
 
+  /* ── App header ── */
+  .app-header {
+    min-height: 18px;
+  }
+
+  .auth-user-email {
+    max-width: 100px;
+    font-size: 9px;
+  }
+
+  .auth-btn {
+    padding: 2px 8px;
+    font-size: 9px;
+  }
+
+  /* ── Month navigation ── */
+  .month-nav {
+    gap: 8px;
+  }
+
+  .month-nav h1 {
+    font-size: 14px;
+    min-width: 0;
+  }
+
+  .nav-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 14px;
+    flex-shrink: 0;
+    border-radius: 5px;
+  }
+
+  /* ── Calendar weekdays ── */
+  .calendar-weekdays {
+    gap: 2px;
+    margin-bottom: 1px;
+  }
+
+  .weekday-header {
+    font-size: 7px;
+    padding: 0;
+  }
+
+  /* ── Calendar grid ── */
+  .calendar-grid {
+    gap: 2px;
+    grid-auto-rows: minmax(52px, 1fr);
+  }
+
+  /* ── Day cells ── */
   .day-cell {
-    padding: 3px;
+    padding: 2px;
+    border-radius: 4px;
+    border-width: 1px;
+  }
+
+  .day-cell.today {
+    box-shadow: 0 0 0 1.5px rgba(245, 158, 11, 0.3);
+  }
+
+  .day-cell.selected {
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
   }
 
   .day-number {
-    font-size: 11px;
+    font-size: 10px;
+    margin-bottom: 1px;
+  }
+
+  .goals-display {
+    gap: 1px;
+  }
+
+  /* ── Shift rows ── */
+  .shift-wages {
+    gap: 1px;
+  }
+
+  .shift {
+    padding: 1px 2px;
+    min-height: 0;
+    gap: 2px;
+    border-radius: 3px;
+  }
+
+  .shift.shift-met,
+  .shift.shift-bought-back,
+  .shift.shift-unmet,
+  .shift.shift-unmet-buyable {
+    border-left-width: 2px;
   }
 
   .shift-label {
     display: none;
   }
 
+  .shift-target {
+    display: none;
+  }
+
+  .no-target-badge {
+    display: none;
+  }
+
+  /* ── Wage display ── */
   .wage-value {
     font-size: 8px;
   }
 
+  .wage-suffix {
+    display: none;
+  }
+
+  /* ── Commission ── */
   .commission-inline {
+    font-size: 6px;
+  }
+
+  /* ── Excess badge: compact on mobile (show amount only) ── */
+  .excess-badge {
+    padding: 0 2px;
+    gap: 1px;
+  }
+
+  .excess-badge-label {
+    display: none;
+  }
+
+  .excess-badge-amount {
+    font-size: 6px;
+  }
+
+  .excess-badge-detail {
+    display: none;
+  }
+
+  .excess-badge-suffix {
+    font-size: 5px;
+  }
+
+  /* ── Unmet badge: compact on mobile (show amount only) ── */
+  .unmet-badge {
+    padding: 0 2px;
+    gap: 1px;
+  }
+
+  .unmet-badge-label {
+    display: none;
+  }
+
+  .unmet-badge-amount {
+    font-size: 6px;
+  }
+
+  .unmet-badge .buyback-star {
+    font-size: 6px;
+    margin-left: 0;
+  }
+
+  /* ── Labor total ── */
+  .labor-total {
+    font-size: 8px;
+    padding: 2px 2px;
+    margin-top: 1px;
+    border-radius: 3px;
+  }
+
+  /* ── Monthly summary ── */
+  .monthly-summary {
+    margin: 0 -6px;
+    padding: 5px 12px;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .monthly-summary.collapsed {
+    padding: 1px 12px;
+  }
+
+  .toggle-arrow {
     font-size: 7px;
   }
 
-  .labor-total {
+  .monthly-row .monthly-label {
+    font-size: 10px;
+  }
+
+  .monthly-row .monthly-value {
+    font-size: 11px;
+  }
+
+  .monthly-row {
+    padding: 0;
+  }
+
+  .monthly-total {
+    margin-top: 1px;
+    padding-top: 3px;
+  }
+
+  .monthly-total .monthly-label {
+    font-size: 11px;
+  }
+
+  .monthly-amount {
+    font-size: 14px;
+  }
+
+  .excess-section {
+    padding: 4px 6px;
+    margin: 2px 0;
+  }
+
+  .excess-label {
+    font-size: 0.75rem;
+  }
+
+  .export-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+    min-height: 36px;
+    margin-top: 4px;
+  }
+
+  .buyback-btn {
+    margin-top: 4px;
+    padding: 5px 12px;
+    font-size: 11px;
+  }
+
+  /* ── Modals: bottom-sheet style ── */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    padding: 20px 16px;
+    max-height: 92vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-compact {
+    max-width: 100%;
+    padding: 20px 16px;
+  }
+
+  .modal h2 {
+    font-size: 17px;
+    margin-bottom: 12px;
+  }
+
+  /* Prevent iOS zoom on input focus (requires font-size >= 16px) */
+  .input-compact input,
+  .input-group input,
+  .login-form .form-group input {
+    font-size: 16px;
+  }
+
+  .input-compact input {
+    padding: 8px;
+  }
+
+  .time-input-group input[type="time"] {
+    font-size: 14px;
+    padding: 6px;
+  }
+
+  /* Larger touch targets for modal buttons */
+  .button-group {
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .button-group button {
+    padding: 14px 16px;
+    font-size: 15px;
+    min-height: 48px;
+    border-radius: 10px;
+  }
+
+  /* Shift row in modal */
+  .shift-row {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .shift-row .shift-label {
+    display: block;
+    min-width: 50px;
+    font-size: 11px;
+  }
+
+  .shift-time-row {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .shift-duration {
+    font-size: 11px;
+    min-width: 36px;
+  }
+
+  .shift-confirm {
+    font-size: 13px;
+    gap: 8px;
+  }
+
+  .shift-confirm input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+
+  .wage-compact {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .custom-commission-toggle label {
+    font-size: 12px;
+    gap: 8px;
+  }
+
+  .custom-commission-toggle input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+  }
+
+  .custom-commission-inputs {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  /* ── Buyback modal ── */
+  .modal-buyback {
+    max-width: 100%;
+  }
+
+  .target-item {
+    padding: 10px;
+  }
+
+  .targets-list {
+    max-height: 40vh;
+  }
+
+  /* ── Wage breakdown modal ── */
+  .wage-breakdown-modal {
+    max-width: 100%;
+  }
+
+  /* ── Login modal ── */
+  .login-modal {
+    max-width: 100%;
+  }
+
+  .login-tab {
+    padding: 12px;
+    font-size: 14px;
+    min-height: 44px;
+  }
+
+  .google-btn {
+    padding: 12px 16px;
+    font-size: 14px;
+    min-height: 44px;
+  }
+
+  /* ── Migration modal ── */
+  .migration-modal {
+    max-width: 100%;
+  }
+
+  .migration-option-btn {
+    padding: 14px 16px;
+    min-height: 48px;
+  }
+
+  /* ── Confirm modal ── */
+  .confirm-modal {
+    max-width: 100%;
+  }
+
+  /* ── Admin bar ── */
+  .admin-bar {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 3px 6px;
+  }
+
+  .admin-badge {
+    font-size: 8px;
+    padding: 1px 5px;
+  }
+
+  .admin-select-label {
     font-size: 9px;
-    padding: 2px 3px;
+  }
+
+  .admin-member-select {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+
+  .back-to-my-data-btn {
+    font-size: 9px;
+    padding: 2px 8px;
+    min-height: auto;
+  }
+
+  .admin-edit-toggle {
+    font-size: 9px;
+    padding: 2px 8px;
+    min-height: auto;
+  }
+
+  .admin-viewing-banner {
+    font-size: 10px;
+    padding: 2px 8px;
+    gap: 6px;
+  }
+
+  /* ── Syncing banner ── */
+  .syncing-banner {
+    font-size: 10px;
+    padding: 3px;
   }
 }
 
@@ -1378,17 +2091,17 @@ body {
   justify-content: flex-end;
   align-items: center;
   flex-shrink: 0;
-  min-height: 32px;
+  min-height: 24px;
 }
 
 .auth-button-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .auth-user-email {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #6b7280;
   max-width: 180px;
@@ -1398,9 +2111,9 @@ body {
 }
 
 .auth-btn {
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1682,4 +2395,459 @@ body {
 .sync-cloud-btn:hover {
   background: rgba(59, 130, 246, 0.35);
   border-color: rgba(59, 130, 246, 0.6);
+}
+
+/* Admin Bar */
+.admin-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.admin-badge {
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.admin-member-select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-select-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
+}
+
+.admin-member-select {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-member-select:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.admin-member-select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+}
+
+.admin-member-select option {
+  background: #1e1b4b;
+  color: white;
+}
+
+.back-to-my-data-btn {
+  padding: 3px 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.back-to-my-data-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.admin-viewing-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 3px 10px;
+  background: #ede9fe;
+  color: #5b21b6;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 5px;
+  border: 1.5px solid #c4b5fd;
+}
+
+/* Admin Edit Toggle */
+.admin-edit-toggle {
+  padding: 3px 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.admin-edit-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: white;
+}
+
+.admin-edit-toggle.active {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: white;
+  animation: pulse-edit 2s ease-in-out infinite;
+}
+
+@keyframes pulse-edit {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+/* Read-only badge in GoalModal */
+.read-only-badge {
+  text-align: center;
+  padding: 6px 12px;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
+  border: 1.5px solid #e5e7eb;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Confirm save modal */
+.confirm-modal {
+  max-width: 340px;
+}
+
+.confirm-message {
+  text-align: center;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
+
+.confirm-save-btn {
+  background: #dc2626 !important;
+}
+
+.confirm-save-btn:hover {
+  background: #b91c1c !important;
+}
+
+/* ========== Admin Data Verification ========== */
+
+.admin-confirmed-check {
+  display: inline-block;
+  color: #10b981;
+  font-size: 9px;
+  font-weight: 700;
+  margin-left: 2px;
+  vertical-align: top;
+  line-height: 1;
+}
+
+.admin-confirmed-badge {
+  text-align: center;
+  padding: 4px 10px;
+  background: #ecfdf5;
+  color: #059669;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  border: 1.5px solid #a7f3d0;
+  margin-bottom: 8px;
+}
+
+.admin-confirm-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.admin-confirm-btn {
+  width: 100%;
+  padding: 8px 16px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-confirm-btn:hover {
+  background: #059669;
+}
+
+.admin-confirm-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-confirm-status.confirmed {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1.5px solid #a7f3d0;
+}
+
+.admin-confirm-icon {
+  font-size: 16px;
+}
+
+.admin-unconfirm-btn {
+  margin-left: auto;
+  padding: 3px 8px;
+  background: transparent;
+  color: #9ca3af;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-unconfirm-btn:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.confirmation-progress {
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7c3aed;
+}
+
+.confirmation-progress.all-confirmed {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+/* ========== Team Bonus ========== */
+
+.team-bonus-btn {
+  padding: 3px 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: 5px;
+  background: rgba(245, 158, 11, 0.3);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.team-bonus-btn:hover {
+  background: rgba(245, 158, 11, 0.5);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.team-bonus-modal {
+  max-width: 500px;
+  width: 90vw;
+}
+
+.team-bonus-input-section {
+  margin-bottom: 16px;
+}
+
+.team-bonus-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.team-bonus-amount-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  transition: border-color 0.2s ease;
+}
+
+.team-bonus-amount-input:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+.team-bonus-loading {
+  text-align: center;
+  padding: 24px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.team-bonus-table-wrapper {
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+
+.team-bonus-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.team-bonus-table th {
+  background: #f9fafb;
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 700;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.team-bonus-table th:nth-child(2),
+.team-bonus-table th:nth-child(3),
+.team-bonus-table th:nth-child(4) {
+  text-align: right;
+}
+
+.team-bonus-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+}
+
+.team-bonus-table tbody tr:hover {
+  background: #fffbeb;
+}
+
+.team-bonus-table .zero-hours td {
+  color: #9ca3af;
+}
+
+.member-name {
+  font-weight: 600;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-hours,
+.member-percentage,
+.member-share {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.member-share {
+  font-weight: 700;
+  color: #d97706;
+}
+
+.team-bonus-table tfoot td {
+  border-top: 2px solid #e5e7eb;
+  border-bottom: none;
+  font-size: 13px;
+  padding-top: 10px;
+}
+
+.team-bonus-last-saved {
+  text-align: center;
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+.team-bonus-row .monthly-label {
+  color: #d97706;
+}
+
+.team-bonus-row .monthly-value {
+  color: #d97706;
+  font-weight: 700;
+}
+
+/* ========== Mobile overrides for new features ========== */
+@media (max-width: 500px) {
+  .admin-viewing-banner {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .team-bonus-modal {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .team-bonus-table {
+    font-size: 12px;
+  }
+
+  .team-bonus-table th,
+  .team-bonus-table td {
+    padding: 6px 6px;
+  }
+
+  .member-name {
+    max-width: 100px;
+  }
+
+  .admin-bar {
+    flex-wrap: wrap;
+  }
 }

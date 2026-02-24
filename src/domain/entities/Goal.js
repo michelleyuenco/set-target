@@ -22,7 +22,8 @@ export class Goal {
     afternoonStartTime = null,
     afternoonEndTime = null,
     morningConfirmed = false,
-    afternoonConfirmed = false
+    afternoonConfirmed = false,
+    adminConfirmed = false
   ) {
     this.day = day
     this.morningAmount = this.parseAmount(morningAmount)
@@ -41,6 +42,7 @@ export class Goal {
     this.afternoonEndTime = afternoonEndTime || DEFAULT_AFTERNOON_END
     this.morningConfirmed = !!morningConfirmed
     this.afternoonConfirmed = !!afternoonConfirmed
+    this.adminConfirmed = !!adminConfirmed
   }
 
   parseAmount(value) {
@@ -105,7 +107,8 @@ export class Goal {
       afternoonStartTime: this.afternoonStartTime,
       afternoonEndTime: this.afternoonEndTime,
       morningConfirmed: this.morningConfirmed,
-      afternoonConfirmed: this.afternoonConfirmed
+      afternoonConfirmed: this.afternoonConfirmed,
+      adminConfirmed: this.adminConfirmed
     }
   }
 
@@ -136,7 +139,8 @@ export class Goal {
       data.afternoonStartTime,
       data.afternoonEndTime,
       morningConfirmed,
-      afternoonConfirmed
+      afternoonConfirmed,
+      data.adminConfirmed || false
     )
   }
 }

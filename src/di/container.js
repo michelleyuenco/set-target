@@ -10,6 +10,11 @@ const localGoalService = new GoalService(localRepository)
 let firestoreRepository = null
 let firestoreGoalService = null
 
+// Admin member viewing (created when admin selects a member)
+let adminMemberRepository = null
+let adminMemberGoalService = null
+let viewingAsMember = false
+
 export async function initFirestoreService(uid) {
   firestoreRepository = new CachedFirestoreGoalRepository(uid)
   await firestoreRepository.initialize()
@@ -22,7 +27,24 @@ export function clearFirestoreService() {
   firestoreGoalService = null
 }
 
+export async function initAdminMemberService(uid) {
+  adminMemberRepository = new CachedFirestoreGoalRepository(uid)
+  await adminMemberRepository.initialize()
+  adminMemberGoalService = new GoalService(adminMemberRepository)
+  viewingAsMember = true
+  return adminMemberGoalService
+}
+
+export function clearAdminMemberService() {
+  adminMemberRepository = null
+  adminMemberGoalService = null
+  viewingAsMember = false
+}
+
 export function getActiveGoalService() {
+  if (viewingAsMember && adminMemberGoalService) {
+    return adminMemberGoalService
+  }
   return firestoreGoalService || localGoalService
 }
 

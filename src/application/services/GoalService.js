@@ -27,7 +27,8 @@ export class GoalService {
     afternoonStartTime,
     afternoonEndTime,
     morningConfirmed,
-    afternoonConfirmed
+    afternoonConfirmed,
+    adminConfirmed
   ) {
     return this.saveGoalUseCase.execute(
       day,
@@ -46,7 +47,60 @@ export class GoalService {
       afternoonStartTime,
       afternoonEndTime,
       morningConfirmed,
-      afternoonConfirmed
+      afternoonConfirmed,
+      adminConfirmed
+    )
+  }
+
+  confirmGoal(day) {
+    const goal = this.getGoalByDayUseCase.execute(day)
+    if (!goal) return null
+
+    return this.saveGoalUseCase.execute(
+      day,
+      goal.morningAmount,
+      goal.afternoonAmount,
+      goal.morningActual,
+      goal.afternoonActual,
+      goal.morningBoughtBack,
+      goal.afternoonBoughtBack,
+      goal.morningCustomRate,
+      goal.afternoonCustomRate,
+      goal.morningCustomAmount,
+      goal.afternoonCustomAmount,
+      goal.morningStartTime,
+      goal.morningEndTime,
+      goal.afternoonStartTime,
+      goal.afternoonEndTime,
+      goal.morningConfirmed,
+      goal.afternoonConfirmed,
+      true
+    )
+  }
+
+  unconfirmGoal(day) {
+    const goal = this.getGoalByDayUseCase.execute(day)
+    if (!goal) return null
+
+    return this.saveGoalUseCase.execute(
+      day,
+      goal.morningAmount,
+      goal.afternoonAmount,
+      goal.morningActual,
+      goal.afternoonActual,
+      goal.morningBoughtBack,
+      goal.afternoonBoughtBack,
+      goal.morningCustomRate,
+      goal.afternoonCustomRate,
+      goal.morningCustomAmount,
+      goal.afternoonCustomAmount,
+      goal.morningStartTime,
+      goal.morningEndTime,
+      goal.afternoonStartTime,
+      goal.afternoonEndTime,
+      goal.morningConfirmed,
+      goal.afternoonConfirmed,
+      false
     )
   }
 

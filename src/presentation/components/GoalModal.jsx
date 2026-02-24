@@ -17,8 +17,13 @@ export function GoalModal({
   initialAfternoonEndTime,
   initialMorningConfirmed,
   initialAfternoonConfirmed,
+  initialAdminConfirmed,
+  isAdminViewing,
   onSave,
-  onCancel
+  onCancel,
+  onConfirm,
+  onUnconfirm,
+  readOnly = false
 }) {
   const [morningGoal, setMorningGoal] = useState('')
   const [afternoonGoal, setAfternoonGoal] = useState('')
@@ -115,10 +120,20 @@ export function GoalModal({
     return 'wage-none'
   }
 
+  const hasShiftData = morningConfirmed || afternoonConfirmed
+
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal modal-compact" onClick={e => e.stopPropagation()}>
         <h2>{day}</h2>
+
+        {readOnly && (
+          <div className="read-only-badge">View Only</div>
+        )}
+
+        {initialAdminConfirmed && !isAdminViewing && (
+          <div className="admin-confirmed-badge">Admin Verified</div>
+        )}
 
         <div className="shifts-compact">
           <div className={`shift-section-wrapper ${!morningConfirmed ? 'shift-unconfirmed' : ''}`}>
@@ -128,6 +143,7 @@ export function GoalModal({
                   type="checkbox"
                   checked={morningConfirmed}
                   onChange={(e) => setMorningConfirmed(e.target.checked)}
+                  disabled={readOnly}
                 />
                 <span>Shift A (Morning)</span>
               </label>
@@ -141,7 +157,7 @@ export function GoalModal({
                     value={morningGoal}
                     onChange={(e) => setMorningGoal(e.target.value)}
                     placeholder="0"
-                    disabled={!morningConfirmed}
+                    disabled={readOnly || !morningConfirmed}
                   />
                 </div>
                 <div className="input-compact">
@@ -151,7 +167,7 @@ export function GoalModal({
                     value={morningActual}
                     onChange={(e) => setMorningActual(e.target.value)}
                     placeholder="0"
-                    disabled={!morningConfirmed}
+                    disabled={readOnly || !morningConfirmed}
                   />
                 </div>
                 <div className={`wage-compact ${wageClass(morningWage)}`}>
@@ -166,7 +182,7 @@ export function GoalModal({
                   type="time"
                   value={morningStartTime}
                   onChange={(e) => setMorningStartTime(e.target.value)}
-                  disabled={!morningConfirmed}
+                  disabled={readOnly || !morningConfirmed}
                 />
               </div>
               <div className="time-input-group">
@@ -175,7 +191,7 @@ export function GoalModal({
                   type="time"
                   value={morningEndTime}
                   onChange={(e) => setMorningEndTime(e.target.value)}
-                  disabled={!morningConfirmed}
+                  disabled={readOnly || !morningConfirmed}
                 />
               </div>
               <div className="shift-duration">
@@ -187,7 +203,7 @@ export function GoalModal({
                 <input
                   type="checkbox"
                   checked={showMorningCustom}
-                  disabled={!morningConfirmed}
+                  disabled={readOnly || !morningConfirmed}
                   onChange={(e) => {
                     setShowMorningCustom(e.target.checked)
                     if (!e.target.checked) {
@@ -209,7 +225,7 @@ export function GoalModal({
                     value={morningCustomRate}
                     onChange={(e) => setMorningCustomRate(e.target.value)}
                     placeholder="5"
-                    disabled={!morningConfirmed}
+                    disabled={readOnly || !morningConfirmed}
                   />
                 </div>
                 <div className="input-compact">
@@ -219,7 +235,7 @@ export function GoalModal({
                     value={morningCustomAmount}
                     onChange={(e) => setMorningCustomAmount(e.target.value)}
                     placeholder="1000"
-                    disabled={!morningConfirmed}
+                    disabled={readOnly || !morningConfirmed}
                   />
                 </div>
               </div>
@@ -233,6 +249,7 @@ export function GoalModal({
                   type="checkbox"
                   checked={afternoonConfirmed}
                   onChange={(e) => setAfternoonConfirmed(e.target.checked)}
+                  disabled={readOnly}
                 />
                 <span>Shift B (Afternoon)</span>
               </label>
@@ -246,7 +263,7 @@ export function GoalModal({
                     value={afternoonGoal}
                     onChange={(e) => setAfternoonGoal(e.target.value)}
                     placeholder="0"
-                    disabled={!afternoonConfirmed}
+                    disabled={readOnly || !afternoonConfirmed}
                   />
                 </div>
                 <div className="input-compact">
@@ -256,7 +273,7 @@ export function GoalModal({
                     value={afternoonActual}
                     onChange={(e) => setAfternoonActual(e.target.value)}
                     placeholder="0"
-                    disabled={!afternoonConfirmed}
+                    disabled={readOnly || !afternoonConfirmed}
                   />
                 </div>
                 <div className={`wage-compact ${wageClass(afternoonWage)}`}>
@@ -271,7 +288,7 @@ export function GoalModal({
                   type="time"
                   value={afternoonStartTime}
                   onChange={(e) => setAfternoonStartTime(e.target.value)}
-                  disabled={!afternoonConfirmed}
+                  disabled={readOnly || !afternoonConfirmed}
                 />
               </div>
               <div className="time-input-group">
@@ -280,7 +297,7 @@ export function GoalModal({
                   type="time"
                   value={afternoonEndTime}
                   onChange={(e) => setAfternoonEndTime(e.target.value)}
-                  disabled={!afternoonConfirmed}
+                  disabled={readOnly || !afternoonConfirmed}
                 />
               </div>
               <div className="shift-duration">
@@ -292,7 +309,7 @@ export function GoalModal({
                 <input
                   type="checkbox"
                   checked={showAfternoonCustom}
-                  disabled={!afternoonConfirmed}
+                  disabled={readOnly || !afternoonConfirmed}
                   onChange={(e) => {
                     setShowAfternoonCustom(e.target.checked)
                     if (!e.target.checked) {
@@ -314,7 +331,7 @@ export function GoalModal({
                     value={afternoonCustomRate}
                     onChange={(e) => setAfternoonCustomRate(e.target.value)}
                     placeholder="5"
-                    disabled={!afternoonConfirmed}
+                    disabled={readOnly || !afternoonConfirmed}
                   />
                 </div>
                 <div className="input-compact">
@@ -324,7 +341,7 @@ export function GoalModal({
                     value={afternoonCustomAmount}
                     onChange={(e) => setAfternoonCustomAmount(e.target.value)}
                     placeholder="1000"
-                    disabled={!afternoonConfirmed}
+                    disabled={readOnly || !afternoonConfirmed}
                   />
                 </div>
               </div>
@@ -332,9 +349,25 @@ export function GoalModal({
           </div>
         </div>
 
+        {isAdminViewing && hasShiftData && (
+          <div className="admin-confirm-section">
+            {initialAdminConfirmed ? (
+              <div className="admin-confirm-status confirmed">
+                <span className="admin-confirm-icon">&#10003;</span>
+                <span>Data Verified</span>
+                <button className="admin-unconfirm-btn" onClick={onUnconfirm}>Undo Verification</button>
+              </div>
+            ) : (
+              <button className="admin-confirm-btn" onClick={onConfirm}>
+                Verify Data
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="button-group">
-          <button className="cancel-btn" onClick={onCancel}>Cancel</button>
-          <button className="save-btn" onClick={handleSave}>Save</button>
+          <button className="cancel-btn" onClick={onCancel}>{readOnly ? 'Close' : 'Cancel'}</button>
+          {!readOnly && <button className="save-btn" onClick={handleSave}>Save</button>}
         </div>
       </div>
     </div>
