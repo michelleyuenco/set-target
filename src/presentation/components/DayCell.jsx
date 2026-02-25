@@ -49,7 +49,6 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     return cost
   }
 
-  // Calculate commission per shift (4.5% when target is met) - only for confirmed shifts
   const getMorningCommission = () => {
     if (goal?.morningConfirmed && goal?.morningWage === 80 && goal?.morningActual > 0) {
       return Math.round(goal.morningAmount * 0.045 * 100) / 100
@@ -64,7 +63,6 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     return 0
   }
 
-  // Calculate buyback amounts and commissions (3.5%) - only for confirmed shifts
   const getMorningBuyback = () => {
     if (goal?.morningConfirmed && goal?.morningBoughtBack && goal?.morningAmount) {
       return {
@@ -85,7 +83,6 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     return { amount: 0, commission: 0 }
   }
 
-  // Calculate custom commissions - only for confirmed shifts
   const getMorningCustomCommission = () => {
     if (goal?.morningConfirmed && goal?.morningCustomRate && goal?.morningCustomAmount) {
       return Math.round(goal.morningCustomAmount * (goal.morningCustomRate / 100) * 100) / 100
@@ -126,6 +123,23 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
   const morningExcessUsed = morningAlloc?.used || 0
   const afternoonExcessUsed = afternoonAlloc?.used || 0
 
+  // Pill class for shift label (colored by state)
+  const pillClass = (shift) => {
+    if (shift === 'morning') {
+      if (isMorningBoughtBack) return 'pill-bought-back'
+      if (isMorningMet) return 'pill-met'
+      if (isMorningUnmet && canBuyMorning) return 'pill-unmet-buyable'
+      if (isMorningUnmet) return 'pill-unmet'
+    } else {
+      if (isAfternoonBoughtBack) return 'pill-bought-back'
+      if (isAfternoonMet) return 'pill-met'
+      if (isAfternoonUnmet && canBuyAfternoon) return 'pill-unmet-buyable'
+      if (isAfternoonUnmet) return 'pill-unmet'
+    }
+    return ''
+  }
+
+  // Shift state class for subtle background tint
   const shiftStateClass = (shift) => {
     if (shift === 'morning') {
       if (isMorningBoughtBack) return 'shift-bought-back'
@@ -143,6 +157,19 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
 
   const hasAnyConfirmed = goal?.morningConfirmed || goal?.afternoonConfirmed
 
+  // Check if shift has secondary info (excess, commission, unmet)
+  const hasMorningMeta = morningExcess > 0
+    || (isMorningMet && morningCommission > 0)
+    || (isMorningBoughtBack && morningBuyback.commission > 0)
+    || isMorningUnmet
+    || morningCustomCommission > 0
+
+  const hasAfternoonMeta = afternoonExcess > 0
+    || (isAfternoonMet && afternoonCommission > 0)
+    || (isAfternoonBoughtBack && afternoonBuyback.commission > 0)
+    || isAfternoonUnmet
+    || afternoonCustomCommission > 0
+
   return (
     <div className={cellClass} onClick={onClick}>
       <div className="day-number">
@@ -156,120 +183,128 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
           <div className="shift-wages">
             {goal.morningConfirmed && (
               <div className={`shift ${shiftStateClass('morning')}`}>
-                <span className="shift-label">A</span>
-                {goal.morningAmount > 0 ? (
-                  <span className="shift-target" title="Target">${goal.morningAmount.toLocaleString()}</span>
-                ) : (
-                  <span className="no-target-badge" title="No revenue target set">No Target Yet</span>
+                <div className="shift-primary">
+                  <span className={`shift-pill ${pillClass('morning')}`}>A</span>
+                  {goal.morningAmount > 0 ? (
+                    <span className="shift-target">${goal.morningAmount.toLocaleString()}</span>
+                  ) : (
+                    <span className="no-target-badge">No Target Yet</span>
+                  )}
+                  <span className={`shift-wage ${wageClass(goal.morningWage)}`}>${goal.morningWage}<span className="wage-suffix">/hr</span></span>
+                </div>
+                {hasMorningMeta && (
+                  <div className="shift-meta">
+                    {morningExcess > 0 && (
+                      <span
+                        className={`excess-badge ${morningExcessUsed >= morningExcess ? 'excess-consumed' : morningExcessUsed > 0 ? 'excess-partial' : 'excess-available'}`}
+                        title={morningExcessUsed > 0
+                          ? `Excess: $${morningExcess.toLocaleString()} | Used: $${morningExcessUsed.toLocaleString()} | Remaining: $${(morningExcess - morningExcessUsed).toLocaleString()}`
+                          : `Excess from this shift: $${morningExcess.toLocaleString()}`}
+                      >
+                        <span className="excess-badge-label">Excess</span>
+                        <span className="excess-badge-amount">${morningExcess.toLocaleString()}</span>
+                        {morningExcessUsed >= morningExcess && (
+                          <span className="excess-badge-suffix">used</span>
+                        )}
+                        {morningExcessUsed > 0 && morningExcessUsed < morningExcess && (
+                          <span className="excess-badge-detail">
+                            <span className="excess-detail-used">−${morningExcessUsed.toLocaleString()}</span>
+                            <span className="excess-detail-sep">&middot;</span>
+                            <span className="excess-detail-remaining">${(morningExcess - morningExcessUsed).toLocaleString()} left</span>
+                          </span>
+                        )}
+                        {morningExcessUsed > 0 && morningExcessUsed < morningExcess && (
+                          <span className="excess-usage-bar">
+                            <span className="excess-usage-fill" style={{ width: `${Math.min(100, Math.round(morningExcessUsed / morningExcess * 100))}%` }} />
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {isMorningMet && morningCommission > 0 && (
+                      <span className="commission-inline" title="Standard 4.5%">+${morningCommission}</span>
+                    )}
+                    {isMorningBoughtBack && morningBuyback.commission > 0 && (
+                      <span className="commission-inline buyback-commission" title="Buyback 3.5%">+${morningBuyback.commission}</span>
+                    )}
+                    {isMorningUnmet && (
+                      <span
+                        className={`unmet-badge ${canBuyMorning ? 'buyable' : ''}`}
+                        onClick={(e) => canBuyMorning && handleBuyback('morning', e)}
+                        title={canBuyMorning ? 'Click to buy back' : `Unmet target: $${goal.morningAmount}`}
+                      >
+                        <span className="unmet-badge-label">Unmet</span>
+                        <span className="unmet-badge-amount">${goal.morningAmount}</span>
+                        {canBuyMorning && <span className="buyback-star">★</span>}
+                      </span>
+                    )}
+                    {morningCustomCommission > 0 && (
+                      <span className="commission-inline custom-commission" title={`Custom ${goal.morningCustomRate}%`}>+${morningCustomCommission}</span>
+                    )}
+                  </div>
                 )}
-                <span className="shift-details">
-                  <span className={`wage-value ${wageClass(goal.morningWage)}`}>${goal.morningWage}<span className="wage-suffix">/hr</span></span>
-                  {isMorningMet && morningCommission > 0 && (
-                    <span className="commission-inline" title="Standard 4.5%">+${morningCommission}</span>
-                  )}
-                  {morningExcess > 0 && (
-                    <span
-                      className={`excess-badge ${morningExcessUsed >= morningExcess ? 'excess-consumed' : morningExcessUsed > 0 ? 'excess-partial' : 'excess-available'}`}
-                      title={morningExcessUsed > 0
-                        ? `Excess: $${morningExcess.toLocaleString()} | Used: $${morningExcessUsed.toLocaleString()} | Remaining: $${(morningExcess - morningExcessUsed).toLocaleString()}`
-                        : `Excess from this shift: $${morningExcess.toLocaleString()}`}
-                    >
-                      <span className="excess-badge-label">Excess</span>
-                      <span className="excess-badge-amount">${morningExcess.toLocaleString()}</span>
-                      {morningExcessUsed >= morningExcess && (
-                        <span className="excess-badge-suffix">used</span>
-                      )}
-                      {morningExcessUsed > 0 && morningExcessUsed < morningExcess && (
-                        <span className="excess-badge-detail">
-                          <span className="excess-detail-used">−${morningExcessUsed.toLocaleString()}</span>
-                          <span className="excess-detail-sep">&middot;</span>
-                          <span className="excess-detail-remaining">${(morningExcess - morningExcessUsed).toLocaleString()} left</span>
-                        </span>
-                      )}
-                      {morningExcessUsed > 0 && morningExcessUsed < morningExcess && (
-                        <span className="excess-usage-bar">
-                          <span className="excess-usage-fill" style={{ width: `${Math.min(100, Math.round(morningExcessUsed / morningExcess * 100))}%` }} />
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  {isMorningBoughtBack && morningBuyback.commission > 0 && (
-                    <span className="commission-inline buyback-commission" title="Buyback 3.5%">+${morningBuyback.commission}</span>
-                  )}
-                  {isMorningUnmet && (
-                    <span
-                      className={`unmet-badge ${canBuyMorning ? 'buyable' : ''}`}
-                      onClick={(e) => canBuyMorning && handleBuyback('morning', e)}
-                      title={canBuyMorning ? 'Click to buy back' : `Unmet target: $${goal.morningAmount}`}
-                    >
-                      <span className="unmet-badge-label">Unmet</span>
-                      <span className="unmet-badge-amount">${goal.morningAmount}</span>
-                      {canBuyMorning && <span className="buyback-star">★</span>}
-                    </span>
-                  )}
-                  {morningCustomCommission > 0 && (
-                    <span className="commission-inline custom-commission" title={`Custom ${goal.morningCustomRate}%`}>+${morningCustomCommission}</span>
-                  )}
-                </span>
               </div>
             )}
             {goal.afternoonConfirmed && (
               <div className={`shift ${shiftStateClass('afternoon')}`}>
-                <span className="shift-label">B</span>
-                {goal.afternoonAmount > 0 ? (
-                  <span className="shift-target" title="Target">${goal.afternoonAmount.toLocaleString()}</span>
-                ) : (
-                  <span className="no-target-badge" title="No revenue target set">No Target Yet</span>
+                <div className="shift-primary">
+                  <span className={`shift-pill ${pillClass('afternoon')}`}>B</span>
+                  {goal.afternoonAmount > 0 ? (
+                    <span className="shift-target">${goal.afternoonAmount.toLocaleString()}</span>
+                  ) : (
+                    <span className="no-target-badge">No Target Yet</span>
+                  )}
+                  <span className={`shift-wage ${wageClass(goal.afternoonWage)}`}>${goal.afternoonWage}<span className="wage-suffix">/hr</span></span>
+                </div>
+                {hasAfternoonMeta && (
+                  <div className="shift-meta">
+                    {afternoonExcess > 0 && (
+                      <span
+                        className={`excess-badge ${afternoonExcessUsed >= afternoonExcess ? 'excess-consumed' : afternoonExcessUsed > 0 ? 'excess-partial' : 'excess-available'}`}
+                        title={afternoonExcessUsed > 0
+                          ? `Excess: $${afternoonExcess.toLocaleString()} | Used: $${afternoonExcessUsed.toLocaleString()} | Remaining: $${(afternoonExcess - afternoonExcessUsed).toLocaleString()}`
+                          : `Excess from this shift: $${afternoonExcess.toLocaleString()}`}
+                      >
+                        <span className="excess-badge-label">Excess</span>
+                        <span className="excess-badge-amount">${afternoonExcess.toLocaleString()}</span>
+                        {afternoonExcessUsed >= afternoonExcess && (
+                          <span className="excess-badge-suffix">used</span>
+                        )}
+                        {afternoonExcessUsed > 0 && afternoonExcessUsed < afternoonExcess && (
+                          <span className="excess-badge-detail">
+                            <span className="excess-detail-used">−${afternoonExcessUsed.toLocaleString()}</span>
+                            <span className="excess-detail-sep">&middot;</span>
+                            <span className="excess-detail-remaining">${(afternoonExcess - afternoonExcessUsed).toLocaleString()} left</span>
+                          </span>
+                        )}
+                        {afternoonExcessUsed > 0 && afternoonExcessUsed < afternoonExcess && (
+                          <span className="excess-usage-bar">
+                            <span className="excess-usage-fill" style={{ width: `${Math.min(100, Math.round(afternoonExcessUsed / afternoonExcess * 100))}%` }} />
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {isAfternoonMet && afternoonCommission > 0 && (
+                      <span className="commission-inline" title="Standard 4.5%">+${afternoonCommission}</span>
+                    )}
+                    {isAfternoonBoughtBack && afternoonBuyback.commission > 0 && (
+                      <span className="commission-inline buyback-commission" title="Buyback 3.5%">+${afternoonBuyback.commission}</span>
+                    )}
+                    {isAfternoonUnmet && (
+                      <span
+                        className={`unmet-badge ${canBuyAfternoon ? 'buyable' : ''}`}
+                        onClick={(e) => canBuyAfternoon && handleBuyback('afternoon', e)}
+                        title={canBuyAfternoon ? 'Click to buy back' : `Unmet target: $${goal.afternoonAmount}`}
+                      >
+                        <span className="unmet-badge-label">Unmet</span>
+                        <span className="unmet-badge-amount">${goal.afternoonAmount}</span>
+                        {canBuyAfternoon && <span className="buyback-star">★</span>}
+                      </span>
+                    )}
+                    {afternoonCustomCommission > 0 && (
+                      <span className="commission-inline custom-commission" title={`Custom ${goal.afternoonCustomRate}%`}>+${afternoonCustomCommission}</span>
+                    )}
+                  </div>
                 )}
-                <span className="shift-details">
-                  <span className={`wage-value ${wageClass(goal.afternoonWage)}`}>${goal.afternoonWage}<span className="wage-suffix">/hr</span></span>
-                  {isAfternoonMet && afternoonCommission > 0 && (
-                    <span className="commission-inline" title="Standard 4.5%">+${afternoonCommission}</span>
-                  )}
-                  {afternoonExcess > 0 && (
-                    <span
-                      className={`excess-badge ${afternoonExcessUsed >= afternoonExcess ? 'excess-consumed' : afternoonExcessUsed > 0 ? 'excess-partial' : 'excess-available'}`}
-                      title={afternoonExcessUsed > 0
-                        ? `Excess: $${afternoonExcess.toLocaleString()} | Used: $${afternoonExcessUsed.toLocaleString()} | Remaining: $${(afternoonExcess - afternoonExcessUsed).toLocaleString()}`
-                        : `Excess from this shift: $${afternoonExcess.toLocaleString()}`}
-                    >
-                      <span className="excess-badge-label">Excess</span>
-                      <span className="excess-badge-amount">${afternoonExcess.toLocaleString()}</span>
-                      {afternoonExcessUsed >= afternoonExcess && (
-                        <span className="excess-badge-suffix">used</span>
-                      )}
-                      {afternoonExcessUsed > 0 && afternoonExcessUsed < afternoonExcess && (
-                        <span className="excess-badge-detail">
-                          <span className="excess-detail-used">−${afternoonExcessUsed.toLocaleString()}</span>
-                          <span className="excess-detail-sep">&middot;</span>
-                          <span className="excess-detail-remaining">${(afternoonExcess - afternoonExcessUsed).toLocaleString()} left</span>
-                        </span>
-                      )}
-                      {afternoonExcessUsed > 0 && afternoonExcessUsed < afternoonExcess && (
-                        <span className="excess-usage-bar">
-                          <span className="excess-usage-fill" style={{ width: `${Math.min(100, Math.round(afternoonExcessUsed / afternoonExcess * 100))}%` }} />
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  {isAfternoonBoughtBack && afternoonBuyback.commission > 0 && (
-                    <span className="commission-inline buyback-commission" title="Buyback 3.5%">+${afternoonBuyback.commission}</span>
-                  )}
-                  {isAfternoonUnmet && (
-                    <span
-                      className={`unmet-badge ${canBuyAfternoon ? 'buyable' : ''}`}
-                      onClick={(e) => canBuyAfternoon && handleBuyback('afternoon', e)}
-                      title={canBuyAfternoon ? 'Click to buy back' : `Unmet target: $${goal.afternoonAmount}`}
-                    >
-                      <span className="unmet-badge-label">Unmet</span>
-                      <span className="unmet-badge-amount">${goal.afternoonAmount}</span>
-                      {canBuyAfternoon && <span className="buyback-star">★</span>}
-                    </span>
-                  )}
-                  {afternoonCustomCommission > 0 && (
-                    <span className="commission-inline custom-commission" title={`Custom ${goal.afternoonCustomRate}%`}>+${afternoonCustomCommission}</span>
-                  )}
-                </span>
               </div>
             )}
           </div>

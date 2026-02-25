@@ -213,41 +213,83 @@ body {
 
 .shift {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 3px 4px;
-  border-radius: 4px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 6px;
+  border-radius: 6px;
   font-size: 9px;
   font-weight: 600;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   min-width: 0;
   flex: 1;
-  min-height: 28px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.shift-label {
-  font-weight: 700;
-  color: #64748b;
-  font-size: 8px;
-  flex-shrink: 0;
-  line-height: 1;
+.shift:hover {
+  transform: translateY(-0.5px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
-.shift-target {
+/* Row 1: pill + target (hero) + wage (subdued, right) */
+.shift-primary {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* Shift label pill — colored by state */
+.shift-pill {
   font-size: 7px;
-  color: #94a3b8;
-  font-weight: 500;
+  font-weight: 700;
+  color: white;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #94a3b8;
+  line-height: 1.3;
   flex-shrink: 0;
+  letter-spacing: 0.3px;
+}
+
+.shift-pill.pill-met {
+  background: #16a34a;
+  box-shadow: 0 0 6px rgba(22, 163, 74, 0.35);
+}
+
+.shift-pill.pill-bought-back {
+  background: #7c3aed;
+}
+
+.shift-pill.pill-unmet {
+  background: #dc2626;
+}
+
+.shift-pill.pill-unmet-buyable {
+  background: #16a34a;
+  animation: pulse-pill 2s ease-in-out infinite;
+}
+
+@keyframes pulse-pill {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+/* Target — the hero element */
+.shift-target {
+  font-size: 12px;
+  color: #0f172a;
+  font-weight: 800;
   line-height: 1;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .no-target-badge {
   font-size: 6px;
   color: #f59e0b;
   font-weight: 700;
-  flex-shrink: 0;
   line-height: 1;
   padding: 1px 3px;
   background: #fffbeb;
@@ -255,28 +297,67 @@ body {
   border-radius: 3px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  flex: 1;
 }
 
-/* Shift state stripes */
+/* Wage — subdued, right-aligned */
+.shift-wage {
+  font-weight: 600;
+  font-size: 7px;
+  white-space: nowrap;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.shift-wage .wage-suffix {
+  font-size: 6px;
+  font-weight: 500;
+}
+
+.shift-wage.wage-hit {
+  color: #16a34a;
+}
+
+.shift-wage.wage-partial {
+  color: #d97706;
+}
+
+.shift-wage.wage-none {
+  color: #dc2626;
+}
+
+/* Row 2: excess → commissions → unmet (secondary meta) */
+.shift-meta {
+  display: flex;
+  align-items: center;
+  column-gap: 3px;
+  row-gap: 2px;
+  min-width: 0;
+  flex-wrap: wrap;
+  padding-left: 22px;
+}
+
+/* Shift state — subtle background tints (no left border) */
 .shift.shift-met {
-  border-left: 3px solid #16a34a;
-  background: linear-gradient(90deg, #f0fdf4 0%, #f8fafc 20%);
+  background: rgba(22, 163, 74, 0.05);
+  border-color: rgba(22, 163, 74, 0.15);
 }
 
 .shift.shift-bought-back {
-  border-left: 3px solid #7c3aed;
-  background: linear-gradient(90deg, #f5f3ff 0%, #f8fafc 20%);
+  background: rgba(124, 58, 237, 0.05);
+  border-color: rgba(124, 58, 237, 0.15);
 }
 
 .shift.shift-unmet {
-  border-left: 3px solid #dc2626;
-  background: linear-gradient(90deg, #fef2f2 0%, #f8fafc 20%);
+  background: rgba(220, 38, 38, 0.05);
+  border-color: rgba(220, 38, 38, 0.15);
 }
 
 .shift.shift-unmet-buyable {
-  border-left: 3px solid #16a34a;
-  background: linear-gradient(90deg, #f0fdf4 0%, #f8fafc 20%);
-  box-shadow: inset 0 0 4px rgba(16, 185, 129, 0.15);
+  background: rgba(22, 163, 74, 0.05);
+  border-color: rgba(22, 163, 74, 0.15);
 }
 
 /* Excess revenue badge */
@@ -433,37 +514,6 @@ body {
   overflow: hidden;
 }
 
-.shift-details {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  column-gap: 3px;
-  row-gap: 4px;
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  flex-wrap: wrap;
-}
-
-.wage-value {
-  font-weight: 700;
-  font-size: 9px;
-  white-space: nowrap;
-  line-height: 1.2;
-}
-
-.wage-value.wage-hit {
-  color: #16a34a;
-}
-
-.wage-value.wage-partial {
-  color: #d97706;
-}
-
-.wage-value.wage-none {
-  color: #dc2626;
-}
-
 .commission-inline {
   font-size: 8px;
   font-weight: 600;
@@ -541,8 +591,8 @@ body {
 .labor-total {
   margin-top: 2px;
   padding: 3px 4px;
-  background: #1e293b;
-  border-radius: 4px;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-radius: 5px;
   font-size: 10px;
   font-weight: 700;
   color: white;
@@ -555,9 +605,9 @@ body {
 }
 
 .labor-total:hover {
-  background: #0f172a;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   transform: scale(1.02);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .wage-badge {
@@ -1252,35 +1302,37 @@ body {
   }
 
   .shift {
-    padding: 2px 3px;
-    min-height: 26px;
+    padding: 3px 4px;
+    gap: 1px;
   }
 
-  .shift-label {
-    font-size: 7px;
+  .shift-pill {
+    font-size: 6px;
+    padding: 1px 4px;
   }
 
   .shift-target {
+    font-size: 10px;
+  }
+
+  .shift-wage {
     font-size: 6px;
+  }
+
+  .shift-wage .wage-suffix {
+    display: none;
+  }
+
+  .shift-meta {
+    padding-left: 18px;
   }
 
   .no-target-badge {
     font-size: 5px;
   }
 
-  .wage-value {
-    font-size: 8px;
-  }
-
   .commission-inline {
     font-size: 7px;
-  }
-
-  .shift.shift-met,
-  .shift.shift-bought-back,
-  .shift.shift-unmet,
-  .shift.shift-unmet-buyable {
-    border-left-width: 2px;
   }
 
   .excess-badge-label {
@@ -1457,38 +1509,41 @@ body {
   }
 
   .shift {
-    padding: 1px 2px;
     min-height: 0;
-    gap: 2px;
-    border-radius: 3px;
+    border-radius: 4px;
+    padding: 2px 3px;
+    gap: 1px;
   }
 
-  .shift.shift-met,
-  .shift.shift-bought-back,
-  .shift.shift-unmet,
-  .shift.shift-unmet-buyable {
-    border-left-width: 2px;
-  }
-
-  .shift-label {
+  .shift-pill {
     display: none;
   }
 
+  .shift-primary {
+    gap: 3px;
+  }
+
+  .shift-meta {
+    padding-left: 0;
+  }
+
+  /* ── Target — still prominent on mobile ── */
   .shift-target {
+    font-size: 9px;
+  }
+
+  /* ── Wage — small on mobile, hide /hr ── */
+  .shift-wage {
+    font-size: 6px;
+  }
+
+  .shift-wage .wage-suffix {
     display: none;
   }
 
   .no-target-badge {
-    display: none;
-  }
-
-  /* ── Wage display ── */
-  .wage-value {
-    font-size: 8px;
-  }
-
-  .wage-suffix {
-    display: none;
+    font-size: 5px;
+    padding: 0 2px;
   }
 
   /* ── Commission ── */
