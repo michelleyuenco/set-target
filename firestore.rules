@@ -12,7 +12,7 @@ service cloud.firestore {
     // Only the owner can write their own profile
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow write: if request.auth.uid == userId;
+      allow write: if request.auth.uid == userId || isAdmin();
     }
 
     // User goals subcollection - owner or admin
@@ -25,6 +25,44 @@ service cloud.firestore {
     match /teamBonus/{monthId} {
       allow read: if request.auth != null;
       allow write: if isAdmin();
+    }
+
+    // Locations - any authenticated user can read, only admin can write
+    match /locations/{locationId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Rosters - any authenticated user can read (filtering done on frontend)
+    // Only admin can write the roster document itself
+    match /rosters/{monthId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Shift applications subcollection under each roster month
+    match /rosters/{monthId}/applications/{appId} {
+      // Any authenticated user can read (matches parent roster read rule)
+      allow read: if request.auth != null;
+
+      // Members can create their own pending applications
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending';
+
+      // Members can delete (cancel) their own applications
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+
+      // Admin can update any application (approve / reject).
+      // Members can re-apply (update their own rejected application back to pending).
+      // applyForShift uses setDoc which triggers 'update' when the doc already exists.
+      allow update: if isAdmin()
+        || (request.auth != null
+            && resource.data.uid == request.auth.uid
+            && resource.data.status == 'rejected'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.uid == request.auth.uid);
     }
 
     function isAdmin() {

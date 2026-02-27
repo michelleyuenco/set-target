@@ -23,15 +23,29 @@ export class SaveGoal {
     afternoonEndTime,
     morningConfirmed,
     afternoonConfirmed,
-    adminConfirmed
+    morningAdminConfirmed,
+    afternoonAdminConfirmed,
+    morningLocation,
+    afternoonLocation,
+    morningProofImages,
+    afternoonProofImages,
+    morningAllowance,
+    afternoonAllowance
   ) {
     // Preserve existing buyback status if not provided
     const existingGoal = this.goalRepository.getByDay(day)
     const finalMorningBoughtBack = morningBoughtBack !== undefined ? morningBoughtBack : existingGoal?.morningBoughtBack
     const finalAfternoonBoughtBack = afternoonBoughtBack !== undefined ? afternoonBoughtBack : existingGoal?.afternoonBoughtBack
 
-    // Preserve existing adminConfirmed if not explicitly provided
-    const finalAdminConfirmed = adminConfirmed !== undefined ? adminConfirmed : (existingGoal?.adminConfirmed || false)
+    // Preserve existing per-shift admin state if not explicitly provided
+    const finalMorningAdminConfirmed = morningAdminConfirmed !== undefined ? morningAdminConfirmed : (existingGoal?.morningAdminConfirmed || false)
+    const finalAfternoonAdminConfirmed = afternoonAdminConfirmed !== undefined ? afternoonAdminConfirmed : (existingGoal?.afternoonAdminConfirmed || false)
+    const finalMorningLocation = morningLocation !== undefined ? morningLocation : (existingGoal?.morningLocation || null)
+    const finalAfternoonLocation = afternoonLocation !== undefined ? afternoonLocation : (existingGoal?.afternoonLocation || null)
+    const finalMorningProofImages = morningProofImages !== undefined ? morningProofImages : (existingGoal?.morningProofImages || [])
+    const finalAfternoonProofImages = afternoonProofImages !== undefined ? afternoonProofImages : (existingGoal?.afternoonProofImages || [])
+    const finalMorningAllowance = morningAllowance !== undefined ? morningAllowance : (existingGoal?.morningAllowance ?? null)
+    const finalAfternoonAllowance = afternoonAllowance !== undefined ? afternoonAllowance : (existingGoal?.afternoonAllowance ?? null)
 
     const goal = new Goal(
       day,
@@ -51,7 +65,14 @@ export class SaveGoal {
       afternoonEndTime,
       morningConfirmed,
       afternoonConfirmed,
-      finalAdminConfirmed
+      finalMorningAdminConfirmed,
+      finalAfternoonAdminConfirmed,
+      finalMorningLocation,
+      finalAfternoonLocation,
+      finalMorningProofImages,
+      finalAfternoonProofImages,
+      finalMorningAllowance,
+      finalAfternoonAllowance
     )
 
     // Auto-clear buyback if actual now meets/exceeds the target —

@@ -23,7 +23,14 @@ export class Goal {
     afternoonEndTime = null,
     morningConfirmed = false,
     afternoonConfirmed = false,
-    adminConfirmed = false
+    morningAdminConfirmed = false,
+    afternoonAdminConfirmed = false,
+    morningLocation = null,
+    afternoonLocation = null,
+    morningProofImages = [],
+    afternoonProofImages = [],
+    morningAllowance = null,
+    afternoonAllowance = null
   ) {
     this.day = day
     this.morningAmount = this.parseAmount(morningAmount)
@@ -42,7 +49,14 @@ export class Goal {
     this.afternoonEndTime = afternoonEndTime || DEFAULT_AFTERNOON_END
     this.morningConfirmed = !!morningConfirmed
     this.afternoonConfirmed = !!afternoonConfirmed
-    this.adminConfirmed = !!adminConfirmed
+    this.morningAdminConfirmed = !!morningAdminConfirmed
+    this.afternoonAdminConfirmed = !!afternoonAdminConfirmed
+    this.morningLocation = morningLocation || null
+    this.afternoonLocation = afternoonLocation || null
+    this.morningProofImages = Array.isArray(morningProofImages) ? morningProofImages : []
+    this.afternoonProofImages = Array.isArray(afternoonProofImages) ? afternoonProofImages : []
+    this.morningAllowance = this.parseAmount(morningAllowance)
+    this.afternoonAllowance = this.parseAmount(afternoonAllowance)
   }
 
   parseAmount(value) {
@@ -108,7 +122,14 @@ export class Goal {
       afternoonEndTime: this.afternoonEndTime,
       morningConfirmed: this.morningConfirmed,
       afternoonConfirmed: this.afternoonConfirmed,
-      adminConfirmed: this.adminConfirmed
+      morningAdminConfirmed: this.morningAdminConfirmed,
+      afternoonAdminConfirmed: this.afternoonAdminConfirmed,
+      morningLocation: this.morningLocation,
+      afternoonLocation: this.afternoonLocation,
+      morningProofImages: this.morningProofImages,
+      afternoonProofImages: this.afternoonProofImages,
+      morningAllowance: this.morningAllowance,
+      afternoonAllowance: this.afternoonAllowance
     }
   }
 
@@ -121,6 +142,20 @@ export class Goal {
     const afternoonConfirmed = data.afternoonConfirmed !== undefined
       ? data.afternoonConfirmed
       : (data.afternoonAmount != null || data.afternoonActual != null)
+
+    // Backward compat: migrate old single adminConfirmed to per-shift fields
+    let morningAdminConfirmed = false
+    let afternoonAdminConfirmed = false
+    if (data.morningAdminConfirmed !== undefined) {
+      morningAdminConfirmed = data.morningAdminConfirmed
+    } else if (data.adminConfirmed) {
+      morningAdminConfirmed = true
+    }
+    if (data.afternoonAdminConfirmed !== undefined) {
+      afternoonAdminConfirmed = data.afternoonAdminConfirmed
+    } else if (data.adminConfirmed) {
+      afternoonAdminConfirmed = true
+    }
 
     return new Goal(
       data.day,
@@ -140,7 +175,14 @@ export class Goal {
       data.afternoonEndTime,
       morningConfirmed,
       afternoonConfirmed,
-      data.adminConfirmed || false
+      morningAdminConfirmed,
+      afternoonAdminConfirmed,
+      data.morningLocation || null,
+      data.afternoonLocation || null,
+      data.morningProofImages || [],
+      data.afternoonProofImages || [],
+      data.morningAllowance ?? null,
+      data.afternoonAllowance ?? null
     )
   }
 }

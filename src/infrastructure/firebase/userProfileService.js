@@ -4,11 +4,26 @@ import { doc, setDoc, getDocs, collection, collectionGroup } from 'firebase/fire
 export const userProfileService = {
   async saveProfile(user) {
     const profileRef = doc(db, 'users', user.uid)
-    await setDoc(profileRef, {
+    const data = {
       email: user.email || '',
-      displayName: user.displayName || '',
       lastLogin: new Date().toISOString()
-    }, { merge: true })
+    }
+    // Only write displayName from Firebase Auth if the user actually has one,
+    // so we don't overwrite an admin-set display name with an empty string
+    if (user.displayName) {
+      data.displayName = user.displayName
+    }
+    await setDoc(profileRef, data, { merge: true })
+  },
+
+  async updateEmail(uid, newEmail) {
+    const profileRef = doc(db, 'users', uid)
+    await setDoc(profileRef, { email: newEmail }, { merge: true })
+  },
+
+  async updateDisplayName(uid, newDisplayName) {
+    const profileRef = doc(db, 'users', uid)
+    await setDoc(profileRef, { displayName: newDisplayName }, { merge: true })
   },
 
   async getAllProfiles() {

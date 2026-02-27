@@ -28,7 +28,14 @@ export class GoalService {
     afternoonEndTime,
     morningConfirmed,
     afternoonConfirmed,
-    adminConfirmed
+    morningAdminConfirmed,
+    afternoonAdminConfirmed,
+    morningLocation,
+    afternoonLocation,
+    morningProofImages,
+    afternoonProofImages,
+    morningAllowance,
+    afternoonAllowance
   ) {
     return this.saveGoalUseCase.execute(
       day,
@@ -48,13 +55,25 @@ export class GoalService {
       afternoonEndTime,
       morningConfirmed,
       afternoonConfirmed,
-      adminConfirmed
+      morningAdminConfirmed,
+      afternoonAdminConfirmed,
+      morningLocation,
+      afternoonLocation,
+      morningProofImages,
+      afternoonProofImages,
+      morningAllowance,
+      afternoonAllowance
     )
   }
 
-  confirmGoal(day) {
+  confirmShift(day, shift, location) {
     const goal = this.getGoalByDayUseCase.execute(day)
     if (!goal) return null
+
+    const morningAdminConfirmed = shift === 'morning' ? true : goal.morningAdminConfirmed
+    const afternoonAdminConfirmed = shift === 'afternoon' ? true : goal.afternoonAdminConfirmed
+    const morningLocation = shift === 'morning' ? location : goal.morningLocation
+    const afternoonLocation = shift === 'afternoon' ? location : goal.afternoonLocation
 
     return this.saveGoalUseCase.execute(
       day,
@@ -74,13 +93,25 @@ export class GoalService {
       goal.afternoonEndTime,
       goal.morningConfirmed,
       goal.afternoonConfirmed,
-      true
+      morningAdminConfirmed,
+      afternoonAdminConfirmed,
+      morningLocation,
+      afternoonLocation,
+      undefined,
+      undefined,
+      goal.morningAllowance,
+      goal.afternoonAllowance
     )
   }
 
-  unconfirmGoal(day) {
+  unconfirmShift(day, shift) {
     const goal = this.getGoalByDayUseCase.execute(day)
     if (!goal) return null
+
+    const morningAdminConfirmed = shift === 'morning' ? false : goal.morningAdminConfirmed
+    const afternoonAdminConfirmed = shift === 'afternoon' ? false : goal.afternoonAdminConfirmed
+    const morningLocation = shift === 'morning' ? null : goal.morningLocation
+    const afternoonLocation = shift === 'afternoon' ? null : goal.afternoonLocation
 
     return this.saveGoalUseCase.execute(
       day,
@@ -100,7 +131,52 @@ export class GoalService {
       goal.afternoonEndTime,
       goal.morningConfirmed,
       goal.afternoonConfirmed,
-      false
+      morningAdminConfirmed,
+      afternoonAdminConfirmed,
+      morningLocation,
+      afternoonLocation,
+      undefined,
+      undefined,
+      goal.morningAllowance,
+      goal.afternoonAllowance
+    )
+  }
+
+  updateShiftLocations(day, location) {
+    const goal = this.getGoalByDayUseCase.execute(day)
+    if (!goal) return null
+
+    const morningLocation = goal.morningConfirmed ? location : undefined
+    const afternoonLocation = goal.afternoonConfirmed ? location : undefined
+
+    if (morningLocation === undefined && afternoonLocation === undefined) return null
+
+    return this.saveGoalUseCase.execute(
+      day,
+      goal.morningAmount,
+      goal.afternoonAmount,
+      goal.morningActual,
+      goal.afternoonActual,
+      goal.morningBoughtBack,
+      goal.afternoonBoughtBack,
+      goal.morningCustomRate,
+      goal.afternoonCustomRate,
+      goal.morningCustomAmount,
+      goal.afternoonCustomAmount,
+      goal.morningStartTime,
+      goal.morningEndTime,
+      goal.afternoonStartTime,
+      goal.afternoonEndTime,
+      goal.morningConfirmed,
+      goal.afternoonConfirmed,
+      undefined,
+      undefined,
+      morningLocation,
+      afternoonLocation,
+      undefined,
+      undefined,
+      goal.morningAllowance,
+      goal.afternoonAllowance
     )
   }
 

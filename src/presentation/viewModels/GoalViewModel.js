@@ -23,7 +23,14 @@ export class GoalViewModel {
     this.afternoonShiftHours = goal.afternoonShiftHours
     this.morningConfirmed = goal.morningConfirmed
     this.afternoonConfirmed = goal.afternoonConfirmed
-    this.adminConfirmed = goal.adminConfirmed
+    this.morningAdminConfirmed = goal.morningAdminConfirmed
+    this.afternoonAdminConfirmed = goal.afternoonAdminConfirmed
+    this.morningLocation = goal.morningLocation
+    this.afternoonLocation = goal.afternoonLocation
+    this.morningProofImages = goal.morningProofImages || []
+    this.afternoonProofImages = goal.afternoonProofImages || []
+    this.morningAllowance = goal.morningAllowance
+    this.afternoonAllowance = goal.afternoonAllowance
     this.hasGoals = goal.hasGoals()
   }
 

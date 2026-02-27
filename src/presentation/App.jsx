@@ -2,16 +2,26 @@ import { useState, useEffect } from 'react'
 import { useGoals } from './hooks/useGoals'
 import { useAuth } from './hooks/useAuth'
 import { useAdminMembers } from './hooks/useAdminMembers'
+import { useLocations } from './hooks/useLocations'
 import { CalendarGrid } from './components/CalendarGrid'
 import { GoalModal } from './components/GoalModal'
 import { BuybackModal } from './components/BuybackModal'
+import { BulkLocationModal } from './components/BulkLocationModal'
 import { WageBreakdownModal } from './components/WageBreakdownModal'
 import { LoginModal } from './components/LoginModal'
+import { ChangeEmailModal } from './components/ChangeEmailModal'
 import { AuthButton } from './components/AuthButton'
 import { AdminBar } from './components/AdminBar'
 import { TeamBonusModal } from './components/TeamBonusModal'
+import { LocationManagerModal } from './components/LocationManagerModal'
+import { RosterModal } from './components/RosterModal'
+import { LocationPerformanceModal } from './components/LocationPerformanceModal'
+import { MemberManagerModal } from './components/MemberManagerModal'
+import { AdminDashboard } from './components/AdminDashboard'
 import { DataMigrationModal } from './components/DataMigrationModal'
 import { useTeamBonus } from './hooks/useTeamBonus'
+import { useProofImages } from './hooks/useProofImages'
+import { useLocationPerformance } from './hooks/useLocationPerformance'
 import { initFirestoreService, clearFirestoreService, getLocalGoalService, getFirestoreRepository, initAdminMemberService, clearAdminMemberService } from '../di/container'
 import { DataMigrationService } from '../application/services/DataMigrationService'
 import { DEFAULT_SHIFT_HOURS } from '../domain/entities/Goal'
@@ -27,25 +37,37 @@ export function App() {
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth()
 
-  const { user, loading: authLoading, isAdmin, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut } = useAuth()
-  const { members, loading: membersLoading } = useAdminMembers(isAdmin)
+  const { user, loading: authLoading, isAdmin, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, changeEmail } = useAuth()
+  const { members, loading: membersLoading, updateMemberDisplayName } = useAdminMembers(isAdmin)
   const [viewYear, setViewYear] = useState(currentYear)
   const [viewMonth, setViewMonth] = useState(currentMonth)
   const [firestoreReady, setFirestoreReady] = useState(false)
+  const { locations, visibleLocations, addLocation, updateLocation, removeLocation, reorderLocations, setLocationVisibility, loadLocations } = useLocations(firestoreReady)
   const [syncing, setSyncing] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [showChangeEmailModal, setShowChangeEmailModal] = useState(false)
   const [showMigrationModal, setShowMigrationModal] = useState(false)
+  const [showLocationManager, setShowLocationManager] = useState(false)
+  const [showMemberManager, setShowMemberManager] = useState(false)
+  const [showRoster, setShowRoster] = useState(false)
+  const [showLocPerf, setShowLocPerf] = useState(false)
+  const { stats: locPerfStats, loading: locPerfLoading, loadedKey: locPerfLoadedKey, loadStats: loadLocPerf } = useLocationPerformance()
 
   // Admin state
+  const [showAdminDashboard, setShowAdminDashboard] = useState(true)
   const [adminViewingUid, setAdminViewingUid] = useState(null)
   const [adminSwitching, setAdminSwitching] = useState(false)
   const [adminEditMode, setAdminEditMode] = useState(false)
   const [showConfirmSave, setShowConfirmSave] = useState(null)
+  const [editingDisplayName, setEditingDisplayName] = useState(false)
+  const [displayNameDraft, setDisplayNameDraft] = useState('')
+  const [displayNameSaving, setDisplayNameSaving] = useState(false)
 
-  const { goals, saveGoal, getGoalByDay, buybackTarget, confirmGoal, unconfirmGoal, exportData, loadGoals } = useGoals(user)
+  const { goals, saveGoal, getGoalByDay, buybackTarget, confirmShift, unconfirmShift, bulkUpdateLocations, exportData, loadGoals } = useGoals(user)
   const [selectedDay, setSelectedDay] = useState(null)
   const [editingGoal, setEditingGoal] = useState(null)
   const [showBuybackModal, setShowBuybackModal] = useState(false)
+  const [showBulkLocationModal, setShowBulkLocationModal] = useState(false)
   const [breakdownDay, setBreakdownDay] = useState(null)
   const [summaryExpanded, setSummaryExpanded] = useState(false)
   const [excessExpanded, setExcessExpanded] = useState(false)
@@ -54,6 +76,10 @@ export function App() {
   // Team bonus - determine whose bonus share to show
   const bonusViewUid = adminViewingUid || user?.uid
   const { teamBonus, myBonusShare, loadTeamBonus, saveTeamBonus } = useTeamBonus(viewYear, viewMonth, bonusViewUid)
+
+  // Proof images - use the active UID (member being viewed by admin, or own UID)
+  const proofImageUid = adminViewingUid || user?.uid
+  const { uploadingShift: proofUploadingShift, uploadImages: uploadProofImages, deleteImage: deleteProofImage } = useProofImages(proofImageUid)
 
   // Initialize or clear Firestore service when auth state changes
   useEffect(() => {
@@ -94,6 +120,8 @@ export function App() {
   const handleAdminSelectMember = async (memberUid) => {
     setAdminSwitching(true)
     setAdminEditMode(false)
+    setEditingDisplayName(false)
+    setShowAdminDashboard(false)
     try {
       await initAdminMemberService(memberUid)
       setAdminViewingUid(memberUid)
@@ -105,11 +133,36 @@ export function App() {
     }
   }
 
-  // Admin: return to own data
-  const handleAdminBackToMyData = () => {
+  const handleStartEditDisplayName = () => {
+    if (viewingMember) {
+      setDisplayNameDraft(viewingMember.displayName || '')
+      setEditingDisplayName(true)
+    }
+  }
+
+  const handleSaveDisplayName = async () => {
+    if (!adminViewingUid || !displayNameDraft.trim()) return
+    setDisplayNameSaving(true)
+    try {
+      await updateMemberDisplayName(adminViewingUid, displayNameDraft.trim())
+      setEditingDisplayName(false)
+    } catch (err) {
+      console.error('Failed to update display name:', err)
+    } finally {
+      setDisplayNameSaving(false)
+    }
+  }
+
+  const handleCancelEditDisplayName = () => {
+    setEditingDisplayName(false)
+  }
+
+  const handleBackToDashboard = () => {
     clearAdminMemberService()
     setAdminViewingUid(null)
     setAdminEditMode(false)
+    setEditingDisplayName(false)
+    setShowAdminDashboard(true)
     loadGoals()
   }
 
@@ -147,9 +200,12 @@ export function App() {
   }
 
   const doSaveGoal = (args) => {
-    // When member edits their own data, clear adminConfirmed (requires re-verification)
-    // When admin edits member data, preserve existing adminConfirmed
-    const adminConfirmedValue = adminViewingUid ? undefined : false
+    // When member edits their own data, clear admin confirmations (requires re-verification)
+    // When admin edits member data, preserve existing admin confirmations
+    const morningAdminVal = adminViewingUid ? undefined : false
+    const afternoonAdminVal = adminViewingUid ? undefined : false
+    const morningLocVal = undefined
+    const afternoonLocVal = undefined
     saveGoal(
       args.day,
       args.morningAmount,
@@ -168,27 +224,44 @@ export function App() {
       args.afternoonEndTime,
       args.morningConfirmed,
       args.afternoonConfirmed,
-      adminConfirmedValue
+      morningAdminVal,
+      afternoonAdminVal,
+      morningLocVal,
+      afternoonLocVal,
+      args.morningImages,
+      args.afternoonImages,
+      adminViewingUid ? (args.morningAllowance !== '' ? args.morningAllowance : undefined) : undefined,
+      adminViewingUid ? (args.afternoonAllowance !== '' ? args.afternoonAllowance : undefined) : undefined
     )
     setSelectedDay(null)
     setEditingGoal(null)
   }
 
-  const handleAdminConfirm = () => {
+  const handleAdminConfirmShift = (shift, location) => {
     if (selectedDay && adminViewingUid) {
-      confirmGoal(selectedDay)
-      // Refresh the editing goal to reflect the change
+      confirmShift(selectedDay, shift, location)
       const updated = getGoalByDay(selectedDay)
       setEditingGoal(updated)
     }
   }
 
-  const handleAdminUnconfirm = () => {
+  const handleAdminUnconfirmShift = (shift) => {
     if (selectedDay && adminViewingUid) {
-      unconfirmGoal(selectedDay)
+      unconfirmShift(selectedDay, shift)
       const updated = getGoalByDay(selectedDay)
       setEditingGoal(updated)
     }
+  }
+
+  // Upload files to Firebase Storage only (no Firestore save) — called from GoalModal on Save
+  const handleUploadFilesOnly = async (shift, files, existingImages) => {
+    if (!selectedDay) return existingImages || []
+    return uploadProofImages(selectedDay, shift, files, existingImages || [])
+  }
+
+  // Delete an image from Firebase Storage only (no Firestore save) — called from GoalModal on X click
+  const handleDeleteFromStorage = async (image) => {
+    await deleteProofImage(image, [])
   }
 
   const handleSave = (
@@ -205,7 +278,11 @@ export function App() {
     afternoonStartTime,
     afternoonEndTime,
     morningConfirmed,
-    afternoonConfirmed
+    afternoonConfirmed,
+    morningImages,
+    afternoonImages,
+    morningAllowance,
+    afternoonAllowance
   ) => {
     const args = {
       day: selectedDay,
@@ -215,7 +292,9 @@ export function App() {
       morningCustomAmount, afternoonCustomAmount,
       morningStartTime, morningEndTime,
       afternoonStartTime, afternoonEndTime,
-      morningConfirmed, afternoonConfirmed
+      morningConfirmed, afternoonConfirmed,
+      morningImages, afternoonImages,
+      morningAllowance, afternoonAllowance
     }
 
     // If editing a member's data, show confirmation first
@@ -247,6 +326,11 @@ export function App() {
       buybackTarget(dateStr, shift)
     })
     setShowBuybackModal(false)
+  }
+
+  const handleBulkLocationApply = (dateStrs, location) => {
+    bulkUpdateLocations(dateStrs, location)
+    setShowBulkLocationModal(false)
   }
 
   const handleQuickBuyback = (dateStr, shift) => {
@@ -292,6 +376,7 @@ export function App() {
     clearAdminMemberService()
     setAdminViewingUid(null)
     setAdminEditMode(false)
+    setShowAdminDashboard(true)
     await signOut()
   }
 
@@ -314,6 +399,8 @@ export function App() {
     let commissionCustom = 0
     let excessRevenue = 0
     let totalBuybackCost = 0
+    let totalActual = 0
+    let totalAllowance = 0
     const customRates = new Set()
     const excessSources = []
     const pad = (n) => String(n).padStart(2, '0')
@@ -323,6 +410,9 @@ export function App() {
       const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`
       const goal = goals[dateStr]
       if (goal?.hasGoals) {
+        if (goal.morningActual) totalActual += goal.morningActual
+        if (goal.afternoonActual) totalActual += goal.afternoonActual
+
         // Only calculate wages for confirmed shifts
         if (goal.morningConfirmed) {
           const morningWage = goal.morningWage || 65
@@ -345,6 +435,7 @@ export function App() {
             commissionCustom += goal.morningCustomAmount * (goal.morningCustomRate / 100)
             customRates.add(Number(goal.morningCustomRate))
           }
+          if (goal.morningAllowance) totalAllowance += goal.morningAllowance
         }
 
         if (goal.afternoonConfirmed) {
@@ -368,6 +459,7 @@ export function App() {
             commissionCustom += goal.afternoonCustomAmount * (goal.afternoonCustomRate / 100)
             customRates.add(Number(goal.afternoonCustomRate))
           }
+          if (goal.afternoonAllowance) totalAllowance += goal.afternoonAllowance
         }
       }
     }
@@ -395,28 +487,36 @@ export function App() {
       excessRevenue: Math.round(excessRevenue * 100) / 100,
       totalBuybackCost: Math.round(totalBuybackCost * 100) / 100,
       availableExcess: Math.round(availableExcess * 100) / 100,
-      excessAllocation
+      excessAllocation,
+      totalActual: Math.round(totalActual * 100) / 100,
+      totalAllowance: Math.round(totalAllowance * 100) / 100
     }
   }
 
-  const { wages: monthlyWages, commission45, commission35, commissionCustom, customRates, excessRevenue: monthlyExcess, totalBuybackCost: monthlyBuybackCost, availableExcess, excessAllocation } = calculateMonthlyEarnings()
-  const monthlyTotal = Math.round((monthlyWages + commission45 + commission35 + commissionCustom + myBonusShare) * 100) / 100
+  const { wages: monthlyWages, commission45, commission35, commissionCustom, customRates, excessRevenue: monthlyExcess, totalBuybackCost: monthlyBuybackCost, availableExcess, excessAllocation, totalActual: monthlyTotalActual, totalAllowance: monthlyTotalAllowance } = calculateMonthlyEarnings()
+  const monthlyTotal = Math.round((monthlyWages + commission45 + commission35 + commissionCustom + myBonusShare + monthlyTotalAllowance) * 100) / 100
 
-  // Calculate admin confirmation progress for the viewing month
+  // Calculate admin confirmation progress for the viewing month (per-shift)
   const getConfirmationProgress = () => {
     const pad = (n) => String(n).padStart(2, '0')
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
-    let totalWithData = 0
-    let confirmed = 0
+    let totalShifts = 0
+    let confirmedShifts = 0
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`
       const goal = goals[dateStr]
-      if (goal?.hasGoals && (goal.morningConfirmed || goal.afternoonConfirmed)) {
-        totalWithData++
-        if (goal.adminConfirmed) confirmed++
+      if (goal?.hasGoals) {
+        if (goal.morningConfirmed) {
+          totalShifts++
+          if (goal.morningAdminConfirmed) confirmedShifts++
+        }
+        if (goal.afternoonConfirmed) {
+          totalShifts++
+          if (goal.afternoonAdminConfirmed) confirmedShifts++
+        }
       }
     }
-    return { confirmed, total: totalWithData }
+    return { confirmed: confirmedShifts, total: totalShifts }
   }
   const confirmationProgress = adminViewingUid ? getConfirmationProgress() : null
 
@@ -431,142 +531,221 @@ export function App() {
   return (
     <div className="app">
       <div className="app-header">
+        {user && !isAdmin && (
+          <>
+            <button className="roster-trigger-btn" onClick={() => setShowRoster(true)}>
+              My Roster
+            </button>
+            <button className="roster-trigger-btn" onClick={() => setShowBulkLocationModal(true)}>
+              Set Locations
+            </button>
+          </>
+        )}
         <AuthButton
           user={user}
           onSignInClick={() => setShowLoginModal(true)}
           onSignOut={handleSignOut}
+          onChangeEmail={() => setShowChangeEmailModal(true)}
         />
       </div>
 
-      {isAdmin && (
-        <AdminBar
+      {isAdmin && (showAdminDashboard || !adminViewingUid) ? (
+        <AdminDashboard
           members={members}
           membersLoading={membersLoading}
-          selectedUid={adminViewingUid}
           currentUserUid={user?.uid}
-          editMode={adminEditMode}
           onSelectMember={handleAdminSelectMember}
-          onBackToMyData={handleAdminBackToMyData}
-          onToggleEditMode={() => setAdminEditMode(!adminEditMode)}
           onTeamBonus={() => setShowTeamBonusModal(true)}
+          onManageLocations={() => { loadLocations(); setShowLocationManager(true) }}
+          onManageMembers={() => setShowMemberManager(true)}
+          onOpenRoster={() => setShowRoster(true)}
+          onLocationPerformance={() => {
+            const key = `${viewYear}-${viewMonth}`
+            if (locPerfLoadedKey !== key) loadLocPerf(members, viewYear, viewMonth)
+            setShowLocPerf(true)
+          }}
         />
-      )}
-
-      {adminViewingUid && viewingMember && (
-        <div className="admin-viewing-banner">
-          <span>Viewing: {viewingMember.displayName || viewingMember.email}</span>
-          {confirmationProgress && confirmationProgress.total > 0 && (
-            <span className={`confirmation-progress ${confirmationProgress.confirmed === confirmationProgress.total ? 'all-confirmed' : ''}`}>
-              Verified: {confirmationProgress.confirmed}/{confirmationProgress.total}
-            </span>
+      ) : (
+        <>
+          {isAdmin && (
+            <AdminBar
+              members={members}
+              membersLoading={membersLoading}
+              selectedUid={adminViewingUid}
+              currentUserUid={user?.uid}
+              editMode={adminEditMode}
+              onSelectMember={handleAdminSelectMember}
+              onToggleEditMode={() => setAdminEditMode(!adminEditMode)}
+              onTeamBonus={() => setShowTeamBonusModal(true)}
+              onManageLocations={() => { loadLocations(); setShowLocationManager(true) }}
+              onManageMembers={() => setShowMemberManager(true)}
+              onOpenRoster={() => setShowRoster(true)}
+              onLocationPerformance={() => {
+                const key = `${viewYear}-${viewMonth}`
+                if (locPerfLoadedKey !== key) loadLocPerf(members, viewYear, viewMonth)
+                setShowLocPerf(true)
+              }}
+              onBackToDashboard={handleBackToDashboard}
+            />
           )}
-        </div>
-      )}
 
-      {(syncing || adminSwitching) && (
-        <div className="syncing-banner">{adminSwitching ? 'Loading member data...' : 'Syncing data...'}</div>
-      )}
-
-      <div className="month-nav">
-        <button className="nav-btn" onClick={handlePrev} disabled={!canGoPrev}>&larr;</button>
-        <h1>{MONTH_NAMES[viewMonth]} {viewYear}</h1>
-        <button className="nav-btn" onClick={handleNext} disabled={!canGoNext}>&rarr;</button>
-      </div>
-
-      <CalendarGrid
-        year={viewYear}
-        month={viewMonth}
-        goals={goals}
-        selectedDay={selectedDay}
-        availableExcess={availableExcess}
-        excessAllocation={excessAllocation}
-        onDayClick={handleDayClick}
-        onBuyback={handleQuickBuyback}
-        onWageClick={handleWageClick}
-      />
-
-      <div className={`monthly-summary ${summaryExpanded ? 'expanded' : 'collapsed'}`}>
-        <div className="summary-toggle" onClick={() => setSummaryExpanded(!summaryExpanded)}>
-          <span className="toggle-arrow">{summaryExpanded ? '\u25BC' : '\u25B2'}</span>
-        </div>
-        {summaryExpanded && (
-          <>
-            <div className="monthly-row">
-              <span className="monthly-label">Wages:</span>
-              <span className="monthly-value">${monthlyWages.toLocaleString()}</span>
-            </div>
-            {commission45 > 0 && (
-              <div className="monthly-row commission-row">
-                <span className="monthly-label">Commission (4.5%):</span>
-                <span className="monthly-value">+${commission45.toLocaleString()}</span>
-              </div>
-            )}
-            {commission35 > 0 && (
-              <div className="monthly-row commission35-row">
-                <span className="monthly-label">Commission (3.5%):</span>
-                <span className="monthly-value">+${commission35.toLocaleString()}</span>
-              </div>
-            )}
-            {monthlyExcess > 0 && (
-              <div className="excess-section">
-                <div
-                  className="excess-header excess-clickable"
-                  onClick={() => setExcessExpanded(!excessExpanded)}
-                >
-                  <span className="excess-label">
-                    Excess Balance: <span className="excess-toggle-hint">{excessExpanded ? '\u25B2' : '\u25BC'}</span>
-                  </span>
-                  <span className="excess-value">${availableExcess.toLocaleString()}</span>
-                </div>
-                {excessExpanded && (
-                  <>
-                    <div className="excess-detail-row">
-                      <span className="excess-detail-label">Total Excess:</span>
-                      <span className="excess-detail-value">${monthlyExcess.toLocaleString()}</span>
-                    </div>
-                    {monthlyBuybackCost > 0 && (
-                      <div className="excess-detail-row excess-used">
-                        <span className="excess-detail-label">Used for Buybacks:</span>
-                        <span className="excess-detail-value">-${monthlyBuybackCost.toLocaleString()}</span>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-            {commissionCustom > 0 && (
-              <div className="monthly-row commission-custom-row">
-                <span className="monthly-label">
-                  Commission ({customRates.length === 1 ? `${customRates[0]}%` : customRates.map(r => `${r}%`).join(', ')}):
+          {adminViewingUid && viewingMember && (
+            <div className="admin-viewing-banner">
+              {editingDisplayName ? (
+                <span className="display-name-edit">
+                  <span>Viewing: </span>
+                  <input
+                    className="display-name-input"
+                    value={displayNameDraft}
+                    onChange={(e) => setDisplayNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveDisplayName()
+                      if (e.key === 'Escape') handleCancelEditDisplayName()
+                    }}
+                    disabled={displayNameSaving}
+                    autoFocus
+                  />
+                  <button className="display-name-save-btn" onClick={handleSaveDisplayName} disabled={displayNameSaving || !displayNameDraft.trim()}>
+                    {displayNameSaving ? '...' : 'Save'}
+                  </button>
+                  <button className="display-name-cancel-btn" onClick={handleCancelEditDisplayName} disabled={displayNameSaving}>
+                    Cancel
+                  </button>
                 </span>
-                <span className="monthly-value">+${commissionCustom.toLocaleString()}</span>
-              </div>
+              ) : (
+                <span>
+                  Viewing: {viewingMember.displayName || viewingMember.email}
+                  {!viewingMember.isAdmin && (
+                    <button className="display-name-edit-btn" onClick={handleStartEditDisplayName} title="Edit display name">&#9998;</button>
+                  )}
+                </span>
+              )}
+              {monthlyTotalActual > 0 && (
+                <span className="actual-revenue-pill">
+                  Actual: ${monthlyTotalActual.toLocaleString()}
+                </span>
+              )}
+              {confirmationProgress && confirmationProgress.total > 0 && (
+                <span className={`confirmation-progress ${confirmationProgress.confirmed === confirmationProgress.total ? 'all-confirmed' : ''}`}>
+                  Verified: {confirmationProgress.confirmed}/{confirmationProgress.total}
+                </span>
+              )}
+            </div>
+          )}
+
+          {(syncing || adminSwitching) && (
+            <div className="syncing-banner">{adminSwitching ? 'Loading member data...' : 'Syncing data...'}</div>
+          )}
+
+          <div className="month-nav">
+            <button className="nav-btn" onClick={handlePrev} disabled={!canGoPrev}>&larr;</button>
+            <h1>{MONTH_NAMES[viewMonth]} {viewYear}</h1>
+            <button className="nav-btn" onClick={handleNext} disabled={!canGoNext}>&rarr;</button>
+          </div>
+
+          <CalendarGrid
+            year={viewYear}
+            month={viewMonth}
+            goals={goals}
+            selectedDay={selectedDay}
+            availableExcess={availableExcess}
+            excessAllocation={excessAllocation}
+            locations={visibleLocations}
+            onDayClick={handleDayClick}
+            onBuyback={handleQuickBuyback}
+            onWageClick={handleWageClick}
+          />
+
+          <div className={`monthly-summary ${summaryExpanded ? 'expanded' : 'collapsed'}`}>
+            <div className="summary-toggle" onClick={() => setSummaryExpanded(!summaryExpanded)}>
+              <span className="toggle-arrow">{summaryExpanded ? '\u25BC' : '\u25B2'}</span>
+            </div>
+            {summaryExpanded && (
+              <>
+                <div className="monthly-row">
+                  <span className="monthly-label">Wages:</span>
+                  <span className="monthly-value">${monthlyWages.toLocaleString()}</span>
+                </div>
+                {commission45 > 0 && (
+                  <div className="monthly-row commission-row">
+                    <span className="monthly-label">Commission (4.5%):</span>
+                    <span className="monthly-value">+${commission45.toLocaleString()}</span>
+                  </div>
+                )}
+                {commission35 > 0 && (
+                  <div className="monthly-row commission35-row">
+                    <span className="monthly-label">Commission (3.5%):</span>
+                    <span className="monthly-value">+${commission35.toLocaleString()}</span>
+                  </div>
+                )}
+                {monthlyExcess > 0 && (
+                  <div className="excess-section">
+                    <div
+                      className="excess-header excess-clickable"
+                      onClick={() => setExcessExpanded(!excessExpanded)}
+                    >
+                      <span className="excess-label">
+                        Excess Balance: <span className="excess-toggle-hint">{excessExpanded ? '\u25B2' : '\u25BC'}</span>
+                      </span>
+                      <span className="excess-value">${availableExcess.toLocaleString()}</span>
+                    </div>
+                    {excessExpanded && (
+                      <>
+                        <div className="excess-detail-row">
+                          <span className="excess-detail-label">Total Excess:</span>
+                          <span className="excess-detail-value">${monthlyExcess.toLocaleString()}</span>
+                        </div>
+                        {monthlyBuybackCost > 0 && (
+                          <div className="excess-detail-row excess-used">
+                            <span className="excess-detail-label">Used for Buybacks:</span>
+                            <span className="excess-detail-value">-${monthlyBuybackCost.toLocaleString()}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+                {commissionCustom > 0 && (
+                  <div className="monthly-row commission-custom-row">
+                    <span className="monthly-label">
+                      Commission ({customRates.length === 1 ? `${customRates[0]}%` : customRates.map(r => `${r}%`).join(', ')}):
+                    </span>
+                    <span className="monthly-value">+${commissionCustom.toLocaleString()}</span>
+                  </div>
+                )}
+                {monthlyTotalAllowance > 0 && (
+                  <div className="monthly-row allowance-row">
+                    <span className="monthly-label">Allowance:</span>
+                    <span className="monthly-value">+${monthlyTotalAllowance.toLocaleString()}</span>
+                  </div>
+                )}
+                {myBonusShare > 0 && (
+                  <div className="monthly-row team-bonus-row">
+                    <span className="monthly-label">Team Bonus:</span>
+                    <span className="monthly-value">+${myBonusShare.toLocaleString()}</span>
+                  </div>
+                )}
+              </>
             )}
-            {myBonusShare > 0 && (
-              <div className="monthly-row team-bonus-row">
-                <span className="monthly-label">Team Bonus:</span>
-                <span className="monthly-value">+${myBonusShare.toLocaleString()}</span>
-              </div>
+            <div className="monthly-total">
+              <span className="monthly-label">Total:</span>
+              <span className="monthly-amount">${monthlyTotal.toLocaleString()}</span>
+            </div>
+            {summaryExpanded && (
+              <>
+                <button className="export-btn" onClick={handleExport}>
+                  Export All Records
+                </button>
+                {user && firestoreReady && !adminViewingUid && (
+                  <button className="export-btn sync-cloud-btn" onClick={() => setShowMigrationModal(true)}>
+                    Sync / Import Data
+                  </button>
+                )}
+              </>
             )}
-          </>
-        )}
-        <div className="monthly-total">
-          <span className="monthly-label">Total:</span>
-          <span className="monthly-amount">${monthlyTotal.toLocaleString()}</span>
-        </div>
-        {summaryExpanded && (
-          <>
-            <button className="export-btn" onClick={handleExport}>
-              Export All Records
-            </button>
-            {user && firestoreReady && !adminViewingUid && (
-              <button className="export-btn sync-cloud-btn" onClick={() => setShowMigrationModal(true)}>
-                Sync / Import Data
-              </button>
-            )}
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
 
       {selectedDay && (
         <GoalModal
@@ -585,12 +764,23 @@ export function App() {
           initialAfternoonEndTime={editingGoal?.afternoonEndTime}
           initialMorningConfirmed={editingGoal?.morningConfirmed}
           initialAfternoonConfirmed={editingGoal?.afternoonConfirmed}
-          initialAdminConfirmed={editingGoal?.adminConfirmed}
+          initialMorningAdminConfirmed={editingGoal?.morningAdminConfirmed}
+          initialAfternoonAdminConfirmed={editingGoal?.afternoonAdminConfirmed}
+          initialMorningLocation={editingGoal?.morningLocation}
+          initialAfternoonLocation={editingGoal?.afternoonLocation}
+          initialMorningProofImages={editingGoal?.morningProofImages}
+          initialAfternoonProofImages={editingGoal?.afternoonProofImages}
+          initialMorningAllowance={editingGoal?.morningAllowance}
+          initialAfternoonAllowance={editingGoal?.afternoonAllowance}
           isAdminViewing={!!adminViewingUid}
+          locations={visibleLocations}
           onSave={handleSave}
           onCancel={handleCancel}
-          onConfirm={handleAdminConfirm}
-          onUnconfirm={handleAdminUnconfirm}
+          onConfirmShift={handleAdminConfirmShift}
+          onUnconfirmShift={handleAdminUnconfirmShift}
+          onUploadFiles={handleUploadFilesOnly}
+          onDeleteFromStorage={handleDeleteFromStorage}
+          proofUploadingShift={proofUploadingShift}
           readOnly={!!adminViewingUid && !adminEditMode}
         />
       )}
@@ -621,6 +811,17 @@ export function App() {
         />
       )}
 
+      {showBulkLocationModal && (
+        <BulkLocationModal
+          goals={goals}
+          viewYear={viewYear}
+          viewMonth={viewMonth}
+          locations={visibleLocations}
+          onApply={handleBulkLocationApply}
+          onClose={() => setShowBulkLocationModal(false)}
+        />
+      )}
+
       {breakdownDay && (
         <WageBreakdownModal
           day={formatSelectedDay(breakdownDay)}
@@ -635,6 +836,14 @@ export function App() {
           onSignUp={handleSignUp}
           onGoogleSignIn={handleGoogleSignIn}
           onClose={() => setShowLoginModal(false)}
+        />
+      )}
+
+      {showChangeEmailModal && user && (
+        <ChangeEmailModal
+          currentEmail={user.email}
+          onChangeEmail={changeEmail}
+          onClose={() => setShowChangeEmailModal(false)}
         />
       )}
 
@@ -656,6 +865,47 @@ export function App() {
             await saveTeamBonus(amount, allocations, totalHours, adminUid)
           }}
           onClose={() => setShowTeamBonusModal(false)}
+        />
+      )}
+
+      {showLocationManager && (
+        <LocationManagerModal
+          locations={locations}
+          onAdd={addLocation}
+          onUpdate={updateLocation}
+          onRemove={removeLocation}
+          onReorder={reorderLocations}
+          onToggleVisible={setLocationVisibility}
+          onClose={() => setShowLocationManager(false)}
+        />
+      )}
+
+      {showMemberManager && (
+        <MemberManagerModal
+          members={members}
+          onUpdateDisplayName={updateMemberDisplayName}
+          onClose={() => setShowMemberManager(false)}
+        />
+      )}
+
+      {showRoster && user && (
+        <RosterModal
+          isAdmin={isAdmin}
+          currentUserUid={user.uid}
+          currentUserDisplayName={user.displayName || user.email}
+          members={members}
+          locations={visibleLocations}
+          onClose={() => setShowRoster(false)}
+        />
+      )}
+
+      {showLocPerf && (
+        <LocationPerformanceModal
+          stats={locPerfStats}
+          loading={locPerfLoading}
+          year={viewYear}
+          month={viewMonth}
+          onClose={() => setShowLocPerf(false)}
         />
       )}
     </div>

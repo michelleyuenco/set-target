@@ -46,6 +46,10 @@ export function AuthProvider({ children }) {
     return authService.signOut()
   }
 
+  const changeEmail = async (currentPassword, newEmail) => {
+    return authService.changeEmail(currentPassword, newEmail)
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -54,7 +58,8 @@ export function AuthProvider({ children }) {
       signUpWithEmail,
       signInWithEmail,
       signInWithGoogle,
-      signOut
+      signOut,
+      changeEmail
     }}>
       {children}
     </AuthContext.Provider>

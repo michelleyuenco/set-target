@@ -1,6 +1,31 @@
+import { useState } from 'react'
 import { DEFAULT_SHIFT_HOURS } from '../../domain/entities/Goal'
 
-export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExcess, excessAllocation, onClick, onBuyback, onWageClick }) {
+export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExcess, excessAllocation, locations, onClick, onBuyback, onWageClick }) {
+  const [proofPreview, setProofPreview] = useState(null) // { images, index }
+
+  const getLocationAbbr = (locationName) => {
+    if (!locationName || !locations) return null
+    const loc = locations.find(l => l.name === locationName)
+    return loc?.abbr || locationName
+  }
+
+  const openProofPreview = (images, index, e) => {
+    e.stopPropagation()
+    setProofPreview({ images, index })
+  }
+
+  const closeProofPreview = () => setProofPreview(null)
+
+  const prevProof = (e) => {
+    e.stopPropagation()
+    setProofPreview(p => ({ ...p, index: p.index > 0 ? p.index - 1 : p.images.length - 1 }))
+  }
+
+  const nextProof = (e) => {
+    e.stopPropagation()
+    setProofPreview(p => ({ ...p, index: p.index < p.images.length - 1 ? p.index + 1 : 0 }))
+  }
   const cellClass = [
     'day-cell',
     goal?.hasGoals ? 'has-goals' : '',
@@ -157,6 +182,13 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
 
   const hasAnyConfirmed = goal?.morningConfirmed || goal?.afternoonConfirmed
 
+  // Location abbreviation display
+  const morningLocAbbr = goal?.morningConfirmed ? getLocationAbbr(goal?.morningLocation) : null
+  const afternoonLocAbbr = goal?.afternoonConfirmed ? getLocationAbbr(goal?.afternoonLocation) : null
+  const bothConfirmed = goal?.morningConfirmed && goal?.afternoonConfirmed
+  const sameLocation = bothConfirmed && morningLocAbbr && afternoonLocAbbr && morningLocAbbr === afternoonLocAbbr
+    ? morningLocAbbr : null
+
   // Check if shift has secondary info (excess, commission, unmet)
   const hasMorningMeta = morningExcess > 0
     || (isMorningMet && morningCommission > 0)
@@ -174,21 +206,29 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     <div className={cellClass} onClick={onClick}>
       <div className="day-number">
         {day}
-        {goal?.adminConfirmed && hasAnyConfirmed && (
-          <span className="admin-confirmed-check" title="Admin Verified">&#10003;</span>
-        )}
       </div>
       {goal?.hasGoals && hasAnyConfirmed && (
         <div className="goals-display">
+          {sameLocation && (
+            <div className="day-location-badge" title={goal.morningLocation}>{sameLocation}</div>
+          )}
           <div className="shift-wages">
             {goal.morningConfirmed && (
               <div className={`shift ${shiftStateClass('morning')}`}>
                 <div className="shift-primary">
-                  <span className={`shift-pill ${pillClass('morning')}`}>A</span>
+                  <span className={`shift-pill ${pillClass('morning')}${goal.morningAdminConfirmed ? ' pill-verified' : ''}`} title={goal.morningAdminConfirmed ? `Verified${goal.morningLocation ? ` - ${goal.morningLocation}` : ''}` : (goal.morningLocation || undefined)}>A{goal.morningAdminConfirmed && <span className="pill-check">&#10003;</span>}</span>
+                  {!sameLocation && morningLocAbbr && (
+                    <span className="shift-location-badge" title={goal.morningLocation}>{morningLocAbbr}</span>
+                  )}
                   {goal.morningAmount > 0 ? (
                     <span className="shift-target">${goal.morningAmount.toLocaleString()}</span>
+                  ) : goal.morningActual > 0 ? (
+                    <span className="shift-actual-no-target">${goal.morningActual.toLocaleString()}</span>
                   ) : (
                     <span className="no-target-badge">No Target Yet</span>
+                  )}
+                  {goal.morningProofImages?.length > 0 && (
+                    <span className="proof-icon proof-icon-clickable" title={`${goal.morningProofImages.length} proof image${goal.morningProofImages.length > 1 ? 's' : ''} — click to preview`} onClick={(e) => openProofPreview(goal.morningProofImages, 0, e)}>&#128247;</span>
                   )}
                   <span className={`shift-wage ${wageClass(goal.morningWage)}`}>${goal.morningWage}<span className="wage-suffix">/hr</span></span>
                 </div>
@@ -242,16 +282,31 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                     )}
                   </div>
                 )}
+                {isMorningUnmet && (
+                  <div className="shift-progress">
+                    <span className="shift-progress-bar">
+                      <span className="shift-progress-fill" style={{ width: `${Math.min(100, Math.round((goal.morningActual || 0) / goal.morningAmount * 100))}%` }} />
+                    </span>
+                  </div>
+                )}
               </div>
             )}
             {goal.afternoonConfirmed && (
               <div className={`shift ${shiftStateClass('afternoon')}`}>
                 <div className="shift-primary">
-                  <span className={`shift-pill ${pillClass('afternoon')}`}>B</span>
+                  <span className={`shift-pill ${pillClass('afternoon')}${goal.afternoonAdminConfirmed ? ' pill-verified' : ''}`} title={goal.afternoonAdminConfirmed ? `Verified${goal.afternoonLocation ? ` - ${goal.afternoonLocation}` : ''}` : (goal.afternoonLocation || undefined)}>B{goal.afternoonAdminConfirmed && <span className="pill-check">&#10003;</span>}</span>
+                  {!sameLocation && afternoonLocAbbr && (
+                    <span className="shift-location-badge" title={goal.afternoonLocation}>{afternoonLocAbbr}</span>
+                  )}
                   {goal.afternoonAmount > 0 ? (
                     <span className="shift-target">${goal.afternoonAmount.toLocaleString()}</span>
+                  ) : goal.afternoonActual > 0 ? (
+                    <span className="shift-actual-no-target">${goal.afternoonActual.toLocaleString()}</span>
                   ) : (
                     <span className="no-target-badge">No Target Yet</span>
+                  )}
+                  {goal.afternoonProofImages?.length > 0 && (
+                    <span className="proof-icon proof-icon-clickable" title={`${goal.afternoonProofImages.length} proof image${goal.afternoonProofImages.length > 1 ? 's' : ''} — click to preview`} onClick={(e) => openProofPreview(goal.afternoonProofImages, 0, e)}>&#128247;</span>
                   )}
                   <span className={`shift-wage ${wageClass(goal.afternoonWage)}`}>${goal.afternoonWage}<span className="wage-suffix">/hr</span></span>
                 </div>
@@ -305,11 +360,39 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                     )}
                   </div>
                 )}
+                {isAfternoonUnmet && (
+                  <div className="shift-progress">
+                    <span className="shift-progress-bar">
+                      <span className="shift-progress-fill" style={{ width: `${Math.min(100, Math.round((goal.afternoonActual || 0) / goal.afternoonAmount * 100))}%` }} />
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
           <div className="labor-total" onClick={handleWageClick} style={{ cursor: 'pointer' }}>
             ${totalEarnings.toLocaleString()}
+          </div>
+        </div>
+      )}
+
+      {proofPreview && (
+        <div className="proof-preview-overlay" onClick={closeProofPreview}>
+          <div className="proof-preview-content" onClick={e => e.stopPropagation()}>
+            <button className="proof-preview-close" onClick={closeProofPreview}>&times;</button>
+            {proofPreview.images.length > 1 && (
+              <>
+                <button className="proof-preview-nav proof-preview-prev" onClick={prevProof}>&#8249;</button>
+                <button className="proof-preview-nav proof-preview-next" onClick={nextProof}>&#8250;</button>
+              </>
+            )}
+            <img src={proofPreview.images[proofPreview.index].url} alt={proofPreview.images[proofPreview.index].name} />
+            <div className="proof-preview-info">
+              {proofPreview.images.length > 1 && (
+                <span className="proof-preview-counter">{proofPreview.index + 1} / {proofPreview.images.length}</span>
+              )}
+              <span>{proofPreview.images[proofPreview.index].name}</span>
+            </div>
           </div>
         </div>
       )}

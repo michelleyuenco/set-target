@@ -14,5 +14,16 @@ export const adminService = {
       console.error('Admin check failed:', err)
       return false
     }
+  },
+
+  async getAdminEmails() {
+    try {
+      const adminsDoc = await getDoc(doc(db, 'config', 'admins'))
+      if (!adminsDoc.exists()) return []
+      return adminsDoc.data().emails || []
+    } catch (err) {
+      console.error('Failed to load admin emails:', err)
+      return []
+    }
   }
 }

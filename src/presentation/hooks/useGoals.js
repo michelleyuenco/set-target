@@ -33,7 +33,14 @@ export function useGoals(authUser) {
     afternoonEndTime,
     morningConfirmed,
     afternoonConfirmed,
-    adminConfirmed
+    morningAdminConfirmed,
+    afternoonAdminConfirmed,
+    morningLocation,
+    afternoonLocation,
+    morningProofImages,
+    afternoonProofImages,
+    morningAllowance,
+    afternoonAllowance
   ) => {
     const service = getActiveGoalService()
     service.saveGoal(
@@ -54,7 +61,14 @@ export function useGoals(authUser) {
       afternoonEndTime,
       morningConfirmed,
       afternoonConfirmed,
-      adminConfirmed
+      morningAdminConfirmed,
+      afternoonAdminConfirmed,
+      morningLocation,
+      afternoonLocation,
+      morningProofImages,
+      afternoonProofImages,
+      morningAllowance,
+      afternoonAllowance
     )
     loadGoals()
   }, [loadGoals])
@@ -71,15 +85,23 @@ export function useGoals(authUser) {
     loadGoals()
   }, [loadGoals])
 
-  const confirmGoal = useCallback((day) => {
+  const confirmShift = useCallback((day, shift, location) => {
     const service = getActiveGoalService()
-    service.confirmGoal(day)
+    service.confirmShift(day, shift, location)
     loadGoals()
   }, [loadGoals])
 
-  const unconfirmGoal = useCallback((day) => {
+  const unconfirmShift = useCallback((day, shift) => {
     const service = getActiveGoalService()
-    service.unconfirmGoal(day)
+    service.unconfirmShift(day, shift)
+    loadGoals()
+  }, [loadGoals])
+
+  const bulkUpdateLocations = useCallback((dateStrs, location) => {
+    const service = getActiveGoalService()
+    dateStrs.forEach(dateStr => {
+      service.updateShiftLocations(dateStr, location)
+    })
     loadGoals()
   }, [loadGoals])
 
@@ -93,8 +115,9 @@ export function useGoals(authUser) {
     saveGoal,
     getGoalByDay,
     buybackTarget,
-    confirmGoal,
-    unconfirmGoal,
+    confirmShift,
+    unconfirmShift,
+    bulkUpdateLocations,
     exportData,
     loadGoals
   }
