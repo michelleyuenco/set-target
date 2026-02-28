@@ -23,7 +23,7 @@ export function AdminBar({ members, membersLoading, selectedUid, currentUserUid,
         >
           <option value="">Select member...</option>
           {members
-            .filter((m) => m.uid !== currentUserUid && !m.isAdmin)
+            .filter((m) => m.uid !== currentUserUid && !m.isAdmin && !m.disabled)
             .map((member) => (
               <option key={member.uid} value={member.uid}>
                 {member.displayName || member.email}

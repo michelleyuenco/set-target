@@ -10,7 +10,7 @@ export function AdminDashboard({
   onLocationPerformance,
   onLocationCalendar,
 }) {
-  const teamMembers = members.filter((m) => m.uid !== currentUserUid && !m.isAdmin)
+  const teamMembers = members.filter((m) => m.uid !== currentUserUid && !m.isAdmin && !m.disabled)
 
   return (
     <div className="admin-dashboard">

@@ -1380,6 +1380,95 @@ body {
   color: #fca5a5;
 }
 
+/* Excess / Buyback detailed breakdown */
+.excess-breakdown {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(125, 211, 252, 0.15);
+}
+
+.excess-breakdown-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #38bdf8;
+  margin-bottom: 4px;
+}
+
+.excess-breakdown-title.buyback-title {
+  color: #f59e0b;
+}
+
+.excess-breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.excess-breakdown-date {
+  font-weight: 700;
+  color: #e2e8f0;
+  min-width: 48px;
+}
+
+.excess-breakdown-detail {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.excess-breakdown-amount {
+  font-weight: 700;
+  color: #38bdf8;
+  white-space: nowrap;
+}
+
+.excess-breakdown-used {
+  font-size: 0.65rem;
+  color: #f59e0b;
+  white-space: nowrap;
+}
+
+.buyback-breakdown {
+  border-top-color: rgba(245, 158, 11, 0.15);
+}
+
+.buyback-breakdown-item {
+  padding: 2px 0;
+}
+
+.buyback-breakdown-item + .buyback-breakdown-item {
+  border-top: 1px solid rgba(245, 158, 11, 0.08);
+}
+
+.buyback-breakdown-amount {
+  font-weight: 700;
+  color: #fbbf24;
+  white-space: nowrap;
+}
+
+.buyback-funding {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 0 2px 48px;
+}
+
+.buyback-funding-tag {
+  font-size: 0.6rem;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: #7dd3fc;
+  white-space: nowrap;
+}
+
 .monthly-total {
   display: flex;
   justify-content: space-between;
@@ -6578,6 +6667,152 @@ body {
 
 .member-manager-cancel-btn:hover:not(:disabled) {
   background: #fef2f2;
+}
+
+/* ── Member Manager: Effective Wages ── */
+.member-wages-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.member-wage-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  min-width: 44px;
+}
+
+.member-wage-pill.no-data {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.member-wage-value {
+  font-weight: 700;
+  font-size: 12px;
+  color: #166534;
+}
+
+.member-wage-pill.no-data .member-wage-value {
+  color: #9ca3af;
+}
+
+.member-wage-month {
+  font-size: 9px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.member-wages-loading {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* ── Member Manager: Disable/Enable ── */
+.member-manager-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.member-disable-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid #fca5a5;
+  background: #fff;
+  color: #dc2626;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.member-disable-btn:hover {
+  background: #fef2f2;
+}
+
+.member-enable-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid #86efac;
+  background: #fff;
+  color: #166534;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.member-enable-btn:hover {
+  background: #f0fdf4;
+}
+
+.member-manager-item.disabled {
+  opacity: 0.55;
+  background: #f3f4f6;
+}
+
+.member-disabled-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.member-manager-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 0 4px;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 8px;
+}
+
+.member-disable-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: #fef2f2;
+  border-radius: 5px;
+  font-size: 11px;
+  color: #991b1b;
+}
+
+.member-disable-confirm button {
+  padding: 3px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  border: 1px solid #e5e7eb;
+}
+
+.member-disable-confirm-cancel {
+  background: #fff;
+  color: #374151;
+}
+
+.member-disable-confirm-btn {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5 !important;
 }
 
 /* ── Admin Dashboard ── */

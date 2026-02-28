@@ -39,5 +39,12 @@ export function useAdminMembers(isAdmin, isAuthenticated = false) {
     )
   }, [])
 
-  return { members, loading, updateMemberDisplayName }
+  const toggleMemberDisabled = useCallback(async (uid, disabled) => {
+    await userProfileService.setDisabled(uid, disabled)
+    setMembers((prev) =>
+      prev.map((m) => m.uid === uid ? { ...m, disabled } : m)
+    )
+  }, [])
+
+  return { members, loading, updateMemberDisplayName, toggleMemberDisabled }
 }

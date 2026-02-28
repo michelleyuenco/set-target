@@ -855,7 +855,7 @@ export function RosterModal({
         const transferDateLabel = new Date(rosterYear, rosterMonth - 1, Number(transferDay))
           .toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
 
-        const eligibleMembers = members.filter(m => m.uid !== currentUserUid && !m.isAdmin)
+        const eligibleMembers = members.filter(m => m.uid !== currentUserUid && !m.isAdmin && !m.disabled)
 
         const handleTransfer = async () => {
           if (!transferTarget || daySlots.length === 0) return

@@ -28,6 +28,7 @@ import { useLocationPerformance } from './hooks/useLocationPerformance'
 import { useLocationCalendar } from './hooks/useLocationCalendar'
 import { LocationCalendarModal } from './components/LocationCalendarModal'
 import { MonthlySalaryModal } from './components/MonthlySalaryModal'
+import { useMemberEarnings } from './hooks/useMemberEarnings'
 import { MiscAdjustmentsSection } from './components/MiscAdjustmentsSection'
 import { useMiscAdjustments } from './hooks/useMiscAdjustments'
 import { initFirestoreService, clearFirestoreService, getLocalGoalService, getFirestoreRepository, initAdminMemberService, clearAdminMemberService } from '../di/container'
@@ -46,7 +47,8 @@ export function App() {
   const currentMonth = now.getMonth()
 
   const { user, loading: authLoading, isAdmin, profileDisplayName, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, changeEmail, changePassword, setPassword } = useAuth()
-  const { members, loading: membersLoading, updateMemberDisplayName } = useAdminMembers(isAdmin, !!user)
+  const { members, loading: membersLoading, updateMemberDisplayName, toggleMemberDisabled } = useAdminMembers(isAdmin, !!user)
+  const { earnings: memberEarnings, loading: memberEarningsLoading, loadEarnings: loadMemberEarnings } = useMemberEarnings()
   const [viewYear, setViewYear] = useState(currentYear)
   const [viewMonth, setViewMonth] = useState(currentMonth)
   const [firestoreReady, setFirestoreReady] = useState(false)
@@ -348,14 +350,14 @@ export function App() {
   }
 
   const handleOpenLocPerf = () => {
-    const teamMembers = members.filter(m => !m.isAdmin)
+    const teamMembers = members.filter(m => !m.isAdmin && !m.disabled)
     const key = `${viewYear}-${viewMonth}`
     if (locPerfLoadedKey !== key) loadLocPerf(teamMembers, viewYear, viewMonth)
     setShowLocPerf(true)
   }
 
   const handleOpenLocCal = () => {
-    const teamMembers = members.filter(m => !m.isAdmin)
+    const teamMembers = members.filter(m => !m.isAdmin && !m.disabled)
     const key = `${viewYear}-${viewMonth}`
     if (locCalLoadedKey !== key) loadLocCalGoals(teamMembers, viewYear, viewMonth)
     setShowLocCalModal(true)
@@ -446,6 +448,7 @@ export function App() {
     let totalAllowance = 0
     const customRates = new Set()
     const excessSources = []
+    const buybackTargets = []
     const pad = (n) => String(n).padStart(2, '0')
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
 
@@ -467,11 +470,12 @@ export function App() {
             if (goal.morningAmount && goal.morningActual > goal.morningAmount) {
               const excess = goal.morningActual - goal.morningAmount
               excessRevenue += excess
-              excessSources.push({ key: `${dateStr}:morning`, excess })
+              excessSources.push({ key: `${dateStr}:morning`, dateStr, day, shift: 'morning', shiftLabel: 'A', target: goal.morningAmount, actual: goal.morningActual, excess })
             }
           } else if (goal.morningBoughtBack && goal.morningAmount) {
             commission35 += goal.morningAmount * 0.035
             totalBuybackCost += goal.morningAmount
+            buybackTargets.push({ key: `${dateStr}:morning`, dateStr, day, shift: 'morning', shiftLabel: 'A', amount: goal.morningAmount, actual: goal.morningActual || 0 })
           }
 
           if (goal.morningCustomRate && goal.morningCustomAmount) {
@@ -492,11 +496,12 @@ export function App() {
             if (goal.afternoonAmount && goal.afternoonActual > goal.afternoonAmount) {
               const excess = goal.afternoonActual - goal.afternoonAmount
               excessRevenue += excess
-              excessSources.push({ key: `${dateStr}:afternoon`, excess })
+              excessSources.push({ key: `${dateStr}:afternoon`, dateStr, day, shift: 'afternoon', shiftLabel: 'B', target: goal.afternoonAmount, actual: goal.afternoonActual, excess })
             }
           } else if (goal.afternoonBoughtBack && goal.afternoonAmount) {
             commission35 += goal.afternoonAmount * 0.035
             totalBuybackCost += goal.afternoonAmount
+            buybackTargets.push({ key: `${dateStr}:afternoon`, dateStr, day, shift: 'afternoon', shiftLabel: 'B', amount: goal.afternoonAmount, actual: goal.afternoonActual || 0 })
           }
 
           if (goal.afternoonCustomRate && goal.afternoonCustomAmount) {
@@ -512,7 +517,9 @@ export function App() {
     const availableExcess = Math.max(0, excessRevenue - totalBuybackCost)
 
     // FIFO allocation: consume excess from earliest shifts first
+    // Track which sources fund which buyback targets
     const excessAllocation = {}
+    const buybackFunding = [] // { source, target, amount }
     let remaining = totalBuybackCost
     for (const source of excessSources) {
       const used = Math.min(remaining, source.excess)
@@ -520,6 +527,19 @@ export function App() {
       excessAllocation[source.key] = {
         excess: Math.round(source.excess * 100) / 100,
         used: Math.round(used * 100) / 100
+      }
+    }
+
+    // Build detailed funding map: for each buyback target, which sources funded it
+    let buybackRemaining = [...buybackTargets.map(t => ({ ...t, remaining: t.amount, fundedBy: [] }))]
+    const sourcePool = excessSources.map(s => ({ ...s, available: s.excess }))
+    for (const bt of buybackRemaining) {
+      for (const sp of sourcePool) {
+        if (bt.remaining <= 0 || sp.available <= 0) continue
+        const draw = Math.min(bt.remaining, sp.available)
+        bt.remaining = Math.round((bt.remaining - draw) * 100) / 100
+        sp.available = Math.round((sp.available - draw) * 100) / 100
+        bt.fundedBy.push({ sourceKey: sp.key, day: sp.day, shiftLabel: sp.shiftLabel, amount: Math.round(draw * 100) / 100 })
       }
     }
 
@@ -533,12 +553,14 @@ export function App() {
       totalBuybackCost: Math.round(totalBuybackCost * 100) / 100,
       availableExcess: Math.round(availableExcess * 100) / 100,
       excessAllocation,
+      excessSources: excessSources.map(s => ({ ...s, excess: Math.round(s.excess * 100) / 100 })),
+      buybackTargets: buybackRemaining.map(bt => ({ ...bt, amount: Math.round(bt.amount * 100) / 100 })),
       totalActual: Math.round(totalActual * 100) / 100,
       totalAllowance: Math.round(totalAllowance * 100) / 100
     }
   }
 
-  const { wages: monthlyWages, commission45, commission35, commissionCustom, customRates, excessRevenue: monthlyExcess, totalBuybackCost: monthlyBuybackCost, availableExcess, excessAllocation, totalActual: monthlyTotalActual, totalAllowance: monthlyTotalAllowance } = calculateMonthlyEarnings()
+  const { wages: monthlyWages, commission45, commission35, commissionCustom, customRates, excessRevenue: monthlyExcess, totalBuybackCost: monthlyBuybackCost, availableExcess, excessAllocation, excessSources: monthlyExcessSources, buybackTargets: monthlyBuybackTargets, totalActual: monthlyTotalActual, totalAllowance: monthlyTotalAllowance } = calculateMonthlyEarnings()
   const monthlyTotal = Math.round((monthlyWages + commission45 + commission35 + commissionCustom + myBonusShare + monthlyTotalAllowance + miscTotal) * 100) / 100
 
   // Calculate admin confirmation progress for the viewing month (per-shift)
@@ -601,7 +623,10 @@ export function App() {
           onSelectMember={handleAdminSelectMember}
           onTeamBonus={() => setShowTeamBonusModal(true)}
           onManageLocations={() => { loadLocations(); setShowLocationManager(true) }}
-          onManageMembers={() => setShowMemberManager(true)}
+          onManageMembers={() => {
+            loadMemberEarnings(members.filter(m => !m.isAdmin))
+            setShowMemberManager(true)
+          }}
           onOpenRoster={() => setShowRoster(true)}
           onLocationPerformance={handleOpenLocPerf}
           onLocationCalendar={handleOpenLocCal}
@@ -731,7 +756,7 @@ export function App() {
                     <span className="monthly-value">+${commission35.toLocaleString()}</span>
                   </div>
                 )}
-                {monthlyExcess > 0 && (
+                {(monthlyExcess > 0 || monthlyBuybackTargets.length > 0) && (
                   <div className="excess-section">
                     <div
                       className="excess-header excess-clickable"
@@ -752,6 +777,55 @@ export function App() {
                           <div className="excess-detail-row excess-used">
                             <span className="excess-detail-label">Used for Buybacks:</span>
                             <span className="excess-detail-value">-${monthlyBuybackCost.toLocaleString()}</span>
+                          </div>
+                        )}
+
+                        {/* Excess revenue sources */}
+                        {monthlyExcessSources.length > 0 && (
+                          <div className="excess-breakdown">
+                            <div className="excess-breakdown-title">Excess Revenue Sources</div>
+                            {monthlyExcessSources.map(src => {
+                              const alloc = excessAllocation[src.key]
+                              return (
+                                <div key={src.key} className="excess-breakdown-row">
+                                  <span className="excess-breakdown-date">{viewMonth + 1}/{src.day} {src.shiftLabel}</span>
+                                  <span className="excess-breakdown-detail">
+                                    ${src.target.toLocaleString()} → ${src.actual.toLocaleString()}
+                                  </span>
+                                  <span className="excess-breakdown-amount">+${src.excess.toLocaleString()}</span>
+                                  {alloc && alloc.used > 0 && (
+                                    <span className="excess-breakdown-used">({alloc.used === src.excess ? 'all' : `$${alloc.used.toLocaleString()}`} used)</span>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        {/* Buyback targets with funding sources */}
+                        {monthlyBuybackTargets.length > 0 && (
+                          <div className="excess-breakdown buyback-breakdown">
+                            <div className="excess-breakdown-title buyback-title">Bought Back Targets</div>
+                            {monthlyBuybackTargets.map(bt => (
+                              <div key={bt.key} className="buyback-breakdown-item">
+                                <div className="excess-breakdown-row buyback-row">
+                                  <span className="excess-breakdown-date">{viewMonth + 1}/{bt.day} {bt.shiftLabel}</span>
+                                  <span className="excess-breakdown-detail">
+                                    actual: ${bt.actual.toLocaleString()}
+                                  </span>
+                                  <span className="buyback-breakdown-amount">${bt.amount.toLocaleString()}</span>
+                                </div>
+                                {bt.fundedBy.length > 0 && (
+                                  <div className="buyback-funding">
+                                    {bt.fundedBy.map((f, i) => (
+                                      <span key={i} className="buyback-funding-tag">
+                                        {viewMonth + 1}/{f.day} {f.shiftLabel}: ${f.amount.toLocaleString()}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         )}
                       </>
@@ -966,7 +1040,7 @@ export function App() {
         <TeamBonusModal
           year={viewYear}
           month={viewMonth}
-          members={members}
+          members={members.filter(m => !m.disabled)}
           adminUid={user?.uid}
           existingBonus={teamBonus}
           onSave={async (amount, allocations, totalHours, adminUid) => {
@@ -992,6 +1066,9 @@ export function App() {
         <MemberManagerModal
           members={members}
           onUpdateDisplayName={updateMemberDisplayName}
+          onToggleDisabled={toggleMemberDisabled}
+          earnings={memberEarnings}
+          earningsLoading={memberEarningsLoading}
           onClose={() => setShowMemberManager(false)}
         />
       )}
@@ -1013,7 +1090,7 @@ export function App() {
           loading={locPerfLoading}
           year={viewYear}
           month={viewMonth}
-          onLoadStats={(y, m) => loadLocPerf(members.filter(mem => !mem.isAdmin), y, m)}
+          onLoadStats={(y, m) => loadLocPerf(members.filter(mem => !mem.isAdmin && !mem.disabled), y, m)}
           onClose={() => setShowLocPerf(false)}
         />
       )}
@@ -1025,7 +1102,7 @@ export function App() {
           year={viewYear}
           month={viewMonth}
           locations={visibleLocations}
-          onLoad={() => loadLocCalGoals(members.filter(m => !m.isAdmin), viewYear, viewMonth)}
+          onLoad={() => loadLocCalGoals(members.filter(m => !m.isAdmin && !m.disabled), viewYear, viewMonth)}
           onClose={() => setShowLocCalModal(false)}
         />
       )}

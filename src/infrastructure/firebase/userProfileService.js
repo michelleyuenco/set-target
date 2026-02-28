@@ -36,6 +36,11 @@ export const userProfileService = {
     await setDoc(profileRef, { displayName: newDisplayName }, { merge: true })
   },
 
+  async setDisabled(uid, disabled) {
+    const profileRef = doc(db, 'users', uid)
+    await setDoc(profileRef, { disabled: !!disabled }, { merge: true })
+  },
+
   async getAllProfiles() {
     const profiles = new Map()
 
@@ -46,10 +51,12 @@ export const userProfileService = {
         const data = docSnap.data()
         const email = data.email || ''
         const displayName = data.displayName || ''
+        const disabled = !!data.disabled
         profiles.set(docSnap.id, {
           uid: docSnap.id,
           email,
-          displayName
+          displayName,
+          disabled
         })
       })
     } catch (err) {
