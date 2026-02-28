@@ -32,14 +32,14 @@ export function WageBreakdownModal({ day, goal, onClose }) {
   const afternoonLabor = hasAfternoon ? Math.round(afternoonWage * afternoonHours * 100) / 100 : 0
 
   const getMorningCommission = () => {
-    if (hasMorning && goal.morningWage === 80 && goal.morningActual > 0) {
+    if (hasMorning && goal.morningCalculatedWage === 80 && goal.morningActual > 0) {
       return Math.round(goal.morningAmount * 0.045 * 100) / 100
     }
     return 0
   }
 
   const getAfternoonCommission = () => {
-    if (hasAfternoon && goal.afternoonWage === 80 && goal.afternoonActual > 0) {
+    if (hasAfternoon && goal.afternoonCalculatedWage === 80 && goal.afternoonActual > 0) {
       return Math.round(goal.afternoonAmount * 0.045 * 100) / 100
     }
     return 0
@@ -94,11 +94,15 @@ export function WageBreakdownModal({ day, goal, onClose }) {
   const morningCustom = getMorningCustomCommission()
   const afternoonCustom = getAfternoonCustomCommission()
 
+  const morningAllowance = (hasMorning && goal.morningAllowance) ? goal.morningAllowance : 0
+  const afternoonAllowance = (hasAfternoon && goal.afternoonAllowance) ? goal.afternoonAllowance : 0
+  const totalAllowance = Math.round((morningAllowance + afternoonAllowance) * 100) / 100
+
   const totalLabor = Math.round((morningLabor + afternoonLabor) * 100) / 100
   const totalCommission45 = Math.round((morningCommission + afternoonCommission) * 100) / 100
   const totalBuybackCommission = Math.round((morningBuyback.commission + afternoonBuyback.commission) * 100) / 100
   const totalCustomCommission = Math.round((morningCustom.commission + afternoonCustom.commission) * 100) / 100
-  const grandTotal = Math.round((totalLabor + totalCommission45 + totalBuybackCommission + totalCustomCommission) * 100) / 100
+  const grandTotal = Math.round((totalLabor + totalCommission45 + totalBuybackCommission + totalCustomCommission + totalAllowance) * 100) / 100
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -111,7 +115,7 @@ export function WageBreakdownModal({ day, goal, onClose }) {
             <div className="breakdown-section">
               <div className="section-header">Shift A ({morningTimeLabel})</div>
               <div className="breakdown-row">
-                <span className="breakdown-label">${morningWage}/hr × {formatHoursLabel(morningHours)} hours</span>
+                <span className="breakdown-label">{goal.morningCustomWage !== null ? <span className="custom-wage-tag">Custom</span> : null}${morningWage}/hr × {formatHoursLabel(morningHours)} hours</span>
                 <span className="breakdown-value">${morningLabor.toFixed(2)}</span>
               </div>
               {morningCommission > 0 && (
@@ -138,6 +142,12 @@ export function WageBreakdownModal({ day, goal, onClose }) {
                   <span className="breakdown-value commission">+${morningCustom.commission.toFixed(2)}</span>
                 </div>
               )}
+              {morningAllowance > 0 && (
+                <div className="breakdown-row allowance-row">
+                  <span className="breakdown-label">Allowance</span>
+                  <span className="breakdown-value allowance">+${morningAllowance.toFixed(2)}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -145,7 +155,7 @@ export function WageBreakdownModal({ day, goal, onClose }) {
             <div className="breakdown-section">
               <div className="section-header">Shift B ({afternoonTimeLabel})</div>
               <div className="breakdown-row">
-                <span className="breakdown-label">${afternoonWage}/hr × {formatHoursLabel(afternoonHours)} hours</span>
+                <span className="breakdown-label">{goal.afternoonCustomWage !== null ? <span className="custom-wage-tag">Custom</span> : null}${afternoonWage}/hr × {formatHoursLabel(afternoonHours)} hours</span>
                 <span className="breakdown-value">${afternoonLabor.toFixed(2)}</span>
               </div>
               {afternoonCommission > 0 && (
@@ -170,6 +180,12 @@ export function WageBreakdownModal({ day, goal, onClose }) {
                 <div className="breakdown-row commission-row">
                   <span className="breakdown-label">Custom Commission ({afternoonCustom.rate}%)</span>
                   <span className="breakdown-value commission">+${afternoonCustom.commission.toFixed(2)}</span>
+                </div>
+              )}
+              {afternoonAllowance > 0 && (
+                <div className="breakdown-row allowance-row">
+                  <span className="breakdown-label">Allowance</span>
+                  <span className="breakdown-value allowance">+${afternoonAllowance.toFixed(2)}</span>
                 </div>
               )}
             </div>
@@ -197,6 +213,12 @@ export function WageBreakdownModal({ day, goal, onClose }) {
               <div className="summary-row">
                 <span className="summary-label">Custom Commission:</span>
                 <span className="summary-value commission">+${totalCustomCommission.toFixed(2)}</span>
+              </div>
+            )}
+            {totalAllowance > 0 && (
+              <div className="summary-row">
+                <span className="summary-label">Allowance:</span>
+                <span className="summary-value allowance">+${totalAllowance.toFixed(2)}</span>
               </div>
             )}
             <div className="summary-total">

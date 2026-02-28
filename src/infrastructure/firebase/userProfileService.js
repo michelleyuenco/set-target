@@ -1,5 +1,5 @@
 import { db } from './config'
-import { doc, setDoc, getDocs, collection, collectionGroup } from 'firebase/firestore'
+import { doc, setDoc, getDocs, collection } from 'firebase/firestore'
 
 export const userProfileService = {
   async saveProfile(user) {
@@ -14,6 +14,16 @@ export const userProfileService = {
       data.displayName = user.displayName
     }
     await setDoc(profileRef, data, { merge: true })
+  },
+
+  async getProfile(uid) {
+    const { getDoc } = await import('firebase/firestore')
+    const profileRef = doc(db, 'users', uid)
+    const snap = await getDoc(profileRef)
+    if (snap.exists()) {
+      return snap.data()
+    }
+    return null
   },
 
   async updateEmail(uid, newEmail) {
@@ -39,28 +49,11 @@ export const userProfileService = {
         profiles.set(docSnap.id, {
           uid: docSnap.id,
           email,
-          displayName: displayName || email || `Member (${docSnap.id.slice(0, 8)})`
+          displayName
         })
       })
     } catch (err) {
       console.error('Failed to query user profiles:', err)
-    }
-
-    // Step 2: Discover additional users via their goals (for users without profile docs)
-    try {
-      const goalsSnapshot = await getDocs(collectionGroup(db, 'goals'))
-      goalsSnapshot.forEach((docSnap) => {
-        const userRef = docSnap.ref.parent.parent
-        if (userRef && !profiles.has(userRef.id)) {
-          profiles.set(userRef.id, {
-            uid: userRef.id,
-            email: '',
-            displayName: `Member (${userRef.id.slice(0, 8)})`
-          })
-        }
-      })
-    } catch (err) {
-      console.error('Failed to query goals for user discovery:', err)
     }
 
     return Array.from(profiles.values())

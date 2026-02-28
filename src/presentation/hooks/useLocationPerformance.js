@@ -9,6 +9,7 @@ export function useLocationPerformance() {
   const [loadedKey, setLoadedKey] = useState(null) // "YYYY-M" of last successful load
 
   const loadStats = useCallback(async (members, year, month) => {
+    if (members.length === 0) return   // nothing to load yet
     setLoading(true)
     try {
       const data = await teamBonusService.getAllMembersLocationStats(members, year, month)

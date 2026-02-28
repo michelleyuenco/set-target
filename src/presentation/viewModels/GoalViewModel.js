@@ -31,7 +31,11 @@ export class GoalViewModel {
     this.afternoonProofImages = goal.afternoonProofImages || []
     this.morningAllowance = goal.morningAllowance
     this.afternoonAllowance = goal.afternoonAllowance
-    this.hasGoals = goal.hasGoals()
+    this.morningCustomWage = goal.morningCustomWage
+    this.afternoonCustomWage = goal.afternoonCustomWage
+    this.morningCalculatedWage = goal.morningCalculatedWage
+    this.afternoonCalculatedWage = goal.afternoonCalculatedWage
+    this.hasGoals = goal.hasGoals
   }
 
   get formattedMorning() {

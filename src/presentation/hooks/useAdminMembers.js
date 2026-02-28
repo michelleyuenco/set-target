@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { userProfileService } from '../../infrastructure/firebase/userProfileService'
 import { adminService } from '../../infrastructure/firebase/adminService'
 
-export function useAdminMembers(isAdmin) {
+export function useAdminMembers(isAdmin, isAuthenticated = false) {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!isAdmin && !isAuthenticated) {
       setMembers([])
       return
     }
@@ -30,7 +30,7 @@ export function useAdminMembers(isAdmin) {
       .finally(() => {
         setLoading(false)
       })
-  }, [isAdmin])
+  }, [isAdmin, isAuthenticated])
 
   const updateMemberDisplayName = useCallback(async (uid, newDisplayName) => {
     await userProfileService.updateDisplayName(uid, newDisplayName)

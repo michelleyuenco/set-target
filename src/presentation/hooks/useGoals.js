@@ -15,61 +15,9 @@ export function useGoals(authUser) {
     loadGoals()
   }, [loadGoals, authUser])
 
-  const saveGoal = useCallback((
-    day,
-    morningAmount,
-    afternoonAmount,
-    morningActual,
-    afternoonActual,
-    morningBoughtBack,
-    afternoonBoughtBack,
-    morningCustomRate,
-    afternoonCustomRate,
-    morningCustomAmount,
-    afternoonCustomAmount,
-    morningStartTime,
-    morningEndTime,
-    afternoonStartTime,
-    afternoonEndTime,
-    morningConfirmed,
-    afternoonConfirmed,
-    morningAdminConfirmed,
-    afternoonAdminConfirmed,
-    morningLocation,
-    afternoonLocation,
-    morningProofImages,
-    afternoonProofImages,
-    morningAllowance,
-    afternoonAllowance
-  ) => {
+  const saveGoal = useCallback((data) => {
     const service = getActiveGoalService()
-    service.saveGoal(
-      day,
-      morningAmount,
-      afternoonAmount,
-      morningActual,
-      afternoonActual,
-      morningBoughtBack,
-      afternoonBoughtBack,
-      morningCustomRate,
-      afternoonCustomRate,
-      morningCustomAmount,
-      afternoonCustomAmount,
-      morningStartTime,
-      morningEndTime,
-      afternoonStartTime,
-      afternoonEndTime,
-      morningConfirmed,
-      afternoonConfirmed,
-      morningAdminConfirmed,
-      afternoonAdminConfirmed,
-      morningLocation,
-      afternoonLocation,
-      morningProofImages,
-      afternoonProofImages,
-      morningAllowance,
-      afternoonAllowance
-    )
+    service.saveGoal(data)
     loadGoals()
   }, [loadGoals])
 
@@ -105,6 +53,27 @@ export function useGoals(authUser) {
     loadGoals()
   }, [loadGoals])
 
+  const bulkVerifyShifts = useCallback((dateStrs) => {
+    const service = getActiveGoalService()
+    dateStrs.forEach(dateStr => {
+      service.verifyAllConfirmedShifts(dateStr)
+    })
+    loadGoals()
+  }, [loadGoals])
+
+  const bulkUpdateAllowances = useCallback((dateStrs, amount, dayShiftMap) => {
+    const service = getActiveGoalService()
+    dateStrs.forEach(dateStr => {
+      const shift = dayShiftMap?.[dateStr] || 'morning'
+      if (shift === 'afternoon') {
+        service.saveGoal({ day: dateStr, afternoonAllowance: amount })
+      } else {
+        service.saveGoal({ day: dateStr, morningAllowance: amount })
+      }
+    })
+    loadGoals()
+  }, [loadGoals])
+
   const exportData = useCallback(() => {
     const service = getActiveGoalService()
     return service.exportData()
@@ -118,6 +87,8 @@ export function useGoals(authUser) {
     confirmShift,
     unconfirmShift,
     bulkUpdateLocations,
+    bulkVerifyShifts,
+    bulkUpdateAllowances,
     exportData,
     loadGoals
   }

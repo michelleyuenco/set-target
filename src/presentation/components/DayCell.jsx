@@ -33,15 +33,16 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     isToday ? 'today' : ''
   ].filter(Boolean).join(' ')
 
-  const wageClass = (wage) => {
+  const wageClass = (wage, customWage) => {
+    if (customWage !== null && customWage !== undefined) return 'wage-custom'
     if (wage === 80) return 'wage-hit'
     if (wage === 75) return 'wage-partial'
     return 'wage-none'
   }
 
-  // Only check unmet for confirmed shifts
-  const isMorningUnmet = goal?.morningConfirmed && goal?.morningAmount && goal?.morningWage !== 80 && !goal?.morningBoughtBack
-  const isAfternoonUnmet = goal?.afternoonConfirmed && goal?.afternoonAmount && goal?.afternoonWage !== 80 && !goal?.afternoonBoughtBack
+  // Only check unmet for confirmed shifts (use calculated wage, ignoring custom overrides)
+  const isMorningUnmet = goal?.morningConfirmed && goal?.morningAmount && goal?.morningCalculatedWage !== 80 && !goal?.morningBoughtBack
+  const isAfternoonUnmet = goal?.afternoonConfirmed && goal?.afternoonAmount && goal?.afternoonCalculatedWage !== 80 && !goal?.afternoonBoughtBack
 
   const canBuyMorning = isMorningUnmet && goal?.morningAmount <= availableExcess
   const canBuyAfternoon = isAfternoonUnmet && goal?.afternoonAmount <= availableExcess
@@ -75,14 +76,14 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
   }
 
   const getMorningCommission = () => {
-    if (goal?.morningConfirmed && goal?.morningWage === 80 && goal?.morningActual > 0) {
+    if (goal?.morningConfirmed && goal?.morningCalculatedWage === 80 && goal?.morningActual > 0) {
       return Math.round(goal.morningAmount * 0.045 * 100) / 100
     }
     return 0
   }
 
   const getAfternoonCommission = () => {
-    if (goal?.afternoonConfirmed && goal?.afternoonWage === 80 && goal?.afternoonActual > 0) {
+    if (goal?.afternoonConfirmed && goal?.afternoonCalculatedWage === 80 && goal?.afternoonActual > 0) {
       return Math.round(goal.afternoonAmount * 0.045 * 100) / 100
     }
     return 0
@@ -132,11 +133,13 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
   const totalBuybackCommission = morningBuyback.commission + afternoonBuyback.commission
   const totalCustomCommission = morningCustomCommission + afternoonCustomCommission
   const totalCommission = morningCommission + afternoonCommission + totalBuybackCommission + totalCustomCommission
-  const totalEarnings = Math.round((laborCost + totalCommission) * 100) / 100
+  const totalAllowance = (goal?.morningConfirmed && goal?.morningAllowance ? goal.morningAllowance : 0)
+    + (goal?.afternoonConfirmed && goal?.afternoonAllowance ? goal.afternoonAllowance : 0)
+  const totalEarnings = Math.round((laborCost + totalCommission + totalAllowance) * 100) / 100
 
-  // Shift state detection
-  const isMorningMet = goal?.morningConfirmed && goal?.morningWage === 80 && !goal?.morningBoughtBack
-  const isAfternoonMet = goal?.afternoonConfirmed && goal?.afternoonWage === 80 && !goal?.afternoonBoughtBack
+  // Shift state detection (use calculated wage, ignoring custom overrides)
+  const isMorningMet = goal?.morningConfirmed && goal?.morningCalculatedWage === 80 && !goal?.morningBoughtBack
+  const isAfternoonMet = goal?.afternoonConfirmed && goal?.afternoonCalculatedWage === 80 && !goal?.afternoonBoughtBack
   const isMorningBoughtBack = goal?.morningConfirmed && goal?.morningBoughtBack
   const isAfternoonBoughtBack = goal?.afternoonConfirmed && goal?.afternoonBoughtBack
 
@@ -220,6 +223,9 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                   {!sameLocation && morningLocAbbr && (
                     <span className="shift-location-badge" title={goal.morningLocation}>{morningLocAbbr}</span>
                   )}
+                  {!sameLocation && !morningLocAbbr && (
+                    <span className="shift-location-badge no-location" title="No location set">?</span>
+                  )}
                   {goal.morningAmount > 0 ? (
                     <span className="shift-target">${goal.morningAmount.toLocaleString()}</span>
                   ) : goal.morningActual > 0 ? (
@@ -230,7 +236,7 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                   {goal.morningProofImages?.length > 0 && (
                     <span className="proof-icon proof-icon-clickable" title={`${goal.morningProofImages.length} proof image${goal.morningProofImages.length > 1 ? 's' : ''} — click to preview`} onClick={(e) => openProofPreview(goal.morningProofImages, 0, e)}>&#128247;</span>
                   )}
-                  <span className={`shift-wage ${wageClass(goal.morningWage)}`}>${goal.morningWage}<span className="wage-suffix">/hr</span></span>
+                  <span className={`shift-wage ${wageClass(goal.morningWage, goal.morningCustomWage)}`}>${goal.morningWage}<span className="wage-suffix">/hr</span></span>
                 </div>
                 {hasMorningMeta && (
                   <div className="shift-meta">
@@ -298,6 +304,9 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                   {!sameLocation && afternoonLocAbbr && (
                     <span className="shift-location-badge" title={goal.afternoonLocation}>{afternoonLocAbbr}</span>
                   )}
+                  {!sameLocation && !afternoonLocAbbr && (
+                    <span className="shift-location-badge no-location" title="No location set">?</span>
+                  )}
                   {goal.afternoonAmount > 0 ? (
                     <span className="shift-target">${goal.afternoonAmount.toLocaleString()}</span>
                   ) : goal.afternoonActual > 0 ? (
@@ -308,7 +317,7 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                   {goal.afternoonProofImages?.length > 0 && (
                     <span className="proof-icon proof-icon-clickable" title={`${goal.afternoonProofImages.length} proof image${goal.afternoonProofImages.length > 1 ? 's' : ''} — click to preview`} onClick={(e) => openProofPreview(goal.afternoonProofImages, 0, e)}>&#128247;</span>
                   )}
-                  <span className={`shift-wage ${wageClass(goal.afternoonWage)}`}>${goal.afternoonWage}<span className="wage-suffix">/hr</span></span>
+                  <span className={`shift-wage ${wageClass(goal.afternoonWage, goal.afternoonCustomWage)}`}>${goal.afternoonWage}<span className="wage-suffix">/hr</span></span>
                 </div>
                 {hasAfternoonMeta && (
                   <div className="shift-meta">

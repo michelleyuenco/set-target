@@ -1,78 +1,88 @@
 import { useState } from 'react'
 
-export function BulkLocationModal({ goals, viewYear, viewMonth, locations, onApply, onClose }) {
+export function BulkAllowanceModal({ goals, viewYear, viewMonth, onApply, onClose }) {
   const [selectedDays, setSelectedDays] = useState(new Set())
-  const [selectedLocation, setSelectedLocation] = useState('')
+  const [allowanceAmount, setAllowanceAmount] = useState('')
 
   const pad = (n) => String(n).padStart(2, '0')
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
 
-  // Build list of days that have at least one confirmed shift
+  // Eligible: days with at least one confirmed shift
+  // Determine which shift gets the allowance: A if available, otherwise B
   const eligibleDays = []
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`
     const goal = goals[dateStr]
     if (goal?.hasGoals && (goal.morningConfirmed || goal.afternoonConfirmed)) {
-      const shifts = []
-      if (goal.morningConfirmed) shifts.push('A')
-      if (goal.afternoonConfirmed) shifts.push('B')
+      const targetShift = goal.morningConfirmed ? 'morning' : 'afternoon'
+      const shiftLabel = targetShift === 'morning' ? 'A' : 'B'
+      const currentAllowance = targetShift === 'morning'
+        ? (goal.morningAllowance || null)
+        : (goal.afternoonAllowance || null)
       eligibleDays.push({
         dateStr,
         day,
-        shifts,
         label: `${viewMonth + 1}/${day}`,
-        currentLocation: goal.morningLocation || goal.afternoonLocation || null
+        targetShift,
+        shiftLabel,
+        currentAllowance
       })
     }
   }
 
-  // Sort shifts without a location to the top
+  // Sort days without an allowance to the top
   eligibleDays.sort((a, b) => {
-    const aHas = a.currentLocation ? 1 : 0
-    const bHas = b.currentLocation ? 1 : 0
+    const aHas = a.currentAllowance ? 1 : 0
+    const bHas = b.currentAllowance ? 1 : 0
     return aHas - bHas
   })
 
   const toggleDay = (dateStr) => {
-    const newSelected = new Set(selectedDays)
-    if (newSelected.has(dateStr)) {
-      newSelected.delete(dateStr)
-    } else {
-      newSelected.add(dateStr)
-    }
-    setSelectedDays(newSelected)
+    const next = new Set(selectedDays)
+    if (next.has(dateStr)) next.delete(dateStr)
+    else next.add(dateStr)
+    setSelectedDays(next)
   }
 
   const toggleAll = () => {
-    if (selectedDays.size === eligibleDays.length) {
-      setSelectedDays(new Set())
-    } else {
-      setSelectedDays(new Set(eligibleDays.map(d => d.dateStr)))
-    }
+    setSelectedDays(
+      selectedDays.size === eligibleDays.length
+        ? new Set()
+        : new Set(eligibleDays.map(d => d.dateStr))
+    )
   }
 
+  const parsedAmount = allowanceAmount === '' ? null : Number(allowanceAmount)
+  const isValidAmount = parsedAmount !== null && !isNaN(parsedAmount) && parsedAmount >= 0
+
   const handleApply = () => {
-    if (selectedDays.size === 0 || !selectedLocation) return
-    onApply([...selectedDays], selectedLocation)
+    if (selectedDays.size === 0 || !isValidAmount) return
+    // Build per-day shift map so the hook knows which shift to assign
+    const dayShiftMap = {}
+    for (const item of eligibleDays) {
+      if (selectedDays.has(item.dateStr)) {
+        dayShiftMap[item.dateStr] = item.targetShift
+      }
+    }
+    onApply([...selectedDays], parsedAmount, dayShiftMap)
   }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal modal-bulk-location" onClick={e => e.stopPropagation()}>
-        <h2>Set Shift Locations</h2>
+        <h2>Set Shift Allowance</h2>
 
         <div className="bulk-location-picker">
-          <label>Location</label>
-          <select
+          <label>Allowance ($)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
             className="location-select"
-            value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)}
-          >
-            <option value="">-- Select location --</option>
-            {(locations || []).map((loc) => (
-              <option key={loc.id} value={loc.name}>{loc.name}</option>
-            ))}
-          </select>
+            value={allowanceAmount}
+            onChange={(e) => setAllowanceAmount(e.target.value)}
+            placeholder="0"
+          />
         </div>
 
         {eligibleDays.length === 0 ? (
@@ -96,13 +106,11 @@ export function BulkLocationModal({ goals, viewYear, viewMonth, locations, onApp
                   >
                     <div className="target-label">
                       {item.label}
-                      <span className="bulk-shifts-badge">
-                        {item.shifts.join(' + ')}
-                      </span>
+                      <span className="bulk-shifts-badge">{item.shiftLabel}</span>
                     </div>
                     <div className="target-details">
-                      {item.currentLocation && (
-                        <div className="bulk-current-location">{item.currentLocation}</div>
+                      {item.currentAllowance != null && item.currentAllowance > 0 && (
+                        <div className="bulk-current-location">${item.currentAllowance}</div>
                       )}
                     </div>
                   </div>
@@ -117,7 +125,7 @@ export function BulkLocationModal({ goals, viewYear, viewMonth, locations, onApp
           <button
             className="save-btn"
             onClick={handleApply}
-            disabled={selectedDays.size === 0 || !selectedLocation}
+            disabled={selectedDays.size === 0 || !isValidAmount}
           >
             Apply to {selectedDays.size} Day{selectedDays.size !== 1 ? 's' : ''}
           </button>

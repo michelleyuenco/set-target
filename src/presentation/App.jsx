@@ -7,9 +7,12 @@ import { CalendarGrid } from './components/CalendarGrid'
 import { GoalModal } from './components/GoalModal'
 import { BuybackModal } from './components/BuybackModal'
 import { BulkLocationModal } from './components/BulkLocationModal'
+import { BulkVerifyModal } from './components/BulkVerifyModal'
+import { BulkAllowanceModal } from './components/BulkAllowanceModal'
 import { WageBreakdownModal } from './components/WageBreakdownModal'
 import { LoginModal } from './components/LoginModal'
 import { ChangeEmailModal } from './components/ChangeEmailModal'
+import { ChangePasswordModal } from './components/ChangePasswordModal'
 import { AuthButton } from './components/AuthButton'
 import { AdminBar } from './components/AdminBar'
 import { TeamBonusModal } from './components/TeamBonusModal'
@@ -22,6 +25,11 @@ import { DataMigrationModal } from './components/DataMigrationModal'
 import { useTeamBonus } from './hooks/useTeamBonus'
 import { useProofImages } from './hooks/useProofImages'
 import { useLocationPerformance } from './hooks/useLocationPerformance'
+import { useLocationCalendar } from './hooks/useLocationCalendar'
+import { LocationCalendarModal } from './components/LocationCalendarModal'
+import { MonthlySalaryModal } from './components/MonthlySalaryModal'
+import { MiscAdjustmentsSection } from './components/MiscAdjustmentsSection'
+import { useMiscAdjustments } from './hooks/useMiscAdjustments'
 import { initFirestoreService, clearFirestoreService, getLocalGoalService, getFirestoreRepository, initAdminMemberService, clearAdminMemberService } from '../di/container'
 import { DataMigrationService } from '../application/services/DataMigrationService'
 import { DEFAULT_SHIFT_HOURS } from '../domain/entities/Goal'
@@ -37,8 +45,8 @@ export function App() {
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth()
 
-  const { user, loading: authLoading, isAdmin, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, changeEmail } = useAuth()
-  const { members, loading: membersLoading, updateMemberDisplayName } = useAdminMembers(isAdmin)
+  const { user, loading: authLoading, isAdmin, profileDisplayName, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, changeEmail, changePassword, setPassword } = useAuth()
+  const { members, loading: membersLoading, updateMemberDisplayName } = useAdminMembers(isAdmin, !!user)
   const [viewYear, setViewYear] = useState(currentYear)
   const [viewMonth, setViewMonth] = useState(currentMonth)
   const [firestoreReady, setFirestoreReady] = useState(false)
@@ -46,15 +54,23 @@ export function App() {
   const [syncing, setSyncing] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showChangeEmailModal, setShowChangeEmailModal] = useState(false)
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
   const [showMigrationModal, setShowMigrationModal] = useState(false)
   const [showLocationManager, setShowLocationManager] = useState(false)
   const [showMemberManager, setShowMemberManager] = useState(false)
-  const [showRoster, setShowRoster] = useState(false)
+  const [showRoster, setShowRoster] = useState(() => window.location.pathname === '/roster')
+  // Extract member UID from URL on initial load (e.g. /member/abc123)
+  const [initialMemberUid] = useState(() => {
+    const match = window.location.pathname.match(/^\/member\/(.+)$/)
+    return match ? match[1] : null
+  })
   const [showLocPerf, setShowLocPerf] = useState(false)
   const { stats: locPerfStats, loading: locPerfLoading, loadedKey: locPerfLoadedKey, loadStats: loadLocPerf } = useLocationPerformance()
+  const { membersGoals: locCalGoals, loading: locCalLoading, loadedKey: locCalLoadedKey, loadGoals: loadLocCalGoals } = useLocationCalendar()
+  const [showLocCalModal, setShowLocCalModal] = useState(false)
 
   // Admin state
-  const [showAdminDashboard, setShowAdminDashboard] = useState(true)
+  const [showAdminDashboard, setShowAdminDashboard] = useState(!initialMemberUid)
   const [adminViewingUid, setAdminViewingUid] = useState(null)
   const [adminSwitching, setAdminSwitching] = useState(false)
   const [adminEditMode, setAdminEditMode] = useState(false)
@@ -63,19 +79,25 @@ export function App() {
   const [displayNameDraft, setDisplayNameDraft] = useState('')
   const [displayNameSaving, setDisplayNameSaving] = useState(false)
 
-  const { goals, saveGoal, getGoalByDay, buybackTarget, confirmShift, unconfirmShift, bulkUpdateLocations, exportData, loadGoals } = useGoals(user)
+  const { goals, saveGoal, getGoalByDay, buybackTarget, confirmShift, unconfirmShift, bulkUpdateLocations, bulkVerifyShifts, bulkUpdateAllowances, exportData, loadGoals } = useGoals(user)
   const [selectedDay, setSelectedDay] = useState(null)
   const [editingGoal, setEditingGoal] = useState(null)
   const [showBuybackModal, setShowBuybackModal] = useState(false)
   const [showBulkLocationModal, setShowBulkLocationModal] = useState(false)
+  const [showBulkVerifyModal, setShowBulkVerifyModal] = useState(false)
+  const [showBulkAllowanceModal, setShowBulkAllowanceModal] = useState(false)
   const [breakdownDay, setBreakdownDay] = useState(null)
   const [summaryExpanded, setSummaryExpanded] = useState(false)
   const [excessExpanded, setExcessExpanded] = useState(false)
   const [showTeamBonusModal, setShowTeamBonusModal] = useState(false)
+  const [showSalaryModal, setShowSalaryModal] = useState(false)
 
   // Team bonus - determine whose bonus share to show
   const bonusViewUid = adminViewingUid || user?.uid
   const { teamBonus, myBonusShare, loadTeamBonus, saveTeamBonus } = useTeamBonus(viewYear, viewMonth, bonusViewUid)
+
+  // Misc adjustments - same uid pattern as team bonus
+  const { miscItems, miscTotal, saveAdjustments: saveMiscAdjustments } = useMiscAdjustments(viewYear, viewMonth, bonusViewUid)
 
   // Proof images - use the active UID (member being viewed by admin, or own UID)
   const proofImageUid = adminViewingUid || user?.uid
@@ -166,14 +188,65 @@ export function App() {
     loadGoals()
   }
 
+  // Sync URL with app state (roster / member views)
+  useEffect(() => {
+    const path = window.location.pathname
+    if (showRoster && path !== '/roster') {
+      window.history.pushState({ roster: true }, '', '/roster')
+    } else if (!showRoster && path === '/roster') {
+      window.history.pushState({}, '', '/')
+    }
+  }, [showRoster])
+
+  useEffect(() => {
+    const path = window.location.pathname
+    const expectedPath = adminViewingUid ? `/member/${adminViewingUid}` : null
+    if (adminViewingUid && path !== expectedPath) {
+      window.history.pushState({ member: adminViewingUid }, '', expectedPath)
+    } else if (!adminViewingUid && path.startsWith('/member/')) {
+      window.history.pushState({}, '', '/')
+    }
+  }, [adminViewingUid])
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname
+      setShowRoster(path === '/roster')
+      const memberMatch = path.match(/^\/member\/(.+)$/)
+      if (memberMatch) {
+        const uid = memberMatch[1]
+        if (uid !== adminViewingUid) {
+          handleAdminSelectMember(uid)
+        }
+      } else if (adminViewingUid && !path.startsWith('/member/')) {
+        handleBackToDashboard()
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [adminViewingUid])
+
+  // Restore member view from URL on initial load (after members are available)
+  useEffect(() => {
+    if (initialMemberUid && isAdmin && !membersLoading && members.length > 0 && !adminViewingUid && firestoreReady) {
+      const memberExists = members.some(m => m.uid === initialMemberUid)
+      if (memberExists) {
+        handleAdminSelectMember(initialMemberUid)
+      }
+    }
+  }, [initialMemberUid, isAdmin, membersLoading, members, firestoreReady])
+
   // Find the member being viewed (for display purposes)
   const viewingMember = adminViewingUid
     ? members.find((m) => m.uid === adminViewingUid)
     : null
 
   const isCurrentMonth = viewYear === currentYear && viewMonth === currentMonth
-  const minYear = currentMonth === 0 ? currentYear - 1 : currentYear
-  const minMonth = currentMonth === 0 ? 11 : currentMonth - 1
+  // Admins can go back up to 12 months for retroactive salary calculations; members can go back 1 month
+  const maxMonthsBack = isAdmin ? 12 : 1
+  const minDate = new Date(currentYear, currentMonth - maxMonthsBack, 1)
+  const minYear = minDate.getFullYear()
+  const minMonth = minDate.getMonth()
   const canGoPrev = viewYear > minYear || (viewYear === minYear && viewMonth > minMonth)
   const canGoNext = !isCurrentMonth
 
@@ -199,40 +272,16 @@ export function App() {
     setEditingGoal(goal)
   }
 
-  const doSaveGoal = (args) => {
+  const doSaveGoal = (data) => {
     // When member edits their own data, clear admin confirmations (requires re-verification)
     // When admin edits member data, preserve existing admin confirmations
-    const morningAdminVal = adminViewingUid ? undefined : false
-    const afternoonAdminVal = adminViewingUid ? undefined : false
-    const morningLocVal = undefined
-    const afternoonLocVal = undefined
-    saveGoal(
-      args.day,
-      args.morningAmount,
-      args.afternoonAmount,
-      args.morningActual,
-      args.afternoonActual,
-      undefined,
-      undefined,
-      args.morningCustomRate,
-      args.afternoonCustomRate,
-      args.morningCustomAmount,
-      args.afternoonCustomAmount,
-      args.morningStartTime,
-      args.morningEndTime,
-      args.afternoonStartTime,
-      args.afternoonEndTime,
-      args.morningConfirmed,
-      args.afternoonConfirmed,
-      morningAdminVal,
-      afternoonAdminVal,
-      morningLocVal,
-      afternoonLocVal,
-      args.morningImages,
-      args.afternoonImages,
-      adminViewingUid ? (args.morningAllowance !== '' ? args.morningAllowance : undefined) : undefined,
-      adminViewingUid ? (args.afternoonAllowance !== '' ? args.afternoonAllowance : undefined) : undefined
-    )
+    saveGoal({
+      ...data,
+      morningAdminConfirmed: adminViewingUid ? undefined : false,
+      afternoonAdminConfirmed: adminViewingUid ? undefined : false,
+      morningAllowance: adminViewingUid ? (data.morningAllowance !== '' ? data.morningAllowance : undefined) : undefined,
+      afternoonAllowance: adminViewingUid ? (data.afternoonAllowance !== '' ? data.afternoonAllowance : undefined) : undefined
+    })
     setSelectedDay(null)
     setEditingGoal(null)
   }
@@ -264,38 +313,8 @@ export function App() {
     await deleteProofImage(image, [])
   }
 
-  const handleSave = (
-    morningAmount,
-    afternoonAmount,
-    morningActual,
-    afternoonActual,
-    morningCustomRate,
-    afternoonCustomRate,
-    morningCustomAmount,
-    afternoonCustomAmount,
-    morningStartTime,
-    morningEndTime,
-    afternoonStartTime,
-    afternoonEndTime,
-    morningConfirmed,
-    afternoonConfirmed,
-    morningImages,
-    afternoonImages,
-    morningAllowance,
-    afternoonAllowance
-  ) => {
-    const args = {
-      day: selectedDay,
-      morningAmount, afternoonAmount,
-      morningActual, afternoonActual,
-      morningCustomRate, afternoonCustomRate,
-      morningCustomAmount, afternoonCustomAmount,
-      morningStartTime, morningEndTime,
-      afternoonStartTime, afternoonEndTime,
-      morningConfirmed, afternoonConfirmed,
-      morningImages, afternoonImages,
-      morningAllowance, afternoonAllowance
-    }
+  const handleSave = (data) => {
+    const args = { day: selectedDay, ...data }
 
     // If editing a member's data, show confirmation first
     if (adminViewingUid) {
@@ -328,9 +347,33 @@ export function App() {
     setShowBuybackModal(false)
   }
 
+  const handleOpenLocPerf = () => {
+    const teamMembers = members.filter(m => !m.isAdmin)
+    const key = `${viewYear}-${viewMonth}`
+    if (locPerfLoadedKey !== key) loadLocPerf(teamMembers, viewYear, viewMonth)
+    setShowLocPerf(true)
+  }
+
+  const handleOpenLocCal = () => {
+    const teamMembers = members.filter(m => !m.isAdmin)
+    const key = `${viewYear}-${viewMonth}`
+    if (locCalLoadedKey !== key) loadLocCalGoals(teamMembers, viewYear, viewMonth)
+    setShowLocCalModal(true)
+  }
+
   const handleBulkLocationApply = (dateStrs, location) => {
     bulkUpdateLocations(dateStrs, location)
     setShowBulkLocationModal(false)
+  }
+
+  const handleBulkVerifyApply = (dateStrs) => {
+    bulkVerifyShifts(dateStrs)
+    setShowBulkVerifyModal(false)
+  }
+
+  const handleBulkAllowanceApply = (dateStrs, amount, dayShiftMap) => {
+    bulkUpdateAllowances(dateStrs, amount, dayShiftMap)
+    setShowBulkAllowanceModal(false)
   }
 
   const handleQuickBuyback = (dateStr, shift) => {
@@ -419,7 +462,7 @@ export function App() {
           const morningHours = goal.morningShiftHours ?? DEFAULT_SHIFT_HOURS
           wages += Math.round(morningWage * morningHours * 100) / 100
 
-          if (morningWage === 80 && goal.morningActual > 0) {
+          if (goal.morningCalculatedWage === 80 && goal.morningActual > 0) {
             commission45 += goal.morningAmount * 0.045
             if (goal.morningAmount && goal.morningActual > goal.morningAmount) {
               const excess = goal.morningActual - goal.morningAmount
@@ -434,6 +477,7 @@ export function App() {
           if (goal.morningCustomRate && goal.morningCustomAmount) {
             commissionCustom += goal.morningCustomAmount * (goal.morningCustomRate / 100)
             customRates.add(Number(goal.morningCustomRate))
+            totalActual += goal.morningCustomAmount
           }
           if (goal.morningAllowance) totalAllowance += goal.morningAllowance
         }
@@ -443,7 +487,7 @@ export function App() {
           const afternoonHours = goal.afternoonShiftHours ?? DEFAULT_SHIFT_HOURS
           wages += Math.round(afternoonWage * afternoonHours * 100) / 100
 
-          if (afternoonWage === 80 && goal.afternoonActual > 0) {
+          if (goal.afternoonCalculatedWage === 80 && goal.afternoonActual > 0) {
             commission45 += goal.afternoonAmount * 0.045
             if (goal.afternoonAmount && goal.afternoonActual > goal.afternoonAmount) {
               const excess = goal.afternoonActual - goal.afternoonAmount
@@ -458,6 +502,7 @@ export function App() {
           if (goal.afternoonCustomRate && goal.afternoonCustomAmount) {
             commissionCustom += goal.afternoonCustomAmount * (goal.afternoonCustomRate / 100)
             customRates.add(Number(goal.afternoonCustomRate))
+            totalActual += goal.afternoonCustomAmount
           }
           if (goal.afternoonAllowance) totalAllowance += goal.afternoonAllowance
         }
@@ -494,7 +539,7 @@ export function App() {
   }
 
   const { wages: monthlyWages, commission45, commission35, commissionCustom, customRates, excessRevenue: monthlyExcess, totalBuybackCost: monthlyBuybackCost, availableExcess, excessAllocation, totalActual: monthlyTotalActual, totalAllowance: monthlyTotalAllowance } = calculateMonthlyEarnings()
-  const monthlyTotal = Math.round((monthlyWages + commission45 + commission35 + commissionCustom + myBonusShare + monthlyTotalAllowance) * 100) / 100
+  const monthlyTotal = Math.round((monthlyWages + commission45 + commission35 + commissionCustom + myBonusShare + monthlyTotalAllowance + miscTotal) * 100) / 100
 
   // Calculate admin confirmation progress for the viewing month (per-shift)
   const getConfirmationProgress = () => {
@@ -532,20 +577,19 @@ export function App() {
     <div className="app">
       <div className="app-header">
         {user && !isAdmin && (
-          <>
-            <button className="roster-trigger-btn" onClick={() => setShowRoster(true)}>
-              My Roster
-            </button>
-            <button className="roster-trigger-btn" onClick={() => setShowBulkLocationModal(true)}>
-              Set Locations
-            </button>
-          </>
+          <button className="roster-trigger-btn" onClick={() => setShowRoster(true)}>
+            My Roster
+          </button>
         )}
         <AuthButton
           user={user}
+          profileDisplayName={profileDisplayName}
           onSignInClick={() => setShowLoginModal(true)}
           onSignOut={handleSignOut}
           onChangeEmail={() => setShowChangeEmailModal(true)}
+          onChangePassword={() => setShowChangePasswordModal(true)}
+          onSetPassword={() => setShowChangePasswordModal(true)}
+          onSetLocations={user && !isAdmin ? () => setShowBulkLocationModal(true) : undefined}
         />
       </div>
 
@@ -559,11 +603,8 @@ export function App() {
           onManageLocations={() => { loadLocations(); setShowLocationManager(true) }}
           onManageMembers={() => setShowMemberManager(true)}
           onOpenRoster={() => setShowRoster(true)}
-          onLocationPerformance={() => {
-            const key = `${viewYear}-${viewMonth}`
-            if (locPerfLoadedKey !== key) loadLocPerf(members, viewYear, viewMonth)
-            setShowLocPerf(true)
-          }}
+          onLocationPerformance={handleOpenLocPerf}
+          onLocationCalendar={handleOpenLocCal}
         />
       ) : (
         <>
@@ -576,15 +617,6 @@ export function App() {
               editMode={adminEditMode}
               onSelectMember={handleAdminSelectMember}
               onToggleEditMode={() => setAdminEditMode(!adminEditMode)}
-              onTeamBonus={() => setShowTeamBonusModal(true)}
-              onManageLocations={() => { loadLocations(); setShowLocationManager(true) }}
-              onManageMembers={() => setShowMemberManager(true)}
-              onOpenRoster={() => setShowRoster(true)}
-              onLocationPerformance={() => {
-                const key = `${viewYear}-${viewMonth}`
-                if (locPerfLoadedKey !== key) loadLocPerf(members, viewYear, viewMonth)
-                setShowLocPerf(true)
-              }}
               onBackToDashboard={handleBackToDashboard}
             />
           )}
@@ -630,7 +662,27 @@ export function App() {
                   Verified: {confirmationProgress.confirmed}/{confirmationProgress.total}
                 </span>
               )}
+              {confirmationProgress && confirmationProgress.confirmed < confirmationProgress.total && (
+                <button className="bulk-verify-trigger-btn" onClick={() => setShowBulkVerifyModal(true)}>
+                  Bulk Verify
+                </button>
+              )}
+              <button className="bulk-verify-trigger-btn bulk-location-trigger-btn" onClick={() => setShowBulkLocationModal(true)}>
+                Set Locations
+              </button>
+              <button className="bulk-verify-trigger-btn bulk-location-trigger-btn" onClick={() => setShowBulkAllowanceModal(true)}>
+                Set Allowance
+              </button>
             </div>
+          )}
+
+          {adminViewingUid && (
+            <MiscAdjustmentsSection
+              items={miscItems}
+              miscTotal={miscTotal}
+              onSave={saveMiscAdjustments}
+              adminUid={user?.uid}
+            />
           )}
 
           {(syncing || adminSwitching) && (
@@ -641,6 +693,7 @@ export function App() {
             <button className="nav-btn" onClick={handlePrev} disabled={!canGoPrev}>&larr;</button>
             <h1>{MONTH_NAMES[viewMonth]} {viewYear}</h1>
             <button className="nav-btn" onClick={handleNext} disabled={!canGoNext}>&rarr;</button>
+            <button className="salary-btn" onClick={() => setShowSalaryModal(true)} title="View Salary Details">Salary</button>
           </div>
 
           <CalendarGrid
@@ -725,12 +778,45 @@ export function App() {
                     <span className="monthly-value">+${myBonusShare.toLocaleString()}</span>
                   </div>
                 )}
+                {miscTotal !== 0 && (
+                  <div className="monthly-row misc-row">
+                    <span className="monthly-label">Misc Adjustments:</span>
+                    <span className="monthly-value">{miscTotal >= 0 ? '+' : ''}${miscTotal.toLocaleString()}</span>
+                  </div>
+                )}
               </>
             )}
-            <div className="monthly-total">
-              <span className="monthly-label">Total:</span>
-              <span className="monthly-amount">${monthlyTotal.toLocaleString()}</span>
-            </div>
+            {(() => {
+              const hasMpf = monthlyTotal > 7000
+              const mpfDeduction = hasMpf ? Math.round(monthlyTotal * 0.05 * 100) / 100 : 0
+              const takeHome = hasMpf ? Math.round((monthlyTotal - mpfDeduction) * 100) / 100 : 0
+              return (
+                <>
+                  <div className="monthly-total" onClick={() => setShowSalaryModal(true)} style={{ cursor: 'pointer' }}>
+                    <span className="monthly-label">Total: <span className="salary-details-hint">Tap for details</span></span>
+                    <span className="monthly-amount">${monthlyTotal.toLocaleString()}</span>
+                  </div>
+                  {hasMpf && !summaryExpanded && (
+                    <div className="monthly-total take-home-row">
+                      <span className="monthly-label">Take Home (-5% MPF):</span>
+                      <span className="monthly-amount">${takeHome.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {summaryExpanded && hasMpf && (
+                    <>
+                      <div className="monthly-row mpf-row">
+                        <span className="monthly-label">MPF (5%):</span>
+                        <span className="monthly-value">-${mpfDeduction.toLocaleString()}</span>
+                      </div>
+                      <div className="monthly-total take-home-row">
+                        <span className="monthly-label">Take Home (-5% MPF):</span>
+                        <span className="monthly-amount">${takeHome.toLocaleString()}</span>
+                      </div>
+                    </>
+                  )}
+                </>
+              )
+            })()}
             {summaryExpanded && (
               <>
                 <button className="export-btn" onClick={handleExport}>
@@ -750,28 +836,7 @@ export function App() {
       {selectedDay && (
         <GoalModal
           day={formatSelectedDay(selectedDay)}
-          initialMorning={editingGoal?.morningAmount}
-          initialAfternoon={editingGoal?.afternoonAmount}
-          initialMorningActual={editingGoal?.morningActual}
-          initialAfternoonActual={editingGoal?.afternoonActual}
-          initialMorningCustomRate={editingGoal?.morningCustomRate}
-          initialAfternoonCustomRate={editingGoal?.afternoonCustomRate}
-          initialMorningCustomAmount={editingGoal?.morningCustomAmount}
-          initialAfternoonCustomAmount={editingGoal?.afternoonCustomAmount}
-          initialMorningStartTime={editingGoal?.morningStartTime}
-          initialMorningEndTime={editingGoal?.morningEndTime}
-          initialAfternoonStartTime={editingGoal?.afternoonStartTime}
-          initialAfternoonEndTime={editingGoal?.afternoonEndTime}
-          initialMorningConfirmed={editingGoal?.morningConfirmed}
-          initialAfternoonConfirmed={editingGoal?.afternoonConfirmed}
-          initialMorningAdminConfirmed={editingGoal?.morningAdminConfirmed}
-          initialAfternoonAdminConfirmed={editingGoal?.afternoonAdminConfirmed}
-          initialMorningLocation={editingGoal?.morningLocation}
-          initialAfternoonLocation={editingGoal?.afternoonLocation}
-          initialMorningProofImages={editingGoal?.morningProofImages}
-          initialAfternoonProofImages={editingGoal?.afternoonProofImages}
-          initialMorningAllowance={editingGoal?.morningAllowance}
-          initialAfternoonAllowance={editingGoal?.afternoonAllowance}
+          goal={editingGoal}
           isAdminViewing={!!adminViewingUid}
           locations={visibleLocations}
           onSave={handleSave}
@@ -822,11 +887,45 @@ export function App() {
         />
       )}
 
+      {showBulkVerifyModal && (
+        <BulkVerifyModal
+          goals={goals}
+          viewYear={viewYear}
+          viewMonth={viewMonth}
+          onApply={handleBulkVerifyApply}
+          onClose={() => setShowBulkVerifyModal(false)}
+        />
+      )}
+
+      {showBulkAllowanceModal && (
+        <BulkAllowanceModal
+          goals={goals}
+          viewYear={viewYear}
+          viewMonth={viewMonth}
+          onApply={handleBulkAllowanceApply}
+          onClose={() => setShowBulkAllowanceModal(false)}
+        />
+      )}
+
       {breakdownDay && (
         <WageBreakdownModal
           day={formatSelectedDay(breakdownDay)}
           goal={getGoalByDay(breakdownDay)}
           onClose={() => setBreakdownDay(null)}
+        />
+      )}
+
+      {showSalaryModal && (
+        <MonthlySalaryModal
+          year={viewYear}
+          month={viewMonth}
+          goals={goals}
+          monthlyEarnings={calculateMonthlyEarnings()}
+          myBonusShare={myBonusShare}
+          miscItems={miscItems}
+          miscTotal={miscTotal}
+          viewingMember={adminViewingUid ? viewingMember : null}
+          onClose={() => setShowSalaryModal(false)}
         />
       )}
 
@@ -844,6 +943,15 @@ export function App() {
           currentEmail={user.email}
           onChangeEmail={changeEmail}
           onClose={() => setShowChangeEmailModal(false)}
+        />
+      )}
+
+      {showChangePasswordModal && user && (
+        <ChangePasswordModal
+          mode={user.providerData?.some(p => p.providerId === 'password') ? 'change' : 'set'}
+          onChangePassword={changePassword}
+          onSetPassword={setPassword}
+          onClose={() => setShowChangePasswordModal(false)}
         />
       )}
 
@@ -892,7 +1000,7 @@ export function App() {
         <RosterModal
           isAdmin={isAdmin}
           currentUserUid={user.uid}
-          currentUserDisplayName={user.displayName || user.email}
+          currentUserDisplayName={profileDisplayName || user.displayName || user.email}
           members={members}
           locations={visibleLocations}
           onClose={() => setShowRoster(false)}
@@ -905,7 +1013,20 @@ export function App() {
           loading={locPerfLoading}
           year={viewYear}
           month={viewMonth}
+          onLoadStats={(y, m) => loadLocPerf(members.filter(mem => !mem.isAdmin), y, m)}
           onClose={() => setShowLocPerf(false)}
+        />
+      )}
+
+      {showLocCalModal && (
+        <LocationCalendarModal
+          membersGoals={locCalGoals}
+          loading={locCalLoading}
+          year={viewYear}
+          month={viewMonth}
+          locations={visibleLocations}
+          onLoad={() => loadLocCalGoals(members.filter(m => !m.isAdmin), viewYear, viewMonth)}
+          onClose={() => setShowLocCalModal(false)}
         />
       )}
     </div>

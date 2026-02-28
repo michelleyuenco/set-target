@@ -8,6 +8,7 @@ export function AdminDashboard({
   onManageMembers,
   onOpenRoster,
   onLocationPerformance,
+  onLocationCalendar,
 }) {
   const teamMembers = members.filter((m) => m.uid !== currentUserUid && !m.isAdmin)
 
@@ -37,6 +38,10 @@ export function AdminDashboard({
         <button className="admin-action-btn" onClick={onLocationPerformance}>
           <span className="action-icon">&#128200;</span>
           <span className="action-label">Performance</span>
+        </button>
+        <button className="admin-action-btn" onClick={onLocationCalendar}>
+          <span className="action-icon">&#128205;</span>
+          <span className="action-label">Loc Calendar</span>
         </button>
       </div>
 

@@ -1,4 +1,4 @@
-export function AdminBar({ members, membersLoading, selectedUid, currentUserUid, editMode, onSelectMember, onToggleEditMode, onTeamBonus, onManageLocations, onManageMembers, onOpenRoster, onLocationPerformance, onBackToDashboard }) {
+export function AdminBar({ members, membersLoading, selectedUid, currentUserUid, editMode, onSelectMember, onToggleEditMode, onBackToDashboard }) {
   const isViewingMember = selectedUid && selectedUid !== currentUserUid
 
   return (
@@ -39,21 +39,6 @@ export function AdminBar({ members, membersLoading, selectedUid, currentUserUid,
           {editMode ? 'Editing ON' : 'Enable Edit'}
         </button>
       )}
-      <button className="team-bonus-btn" onClick={onTeamBonus}>
-        Team Bonus
-      </button>
-      <button className="team-bonus-btn" onClick={onManageLocations}>
-        Locations
-      </button>
-      <button className="team-bonus-btn" onClick={onManageMembers}>
-        Members
-      </button>
-      <button className="team-bonus-btn" onClick={onOpenRoster}>
-        Roster
-      </button>
-      <button className="team-bonus-btn" onClick={onLocationPerformance}>
-        Perf
-      </button>
     </div>
   )
 }

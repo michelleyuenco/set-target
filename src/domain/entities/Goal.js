@@ -5,58 +5,34 @@ export const DEFAULT_AFTERNOON_END = '20:10'
 export const DEFAULT_SHIFT_HOURS = 4 + (10 / 60) // 4.167 hours
 
 export class Goal {
-  constructor(
-    day,
-    morningAmount = null,
-    afternoonAmount = null,
-    morningActual = null,
-    afternoonActual = null,
-    morningBoughtBack = false,
-    afternoonBoughtBack = false,
-    morningCustomRate = null,
-    afternoonCustomRate = null,
-    morningCustomAmount = null,
-    afternoonCustomAmount = null,
-    morningStartTime = null,
-    morningEndTime = null,
-    afternoonStartTime = null,
-    afternoonEndTime = null,
-    morningConfirmed = false,
-    afternoonConfirmed = false,
-    morningAdminConfirmed = false,
-    afternoonAdminConfirmed = false,
-    morningLocation = null,
-    afternoonLocation = null,
-    morningProofImages = [],
-    afternoonProofImages = [],
-    morningAllowance = null,
-    afternoonAllowance = null
-  ) {
-    this.day = day
-    this.morningAmount = this.parseAmount(morningAmount)
-    this.afternoonAmount = this.parseAmount(afternoonAmount)
-    this.morningActual = this.parseAmount(morningActual)
-    this.afternoonActual = this.parseAmount(afternoonActual)
-    this.morningBoughtBack = morningBoughtBack || false
-    this.afternoonBoughtBack = afternoonBoughtBack || false
-    this.morningCustomRate = this.parseAmount(morningCustomRate)
-    this.afternoonCustomRate = this.parseAmount(afternoonCustomRate)
-    this.morningCustomAmount = this.parseAmount(morningCustomAmount)
-    this.afternoonCustomAmount = this.parseAmount(afternoonCustomAmount)
-    this.morningStartTime = morningStartTime || DEFAULT_MORNING_START
-    this.morningEndTime = morningEndTime || DEFAULT_MORNING_END
-    this.afternoonStartTime = afternoonStartTime || DEFAULT_AFTERNOON_START
-    this.afternoonEndTime = afternoonEndTime || DEFAULT_AFTERNOON_END
-    this.morningConfirmed = !!morningConfirmed
-    this.afternoonConfirmed = !!afternoonConfirmed
-    this.morningAdminConfirmed = !!morningAdminConfirmed
-    this.afternoonAdminConfirmed = !!afternoonAdminConfirmed
-    this.morningLocation = morningLocation || null
-    this.afternoonLocation = afternoonLocation || null
-    this.morningProofImages = Array.isArray(morningProofImages) ? morningProofImages : []
-    this.afternoonProofImages = Array.isArray(afternoonProofImages) ? afternoonProofImages : []
-    this.morningAllowance = this.parseAmount(morningAllowance)
-    this.afternoonAllowance = this.parseAmount(afternoonAllowance)
+  constructor(data = {}) {
+    this.day = data.day
+    this.morningAmount = this.parseAmount(data.morningAmount)
+    this.afternoonAmount = this.parseAmount(data.afternoonAmount)
+    this.morningActual = this.parseAmount(data.morningActual)
+    this.afternoonActual = this.parseAmount(data.afternoonActual)
+    this.morningBoughtBack = data.morningBoughtBack || false
+    this.afternoonBoughtBack = data.afternoonBoughtBack || false
+    this.morningCustomRate = this.parseAmount(data.morningCustomRate)
+    this.afternoonCustomRate = this.parseAmount(data.afternoonCustomRate)
+    this.morningCustomAmount = this.parseAmount(data.morningCustomAmount)
+    this.afternoonCustomAmount = this.parseAmount(data.afternoonCustomAmount)
+    this.morningStartTime = data.morningStartTime || DEFAULT_MORNING_START
+    this.morningEndTime = data.morningEndTime || DEFAULT_MORNING_END
+    this.afternoonStartTime = data.afternoonStartTime || DEFAULT_AFTERNOON_START
+    this.afternoonEndTime = data.afternoonEndTime || DEFAULT_AFTERNOON_END
+    this.morningConfirmed = !!data.morningConfirmed
+    this.afternoonConfirmed = !!data.afternoonConfirmed
+    this.morningAdminConfirmed = !!data.morningAdminConfirmed
+    this.afternoonAdminConfirmed = !!data.afternoonAdminConfirmed
+    this.morningLocation = data.morningLocation || null
+    this.afternoonLocation = data.afternoonLocation || null
+    this.morningProofImages = Array.isArray(data.morningProofImages) ? data.morningProofImages : []
+    this.afternoonProofImages = Array.isArray(data.afternoonProofImages) ? data.afternoonProofImages : []
+    this.morningAllowance = this.parseAmount(data.morningAllowance)
+    this.afternoonAllowance = this.parseAmount(data.afternoonAllowance)
+    this.morningCustomWage = this.parseAmount(data.morningCustomWage)
+    this.afternoonCustomWage = this.parseAmount(data.afternoonCustomWage)
   }
 
   parseAmount(value) {
@@ -90,15 +66,25 @@ export class Goal {
     return 75
   }
 
-  get morningWage() {
+  get morningCalculatedWage() {
     return Goal.calculateWage(this.morningAmount, this.morningActual)
   }
 
-  get afternoonWage() {
+  get afternoonCalculatedWage() {
     return Goal.calculateWage(this.afternoonAmount, this.afternoonActual)
   }
 
-  hasGoals() {
+  get morningWage() {
+    if (this.morningCustomWage !== null) return this.morningCustomWage
+    return this.morningCalculatedWage
+  }
+
+  get afternoonWage() {
+    if (this.afternoonCustomWage !== null) return this.afternoonCustomWage
+    return this.afternoonCalculatedWage
+  }
+
+  get hasGoals() {
     return this.morningConfirmed || this.afternoonConfirmed ||
       this.morningAmount !== null || this.afternoonAmount !== null
   }
@@ -129,7 +115,9 @@ export class Goal {
       morningProofImages: this.morningProofImages,
       afternoonProofImages: this.afternoonProofImages,
       morningAllowance: this.morningAllowance,
-      afternoonAllowance: this.afternoonAllowance
+      afternoonAllowance: this.afternoonAllowance,
+      morningCustomWage: this.morningCustomWage,
+      afternoonCustomWage: this.afternoonCustomWage
     }
   }
 
@@ -157,32 +145,19 @@ export class Goal {
       afternoonAdminConfirmed = true
     }
 
-    return new Goal(
-      data.day,
-      data.morningAmount,
-      data.afternoonAmount,
-      data.morningActual,
-      data.afternoonActual,
-      data.morningBoughtBack,
-      data.afternoonBoughtBack,
-      data.morningCustomRate,
-      data.afternoonCustomRate,
-      data.morningCustomAmount,
-      data.afternoonCustomAmount,
-      data.morningStartTime,
-      data.morningEndTime,
-      data.afternoonStartTime,
-      data.afternoonEndTime,
+    return new Goal({
+      ...data,
       morningConfirmed,
       afternoonConfirmed,
       morningAdminConfirmed,
       afternoonAdminConfirmed,
-      data.morningLocation || null,
-      data.afternoonLocation || null,
-      data.morningProofImages || [],
-      data.afternoonProofImages || [],
-      data.morningAllowance ?? null,
-      data.afternoonAllowance ?? null
-    )
+      morningLocation: data.morningLocation || null,
+      morningProofImages: data.morningProofImages || [],
+      afternoonProofImages: data.afternoonProofImages || [],
+      morningAllowance: data.morningAllowance ?? null,
+      afternoonAllowance: data.afternoonAllowance ?? null,
+      morningCustomWage: data.morningCustomWage ?? null,
+      afternoonCustomWage: data.afternoonCustomWage ?? null
+    })
   }
 }

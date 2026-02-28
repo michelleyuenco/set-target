@@ -14,7 +14,7 @@ export function BuybackModal({ goals, viewYear, viewMonth, availableExcess, onBu
 
     if (goal?.hasGoals) {
       // Morning shift: confirmed, unmet and not bought back
-      if (goal.morningConfirmed && goal.morningAmount && goal.morningWage !== 80 && !goal.morningBoughtBack) {
+      if (goal.morningConfirmed && goal.morningAmount && goal.morningCalculatedWage !== 80 && !goal.morningBoughtBack) {
         unmetTargets.push({
           dateStr,
           shift: 'morning',
@@ -25,7 +25,7 @@ export function BuybackModal({ goals, viewYear, viewMonth, availableExcess, onBu
       }
 
       // Afternoon shift: confirmed, unmet and not bought back
-      if (goal.afternoonConfirmed && goal.afternoonAmount && goal.afternoonWage !== 80 && !goal.afternoonBoughtBack) {
+      if (goal.afternoonConfirmed && goal.afternoonAmount && goal.afternoonCalculatedWage !== 80 && !goal.afternoonBoughtBack) {
         unmetTargets.push({
           dateStr,
           shift: 'afternoon',

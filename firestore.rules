@@ -27,6 +27,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Monthly adjustments (misc salary items) - any authenticated user can read, only admin can write
+    match /monthlyAdjustments/{monthId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
     // Locations - any authenticated user can read, only admin can write
     match /locations/{locationId} {
       allow read: if request.auth != null;
@@ -34,10 +40,10 @@ service cloud.firestore {
     }
 
     // Rosters - any authenticated user can read (filtering done on frontend)
-    // Only admin can write the roster document itself
+    // Any authenticated user can write (admin manages roster, members can transfer shifts)
     match /rosters/{monthId} {
       allow read: if request.auth != null;
-      allow write: if isAdmin();
+      allow write: if request.auth != null;
     }
 
     // Shift applications subcollection under each roster month

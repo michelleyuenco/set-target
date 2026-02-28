@@ -4,28 +4,7 @@ import { ProofImages } from './ProofImages'
 
 export function GoalModal({
   day,
-  initialMorning,
-  initialAfternoon,
-  initialMorningActual,
-  initialAfternoonActual,
-  initialMorningCustomRate,
-  initialAfternoonCustomRate,
-  initialMorningCustomAmount,
-  initialAfternoonCustomAmount,
-  initialMorningStartTime,
-  initialMorningEndTime,
-  initialAfternoonStartTime,
-  initialAfternoonEndTime,
-  initialMorningConfirmed,
-  initialAfternoonConfirmed,
-  initialMorningAdminConfirmed,
-  initialAfternoonAdminConfirmed,
-  initialMorningLocation,
-  initialAfternoonLocation,
-  initialMorningProofImages,
-  initialAfternoonProofImages,
-  initialMorningAllowance,
-  initialAfternoonAllowance,
+  goal,
   isAdminViewing,
   locations,
   onSave,
@@ -41,6 +20,8 @@ export function GoalModal({
   const [afternoonGoal, setAfternoonGoal] = useState('')
   const [morningActual, setMorningActual] = useState('')
   const [afternoonActual, setAfternoonActual] = useState('')
+  const [morningActualInput, setMorningActualInput] = useState('')
+  const [afternoonActualInput, setAfternoonActualInput] = useState('')
   const [morningCustomRate, setMorningCustomRate] = useState('')
   const [afternoonCustomRate, setAfternoonCustomRate] = useState('')
   const [morningCustomAmount, setMorningCustomAmount] = useState('')
@@ -53,12 +34,12 @@ export function GoalModal({
   const [afternoonEndTime, setAfternoonEndTime] = useState(DEFAULT_AFTERNOON_END)
   const [morningConfirmed, setMorningConfirmed] = useState(false)
   const [afternoonConfirmed, setAfternoonConfirmed] = useState(false)
-  const [morningLocationId, setMorningLocationId] = useState('')
-  const [afternoonLocationId, setAfternoonLocationId] = useState('')
   const [morningProofImages, setMorningProofImages] = useState([])
   const [afternoonProofImages, setAfternoonProofImages] = useState([])
   const [morningAllowance, setMorningAllowance] = useState('')
   const [afternoonAllowance, setAfternoonAllowance] = useState('')
+  const [morningCustomWage, setMorningCustomWage] = useState('')
+  const [afternoonCustomWage, setAfternoonCustomWage] = useState('')
   const [pendingMorningFiles, setPendingMorningFiles] = useState([])
   const [pendingAfternoonFiles, setPendingAfternoonFiles] = useState([])
   const [saving, setSaving] = useState(false)
@@ -70,39 +51,31 @@ export function GoalModal({
     setPendingAfternoonFiles(prev => { prev.forEach(p => URL.revokeObjectURL(p.localUrl)); return [] })
     setSaveError(null)
 
-    setMorningGoal(initialMorning || '')
-    setAfternoonGoal(initialAfternoon || '')
-    setMorningActual(initialMorningActual || '')
-    setAfternoonActual(initialAfternoonActual || '')
-    setMorningCustomRate(initialMorningCustomRate || '')
-    setAfternoonCustomRate(initialAfternoonCustomRate || '')
-    setMorningCustomAmount(initialMorningCustomAmount || '')
-    setAfternoonCustomAmount(initialAfternoonCustomAmount || '')
-    setShowMorningCustom(!!(initialMorningCustomRate || initialMorningCustomAmount))
-    setShowAfternoonCustom(!!(initialAfternoonCustomRate || initialAfternoonCustomAmount))
-    setMorningStartTime(initialMorningStartTime || DEFAULT_MORNING_START)
-    setMorningEndTime(initialMorningEndTime || DEFAULT_MORNING_END)
-    setAfternoonStartTime(initialAfternoonStartTime || DEFAULT_AFTERNOON_START)
-    setAfternoonEndTime(initialAfternoonEndTime || DEFAULT_AFTERNOON_END)
-    setMorningConfirmed(!!initialMorningConfirmed)
-    setAfternoonConfirmed(!!initialAfternoonConfirmed)
-    setMorningLocationId('')
-    setAfternoonLocationId('')
-    setMorningProofImages(initialMorningProofImages || [])
-    setAfternoonProofImages(initialAfternoonProofImages || [])
-    setMorningAllowance(initialMorningAllowance ?? '')
-    setAfternoonAllowance(initialAfternoonAllowance ?? '')
-  }, [
-    initialMorning, initialAfternoon,
-    initialMorningActual, initialAfternoonActual,
-    initialMorningCustomRate, initialAfternoonCustomRate,
-    initialMorningCustomAmount, initialAfternoonCustomAmount,
-    initialMorningStartTime, initialMorningEndTime,
-    initialAfternoonStartTime, initialAfternoonEndTime,
-    initialMorningConfirmed, initialAfternoonConfirmed,
-    initialMorningProofImages, initialAfternoonProofImages,
-    initialMorningAllowance, initialAfternoonAllowance
-  ])
+    setMorningGoal(goal?.morningAmount || '')
+    setAfternoonGoal(goal?.afternoonAmount || '')
+    setMorningActual(goal?.morningActual || '')
+    setAfternoonActual(goal?.afternoonActual || '')
+    setMorningActualInput(goal?.morningActual || '')
+    setAfternoonActualInput(goal?.afternoonActual || '')
+    setMorningCustomRate(goal?.morningCustomRate || '')
+    setAfternoonCustomRate(goal?.afternoonCustomRate || '')
+    setMorningCustomAmount(goal?.morningCustomAmount || '')
+    setAfternoonCustomAmount(goal?.afternoonCustomAmount || '')
+    setShowMorningCustom(!!(goal?.morningCustomRate || goal?.morningCustomAmount))
+    setShowAfternoonCustom(!!(goal?.afternoonCustomRate || goal?.afternoonCustomAmount))
+    setMorningStartTime(goal?.morningStartTime || DEFAULT_MORNING_START)
+    setMorningEndTime(goal?.morningEndTime || DEFAULT_MORNING_END)
+    setAfternoonStartTime(goal?.afternoonStartTime || DEFAULT_AFTERNOON_START)
+    setAfternoonEndTime(goal?.afternoonEndTime || DEFAULT_AFTERNOON_END)
+    setMorningConfirmed(!!goal?.morningConfirmed)
+    setAfternoonConfirmed(!!goal?.afternoonConfirmed)
+    setMorningProofImages(goal?.morningProofImages || [])
+    setAfternoonProofImages(goal?.afternoonProofImages || [])
+    setMorningAllowance(goal?.morningAllowance ?? '')
+    setAfternoonAllowance(goal?.afternoonAllowance ?? '')
+    setMorningCustomWage(goal?.morningCustomWage ?? '')
+    setAfternoonCustomWage(goal?.afternoonCustomWage ?? '')
+  }, [goal])
 
   // Stage files locally — no upload until Save
   const handleStageFiles = (shift, files) => {
@@ -153,6 +126,36 @@ export function GoalModal({
     onCancel()
   }
 
+  const evaluateFormula = (expr) => {
+    if (!expr || String(expr).trim() === '') return null
+    const str = String(expr).trim()
+    // Only allow digits, decimal points, spaces, and basic operators
+    if (!/^[\d\s+\-*/().]+$/.test(str)) return null
+    // Must contain at least one digit
+    if (!/\d/.test(str)) return null
+    try {
+      // eslint-disable-next-line no-new-func
+      const result = Function('"use strict"; return (' + str + ')')()
+      if (typeof result !== 'number' || !isFinite(result)) return null
+      return Math.round(result * 100) / 100
+    } catch {
+      return null
+    }
+  }
+
+  const formulaPreview = (input) => {
+    const str = String(input || '').trim()
+    if (!/[+\-*/]/.test(str)) return null
+    return evaluateFormula(str)
+  }
+
+  const handleActualBlur = (input, setActual) => {
+    const str = String(input || '').trim()
+    if (str === '') { setActual(''); return }
+    const result = evaluateFormula(str)
+    if (result !== null) setActual(String(result))
+  }
+
   const handleSave = async () => {
     setSaving(true)
     setSaveError(null)
@@ -174,17 +177,28 @@ export function GoalModal({
         setPendingAfternoonFiles([])
       }
 
-      onSave(
-        morningGoal, afternoonGoal,
-        morningActual, afternoonActual,
-        morningCustomRate, afternoonCustomRate,
-        morningCustomAmount, afternoonCustomAmount,
-        morningStartTime, morningEndTime,
-        afternoonStartTime, afternoonEndTime,
-        morningConfirmed, afternoonConfirmed,
-        finalMorningImages, finalAfternoonImages,
-        morningAllowance, afternoonAllowance
-      )
+      onSave({
+        morningAmount: morningGoal,
+        afternoonAmount: afternoonGoal,
+        morningActual,
+        afternoonActual,
+        morningCustomRate,
+        afternoonCustomRate,
+        morningCustomAmount,
+        afternoonCustomAmount,
+        morningStartTime,
+        morningEndTime,
+        afternoonStartTime,
+        afternoonEndTime,
+        morningConfirmed,
+        afternoonConfirmed,
+        morningProofImages: finalMorningImages,
+        afternoonProofImages: finalAfternoonImages,
+        morningAllowance,
+        afternoonAllowance,
+        morningCustomWage,
+        afternoonCustomWage
+      })
     } catch (err) {
       setSaveError(err.message || 'Failed to upload images')
       setSaving(false)
@@ -194,36 +208,40 @@ export function GoalModal({
   // Detect whether any value has changed from initial state
   const norm = (v) => v == null ? '' : String(v)
   const hasChanges = (
-    norm(morningGoal) !== norm(initialMorning) ||
-    norm(afternoonGoal) !== norm(initialAfternoon) ||
-    norm(morningActual) !== norm(initialMorningActual) ||
-    norm(afternoonActual) !== norm(initialAfternoonActual) ||
-    norm(morningCustomRate) !== norm(initialMorningCustomRate) ||
-    norm(afternoonCustomRate) !== norm(initialAfternoonCustomRate) ||
-    norm(morningCustomAmount) !== norm(initialMorningCustomAmount) ||
-    norm(afternoonCustomAmount) !== norm(initialAfternoonCustomAmount) ||
-    morningStartTime !== (initialMorningStartTime || DEFAULT_MORNING_START) ||
-    morningEndTime !== (initialMorningEndTime || DEFAULT_MORNING_END) ||
-    afternoonStartTime !== (initialAfternoonStartTime || DEFAULT_AFTERNOON_START) ||
-    afternoonEndTime !== (initialAfternoonEndTime || DEFAULT_AFTERNOON_END) ||
-    morningConfirmed !== !!initialMorningConfirmed ||
-    afternoonConfirmed !== !!initialAfternoonConfirmed ||
+    norm(morningGoal) !== norm(goal?.morningAmount) ||
+    norm(afternoonGoal) !== norm(goal?.afternoonAmount) ||
+    norm(morningActual) !== norm(goal?.morningActual) ||
+    norm(afternoonActual) !== norm(goal?.afternoonActual) ||
+    norm(morningCustomRate) !== norm(goal?.morningCustomRate) ||
+    norm(afternoonCustomRate) !== norm(goal?.afternoonCustomRate) ||
+    norm(morningCustomAmount) !== norm(goal?.morningCustomAmount) ||
+    norm(afternoonCustomAmount) !== norm(goal?.afternoonCustomAmount) ||
+    morningStartTime !== (goal?.morningStartTime || DEFAULT_MORNING_START) ||
+    morningEndTime !== (goal?.morningEndTime || DEFAULT_MORNING_END) ||
+    afternoonStartTime !== (goal?.afternoonStartTime || DEFAULT_AFTERNOON_START) ||
+    afternoonEndTime !== (goal?.afternoonEndTime || DEFAULT_AFTERNOON_END) ||
+    morningConfirmed !== !!goal?.morningConfirmed ||
+    afternoonConfirmed !== !!goal?.afternoonConfirmed ||
     pendingMorningFiles.length > 0 ||
     pendingAfternoonFiles.length > 0 ||
-    morningProofImages.length !== (initialMorningProofImages?.length || 0) ||
-    afternoonProofImages.length !== (initialAfternoonProofImages?.length || 0) ||
-    norm(morningAllowance) !== norm(initialMorningAllowance) ||
-    norm(afternoonAllowance) !== norm(initialAfternoonAllowance)
+    morningProofImages.length !== (goal?.morningProofImages?.length || 0) ||
+    afternoonProofImages.length !== (goal?.afternoonProofImages?.length || 0) ||
+    norm(morningAllowance) !== norm(goal?.morningAllowance) ||
+    norm(afternoonAllowance) !== norm(goal?.afternoonAllowance) ||
+    norm(morningCustomWage) !== norm(goal?.morningCustomWage) ||
+    norm(afternoonCustomWage) !== norm(goal?.afternoonCustomWage)
   )
 
-  const getWage = (target, actual) => {
+  const getWage = (target, actual, customWage) => {
+    const cw = customWage === '' ? null : Number(customWage)
+    if (cw !== null && !isNaN(cw) && cw >= 0) return cw
     const t = target === '' ? null : Number(target)
     const a = actual === '' ? null : Number(actual)
     return Goal.calculateWage(t, a)
   }
 
-  const morningWage = getWage(morningGoal, morningActual)
-  const afternoonWage = getWage(afternoonGoal, afternoonActual)
+  const morningWage = getWage(morningGoal, morningActual, morningCustomWage)
+  const afternoonWage = getWage(afternoonGoal, afternoonActual, afternoonCustomWage)
 
   const morningHours = Goal.calculateHoursFromTimes(morningStartTime, morningEndTime)
   const afternoonHours = Goal.calculateHoursFromTimes(afternoonStartTime, afternoonEndTime)
@@ -235,65 +253,16 @@ export function GoalModal({
     return `${h}h ${m}m`
   }
 
-  const wageClass = (wage) => {
+  // Lock shifts that have been admin-verified (unless admin is viewing)
+  const morningLocked = !isAdminViewing && !!goal?.morningAdminConfirmed
+  const afternoonLocked = !isAdminViewing && !!goal?.afternoonAdminConfirmed
+
+  const wageClass = (wage, customWage) => {
+    const cw = customWage === '' ? null : Number(customWage)
+    if (cw !== null && !isNaN(cw) && cw >= 0) return 'wage-custom'
     if (wage === 80) return 'wage-hit'
     if (wage === 75) return 'wage-partial'
     return 'wage-none'
-  }
-
-  const renderShiftAdminSection = (shift) => {
-    const isConfirmed = shift === 'morning' ? initialMorningAdminConfirmed : initialAfternoonAdminConfirmed
-    const shiftUserConfirmed = shift === 'morning' ? morningConfirmed : afternoonConfirmed
-    const locationName = shift === 'morning' ? initialMorningLocation : initialAfternoonLocation
-    const selectedLocationId = shift === 'morning' ? morningLocationId : afternoonLocationId
-    const setSelectedLocationId = shift === 'morning' ? setMorningLocationId : setAfternoonLocationId
-    const allowanceVal = shift === 'morning' ? morningAllowance : afternoonAllowance
-    const setAllowanceVal = shift === 'morning' ? setMorningAllowance : setAfternoonAllowance
-
-    if (!shiftUserConfirmed) return null
-
-    return (
-      <div className="shift-admin-section">
-        {isConfirmed ? (
-          <div className="shift-admin-confirm confirmed">
-            <span className="shift-admin-icon">&#10003;</span>
-            <span className="shift-admin-location">{locationName || 'Verified'}</span>
-            <button className="admin-unconfirm-btn" onClick={() => onUnconfirmShift(shift)}>Undo</button>
-          </div>
-        ) : (
-          <div className="shift-admin-confirm pending">
-            <button
-              className="admin-confirm-btn shift-verify-btn"
-              onClick={() => onConfirmShift(shift, selectedLocationId)}
-            >
-              ✓ Verify
-            </button>
-            <select
-              className="location-select"
-              value={selectedLocationId}
-              onChange={(e) => setSelectedLocationId(e.target.value)}
-            >
-              <option value="">Location (optional)</option>
-              {(locations || []).map((loc) => (
-                <option key={loc.id} value={loc.name}>{loc.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-        <div className="allowance-row">
-          <label className="allowance-label">Allowance ($)</label>
-          <input
-            className="allowance-input"
-            type="number"
-            step="0.01"
-            min="0"
-            value={allowanceVal}
-            onChange={(e) => setAllowanceVal(e.target.value)}
-            placeholder="0"
-          />
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -305,13 +274,6 @@ export function GoalModal({
           <div className="read-only-badge">View Only</div>
         )}
 
-        {!isAdminViewing && initialMorningAdminConfirmed && morningConfirmed && (
-          <div className="admin-confirmed-badge">Shift A: Admin Verified{initialMorningLocation ? ` - ${initialMorningLocation}` : ''}</div>
-        )}
-        {!isAdminViewing && initialAfternoonAdminConfirmed && afternoonConfirmed && (
-          <div className="admin-confirmed-badge">Shift B: Admin Verified{initialAfternoonLocation ? ` - ${initialAfternoonLocation}` : ''}</div>
-        )}
-
         <div className="shifts-compact">
           <div className={`shift-section-wrapper ${!morningConfirmed ? 'shift-unconfirmed' : ''}`}>
             <div className="shift-confirm-toggle">
@@ -320,10 +282,20 @@ export function GoalModal({
                   type="checkbox"
                   checked={morningConfirmed}
                   onChange={(e) => setMorningConfirmed(e.target.checked)}
-                  disabled={readOnly}
+                  disabled={readOnly || morningLocked}
                 />
                 <span>Shift A (Morning)</span>
               </label>
+              {morningConfirmed && goal?.morningAdminConfirmed && (
+                <span className="shift-verified-tag">&#10003; Verified</span>
+              )}
+              {isAdminViewing && morningConfirmed && (
+                goal?.morningAdminConfirmed ? (
+                  <button className="admin-unconfirm-btn" onClick={() => onUnconfirmShift('morning')}>Undo</button>
+                ) : (
+                  <button className="admin-confirm-btn shift-verify-btn" onClick={() => onConfirmShift('morning')}>&#10003; Verify</button>
+                )
+              )}
             </div>
             <div className="shift-row">
               <div className="shift-inputs">
@@ -334,20 +306,29 @@ export function GoalModal({
                     value={morningGoal}
                     onChange={(e) => setMorningGoal(e.target.value)}
                     placeholder="0"
-                    disabled={readOnly || !morningConfirmed}
+                    disabled={readOnly || !morningConfirmed || morningLocked}
                   />
                 </div>
                 <div className="input-compact">
                   <label>Actual</label>
                   <input
-                    type="number"
-                    value={morningActual}
-                    onChange={(e) => setMorningActual(e.target.value)}
+                    type="text"
+                    inputMode="decimal"
+                    value={morningActualInput}
+                    onChange={(e) => {
+                      setMorningActualInput(e.target.value)
+                      const result = evaluateFormula(e.target.value)
+                      if (result !== null) setMorningActual(String(result))
+                    }}
+                    onBlur={() => handleActualBlur(morningActualInput, setMorningActual)}
                     placeholder="0"
-                    disabled={readOnly || !morningConfirmed}
+                    disabled={readOnly || !morningConfirmed || morningLocked}
                   />
+                  {formulaPreview(morningActualInput) !== null && (
+                    <div className="formula-preview">= {formulaPreview(morningActualInput)}</div>
+                  )}
                 </div>
-                <div className={`wage-compact ${wageClass(morningWage)}`}>
+                <div className={`wage-compact ${wageClass(morningWage, morningCustomWage)}`}>
                   ${morningWage}/hr
                 </div>
               </div>
@@ -359,7 +340,7 @@ export function GoalModal({
                   type="time"
                   value={morningStartTime}
                   onChange={(e) => setMorningStartTime(e.target.value)}
-                  disabled={readOnly || !morningConfirmed}
+                  disabled={readOnly || !morningConfirmed || morningLocked}
                 />
               </div>
               <div className="time-input-group">
@@ -368,7 +349,7 @@ export function GoalModal({
                   type="time"
                   value={morningEndTime}
                   onChange={(e) => setMorningEndTime(e.target.value)}
-                  disabled={readOnly || !morningConfirmed}
+                  disabled={readOnly || !morningConfirmed || morningLocked}
                 />
               </div>
               <div className="shift-duration">
@@ -380,7 +361,7 @@ export function GoalModal({
                 <input
                   type="checkbox"
                   checked={showMorningCustom}
-                  disabled={readOnly || !morningConfirmed}
+                  disabled={readOnly || !morningConfirmed || morningLocked}
                   onChange={(e) => {
                     setShowMorningCustom(e.target.checked)
                     if (!e.target.checked) {
@@ -402,7 +383,7 @@ export function GoalModal({
                     value={morningCustomRate}
                     onChange={(e) => setMorningCustomRate(e.target.value)}
                     placeholder="5"
-                    disabled={readOnly || !morningConfirmed}
+                    disabled={readOnly || !morningConfirmed || morningLocked}
                   />
                 </div>
                 <div className="input-compact">
@@ -412,22 +393,11 @@ export function GoalModal({
                     value={morningCustomAmount}
                     onChange={(e) => setMorningCustomAmount(e.target.value)}
                     placeholder="1000"
-                    disabled={readOnly || !morningConfirmed}
+                    disabled={readOnly || !morningConfirmed || morningLocked}
                   />
                 </div>
               </div>
             )}
-            <ProofImages
-              images={morningProofImages}
-              pendingFiles={pendingMorningFiles}
-              onUpload={(files) => handleStageFiles('morning', files)}
-              onDelete={(image) => handleDeleteUploadedImage('morning', image)}
-              onRemovePending={(index) => handleRemovePending('morning', index)}
-              uploading={proofUploadingShift === 'morning'}
-              disabled={!morningConfirmed}
-              readOnly={readOnly}
-            />
-            {isAdminViewing && renderShiftAdminSection('morning')}
           </div>
 
           <div className={`shift-section-wrapper ${!afternoonConfirmed ? 'shift-unconfirmed' : ''}`}>
@@ -437,10 +407,20 @@ export function GoalModal({
                   type="checkbox"
                   checked={afternoonConfirmed}
                   onChange={(e) => setAfternoonConfirmed(e.target.checked)}
-                  disabled={readOnly}
+                  disabled={readOnly || afternoonLocked}
                 />
                 <span>Shift B (Afternoon)</span>
               </label>
+              {afternoonConfirmed && goal?.afternoonAdminConfirmed && (
+                <span className="shift-verified-tag">&#10003; Verified</span>
+              )}
+              {isAdminViewing && afternoonConfirmed && (
+                goal?.afternoonAdminConfirmed ? (
+                  <button className="admin-unconfirm-btn" onClick={() => onUnconfirmShift('afternoon')}>Undo</button>
+                ) : (
+                  <button className="admin-confirm-btn shift-verify-btn" onClick={() => onConfirmShift('afternoon')}>&#10003; Verify</button>
+                )
+              )}
             </div>
             <div className="shift-row">
               <div className="shift-inputs">
@@ -451,20 +431,29 @@ export function GoalModal({
                     value={afternoonGoal}
                     onChange={(e) => setAfternoonGoal(e.target.value)}
                     placeholder="0"
-                    disabled={readOnly || !afternoonConfirmed}
+                    disabled={readOnly || !afternoonConfirmed || afternoonLocked}
                   />
                 </div>
                 <div className="input-compact">
                   <label>Actual</label>
                   <input
-                    type="number"
-                    value={afternoonActual}
-                    onChange={(e) => setAfternoonActual(e.target.value)}
+                    type="text"
+                    inputMode="decimal"
+                    value={afternoonActualInput}
+                    onChange={(e) => {
+                      setAfternoonActualInput(e.target.value)
+                      const result = evaluateFormula(e.target.value)
+                      if (result !== null) setAfternoonActual(String(result))
+                    }}
+                    onBlur={() => handleActualBlur(afternoonActualInput, setAfternoonActual)}
                     placeholder="0"
-                    disabled={readOnly || !afternoonConfirmed}
+                    disabled={readOnly || !afternoonConfirmed || afternoonLocked}
                   />
+                  {formulaPreview(afternoonActualInput) !== null && (
+                    <div className="formula-preview">= {formulaPreview(afternoonActualInput)}</div>
+                  )}
                 </div>
-                <div className={`wage-compact ${wageClass(afternoonWage)}`}>
+                <div className={`wage-compact ${wageClass(afternoonWage, afternoonCustomWage)}`}>
                   ${afternoonWage}/hr
                 </div>
               </div>
@@ -476,7 +465,7 @@ export function GoalModal({
                   type="time"
                   value={afternoonStartTime}
                   onChange={(e) => setAfternoonStartTime(e.target.value)}
-                  disabled={readOnly || !afternoonConfirmed}
+                  disabled={readOnly || !afternoonConfirmed || afternoonLocked}
                 />
               </div>
               <div className="time-input-group">
@@ -485,7 +474,7 @@ export function GoalModal({
                   type="time"
                   value={afternoonEndTime}
                   onChange={(e) => setAfternoonEndTime(e.target.value)}
-                  disabled={readOnly || !afternoonConfirmed}
+                  disabled={readOnly || !afternoonConfirmed || afternoonLocked}
                 />
               </div>
               <div className="shift-duration">
@@ -497,7 +486,7 @@ export function GoalModal({
                 <input
                   type="checkbox"
                   checked={showAfternoonCustom}
-                  disabled={readOnly || !afternoonConfirmed}
+                  disabled={readOnly || !afternoonConfirmed || afternoonLocked}
                   onChange={(e) => {
                     setShowAfternoonCustom(e.target.checked)
                     if (!e.target.checked) {
@@ -519,7 +508,7 @@ export function GoalModal({
                     value={afternoonCustomRate}
                     onChange={(e) => setAfternoonCustomRate(e.target.value)}
                     placeholder="5"
-                    disabled={readOnly || !afternoonConfirmed}
+                    disabled={readOnly || !afternoonConfirmed || afternoonLocked}
                   />
                 </div>
                 <div className="input-compact">
@@ -529,11 +518,28 @@ export function GoalModal({
                     value={afternoonCustomAmount}
                     onChange={(e) => setAfternoonCustomAmount(e.target.value)}
                     placeholder="1000"
-                    disabled={readOnly || !afternoonConfirmed}
+                    disabled={readOnly || !afternoonConfirmed || afternoonLocked}
                   />
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        <div className="shifts-proof-row">
+          <div className={`shift-proof-col${!morningConfirmed ? ' shift-unconfirmed' : ''}`}>
+            <ProofImages
+              images={morningProofImages}
+              pendingFiles={pendingMorningFiles}
+              onUpload={(files) => handleStageFiles('morning', files)}
+              onDelete={(image) => handleDeleteUploadedImage('morning', image)}
+              onRemovePending={(index) => handleRemovePending('morning', index)}
+              uploading={proofUploadingShift === 'morning'}
+              disabled={!morningConfirmed}
+              readOnly={readOnly}
+            />
+          </div>
+          <div className={`shift-proof-col${!afternoonConfirmed ? ' shift-unconfirmed' : ''}`}>
             <ProofImages
               images={afternoonProofImages}
               pendingFiles={pendingAfternoonFiles}
@@ -544,9 +550,69 @@ export function GoalModal({
               disabled={!afternoonConfirmed}
               readOnly={readOnly}
             />
-            {isAdminViewing && renderShiftAdminSection('afternoon')}
           </div>
         </div>
+
+        {isAdminViewing && (morningConfirmed || afternoonConfirmed) && (
+          <div className="admin-allowance-row">
+            <div className="admin-allowance-row-inner">
+              {morningConfirmed ? (
+                <div className="admin-allowance-field">
+                  <label>A Allowance ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={morningAllowance}
+                    onChange={(e) => setMorningAllowance(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              ) : <div className="admin-allowance-field" />}
+              {afternoonConfirmed ? (
+                <div className="admin-allowance-field">
+                  <label>B Allowance ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={afternoonAllowance}
+                    onChange={(e) => setAfternoonAllowance(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              ) : <div className="admin-allowance-field" />}
+            </div>
+            <div className="admin-allowance-row-inner">
+              {morningConfirmed ? (
+                <div className="admin-allowance-field">
+                  <label>A Custom Wage ($/hr)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={morningCustomWage}
+                    onChange={(e) => setMorningCustomWage(e.target.value)}
+                    placeholder="Auto"
+                  />
+                </div>
+              ) : <div className="admin-allowance-field" />}
+              {afternoonConfirmed ? (
+                <div className="admin-allowance-field">
+                  <label>B Custom Wage ($/hr)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={afternoonCustomWage}
+                    onChange={(e) => setAfternoonCustomWage(e.target.value)}
+                    placeholder="Auto"
+                  />
+                </div>
+              ) : <div className="admin-allowance-field" />}
+            </div>
+          </div>
+        )}
 
         {saveError && <div className="login-error" style={{ margin: '8px 0 0' }}>{saveError}</div>}
 

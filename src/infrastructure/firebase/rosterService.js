@@ -1,7 +1,7 @@
 import { db } from './config'
 import {
-  doc, getDoc, setDoc, serverTimestamp,
-  collection, getDocs, updateDoc, deleteDoc, writeBatch
+  doc, getDoc, setDoc, serverTimestamp, onSnapshot,
+  collection, getDocs, updateDoc, deleteDoc, deleteField, writeBatch
 } from 'firebase/firestore'
 
 const rosterDocId = (year, month) => {
@@ -34,6 +34,17 @@ export const rosterService = {
     }
   },
 
+  // Real-time listener. Returns an unsubscribe function.
+  subscribeToRoster(year, month, onData, onError) {
+    const docRef = doc(db, 'rosters', rosterDocId(year, month))
+    return onSnapshot(docRef, (snap) => {
+      onData(snap.exists() ? snap.data() : null)
+    }, (err) => {
+      console.error('Roster subscription error:', err)
+      if (onError) onError(err)
+    })
+  },
+
   // slotData = { uid, displayName, notes } or null (to clear)
   // locationName is the key — one slot per location per shift.
   async saveRosterSlot(year, month, day, shift, locationName, slotData, updatedByUid) {
@@ -44,7 +55,7 @@ export const rosterService = {
         days: {
           [day]: {
             [shift]: {
-              [locationName]: slotData
+              [locationName]: slotData == null ? deleteField() : slotData
             }
           }
         },
@@ -147,6 +158,26 @@ export const rosterService = {
       })
     }
     await batch.commit()
+  },
+
+  // Batch: assign multiple day/shift/location slots in one Firestore write.
+  // updates = [{ day, shift, locationName, slotData }]
+  // slotData = null means "clear this slot" (uses deleteField()).
+  async saveBulkRosterSlots(year, month, updates, updatedByUid) {
+    if (!updates.length) return
+    const days = {}
+    for (const { day, shift, locationName, slotData } of updates) {
+      if (!days[day]) days[day] = {}
+      if (!days[day][shift]) days[day][shift] = {}
+      days[day][shift][locationName] = slotData == null ? deleteField() : slotData
+    }
+    const docRef = doc(db, 'rosters', rosterDocId(year, month))
+    await setDoc(docRef, {
+      month: rosterDocId(year, month),
+      days,
+      updatedAt: serverTimestamp(),
+      updatedBy: updatedByUid
+    }, { merge: true })
   },
 
   // Batch: cancel multiple applications in one write.

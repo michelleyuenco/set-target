@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [profileDisplayName, setProfileDisplayName] = useState(null)
 
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChanged(async (firebaseUser) => {
@@ -22,8 +23,16 @@ export function AuthProvider({ children }) {
           })
         ])
         setIsAdmin(adminResult)
+        // Fetch stored displayName from Firestore profile (may differ from Firebase Auth)
+        try {
+          const profile = await userProfileService.getProfile(firebaseUser.uid)
+          setProfileDisplayName(profile?.displayName || null)
+        } catch (err) {
+          console.error('Failed to fetch user profile:', err)
+        }
       } else {
         setIsAdmin(false)
+        setProfileDisplayName(null)
       }
       setLoading(false)
     })
@@ -50,16 +59,27 @@ export function AuthProvider({ children }) {
     return authService.changeEmail(currentPassword, newEmail)
   }
 
+  const changePassword = async (currentPassword, newPassword) => {
+    return authService.changePassword(currentPassword, newPassword)
+  }
+
+  const setPassword = async (newPassword) => {
+    return authService.setPassword(newPassword)
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
       loading,
       isAdmin,
+      profileDisplayName,
       signUpWithEmail,
       signInWithEmail,
       signInWithGoogle,
       signOut,
-      changeEmail
+      changeEmail,
+      changePassword,
+      setPassword
     }}>
       {children}
     </AuthContext.Provider>
