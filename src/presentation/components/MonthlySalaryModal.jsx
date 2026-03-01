@@ -9,9 +9,11 @@ export function MonthlySalaryModal({
   goals,
   monthlyEarnings,
   myBonusShare,
+  myBonusBreakdown,
   miscItems,
   miscTotal,
   viewingMember,
+  fullScreen,
   onClose
 }) {
   const { wages, commission45, commission35, commissionCustom, customRates, totalAllowance } = monthlyEarnings
@@ -77,7 +79,23 @@ export function MonthlySalaryModal({
     const date = new Date(year, month, day)
     const formatted = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 
-    workedDays.push({ dateStr, formatted, shifts, hours: dayHours, total: dayTotal })
+    // Location
+    const morningLoc = hasMorning ? goal.morningLocation : null
+    const afternoonLoc = hasAfternoon ? goal.afternoonLocation : null
+    let location = null
+    if (hasMorning && hasAfternoon) {
+      // Both shifts — need to show per-shift detail if they differ or one is missing
+      if (morningLoc && afternoonLoc && morningLoc === afternoonLoc) {
+        location = morningLoc
+      } else {
+        location = `A: ${morningLoc || '—'} / B: ${afternoonLoc || '—'}`
+      }
+    } else {
+      // Single shift — show location directly or nothing
+      location = morningLoc || afternoonLoc
+    }
+
+    workedDays.push({ dateStr, formatted, shifts, hours: dayHours, total: dayTotal, location })
   }
 
   totalHours = Math.round(totalHours * 100) / 100
@@ -94,9 +112,8 @@ export function MonthlySalaryModal({
   const mpfDeduction = hasMpf ? Math.round(grossTotal * 0.05 * 100) / 100 : 0
   const takeHome = hasMpf ? Math.round((grossTotal - mpfDeduction) * 100) / 100 : grossTotal
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal monthly-salary-modal" onClick={e => e.stopPropagation()}>
+  const content = (
+    <>
         <h2>Monthly Salary</h2>
         <div className="salary-month-header">
           {MONTH_NAMES[month]} {year}
@@ -155,7 +172,12 @@ export function MonthlySalaryModal({
               <span>+${totalAllowance.toLocaleString()}</span>
             </div>
           )}
-          {myBonusShare > 0 && (
+          {myBonusBreakdown && myBonusBreakdown.length > 0 ? myBonusBreakdown.map((b, i) => (
+            <div className="salary-row positive" key={`bonus-${i}`}>
+              <span>{b.location} Bonus</span>
+              <span>+${b.share.toLocaleString()}</span>
+            </div>
+          )) : myBonusShare > 0 && (
             <div className="salary-row positive">
               <span>Team Bonus</span>
               <span>+${myBonusShare.toLocaleString()}</span>
@@ -194,7 +216,10 @@ export function MonthlySalaryModal({
             <div className="salary-daily-list">
               {workedDays.map(day => (
                 <div className="salary-day-row" key={day.dateStr}>
-                  <span className="salary-day-date">{day.formatted}</span>
+                  <div className="salary-day-info">
+                    <span className="salary-day-date">{day.formatted}</span>
+                    {day.location && <span className="salary-day-location">{day.location}</span>}
+                  </div>
                   <span className="salary-day-shifts">{day.shifts}</span>
                   <span className="salary-day-hours">{formatHours(day.hours)}</span>
                   <span className="salary-day-total">${day.total.toLocaleString()}</span>
@@ -207,6 +232,23 @@ export function MonthlySalaryModal({
         <div className="button-group">
           <button className="save-btn" onClick={onClose}>Close</button>
         </div>
+    </>
+  )
+
+  if (fullScreen) {
+    return (
+      <div className="monthly-salary-fullscreen">
+        <div className="monthly-salary-fullscreen-content">
+          {content}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal monthly-salary-modal" onClick={e => e.stopPropagation()}>
+        {content}
       </div>
     </div>
   )

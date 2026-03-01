@@ -31,6 +31,7 @@ import { MonthlySalaryModal } from './components/MonthlySalaryModal'
 import { useMemberEarnings } from './hooks/useMemberEarnings'
 import { MiscAdjustmentsSection } from './components/MiscAdjustmentsSection'
 import { useMiscAdjustments } from './hooks/useMiscAdjustments'
+import { useWorkingMonth } from './hooks/useWorkingMonth'
 import { initFirestoreService, clearFirestoreService, getLocalGoalService, getFirestoreRepository, initAdminMemberService, clearAdminMemberService } from '../di/container'
 import { DataMigrationService } from '../application/services/DataMigrationService'
 import { DEFAULT_SHIFT_HOURS } from '../domain/entities/Goal'
@@ -47,10 +48,16 @@ export function App() {
   const currentMonth = now.getMonth()
 
   const { user, loading: authLoading, isAdmin, profileDisplayName, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, changeEmail, changePassword, setPassword } = useAuth()
+  const { workingMonth: configMonth, workingYear: configYear, loading: workingMonthLoading, saveWorkingMonth } = useWorkingMonth()
   const { members, loading: membersLoading, updateMemberDisplayName, toggleMemberDisabled } = useAdminMembers(isAdmin, !!user)
   const { earnings: memberEarnings, loading: memberEarningsLoading, loadEarnings: loadMemberEarnings } = useMemberEarnings()
-  const [viewYear, setViewYear] = useState(currentYear)
-  const [viewMonth, setViewMonth] = useState(currentMonth)
+  const [initialSalaryUrl] = useState(() => {
+    const match = window.location.pathname.match(/^\/salary\/(\d{4})\/(\d{1,2})$/)
+    return match ? { year: Number(match[1]), month: Number(match[2]) - 1 } : null
+  })
+  const [viewYear, setViewYear] = useState(initialSalaryUrl ? initialSalaryUrl.year : currentYear)
+  const [viewMonth, setViewMonth] = useState(initialSalaryUrl ? initialSalaryUrl.month : currentMonth)
+  const [initialMonthApplied, setInitialMonthApplied] = useState(false)
   const [firestoreReady, setFirestoreReady] = useState(false)
   const { locations, visibleLocations, addLocation, updateLocation, removeLocation, reorderLocations, setLocationVisibility, loadLocations } = useLocations(firestoreReady)
   const [syncing, setSyncing] = useState(false)
@@ -92,11 +99,11 @@ export function App() {
   const [summaryExpanded, setSummaryExpanded] = useState(false)
   const [excessExpanded, setExcessExpanded] = useState(false)
   const [showTeamBonusModal, setShowTeamBonusModal] = useState(false)
-  const [showSalaryModal, setShowSalaryModal] = useState(false)
+  const [showSalaryModal, setShowSalaryModal] = useState(() => /^\/salary(\/\d{4}\/\d{1,2})?$/.test(window.location.pathname))
 
   // Team bonus - determine whose bonus share to show
   const bonusViewUid = adminViewingUid || user?.uid
-  const { teamBonus, myBonusShare, loadTeamBonus, saveTeamBonus } = useTeamBonus(viewYear, viewMonth, bonusViewUid)
+  const { teamBonus, myBonusShare, myBonusBreakdown, loadTeamBonus, saveTeamBonus } = useTeamBonus(viewYear, viewMonth, bonusViewUid)
 
   // Misc adjustments - same uid pattern as team bonus
   const { miscItems, miscTotal, saveAdjustments: saveMiscAdjustments } = useMiscAdjustments(viewYear, viewMonth, bonusViewUid)
@@ -104,6 +111,17 @@ export function App() {
   // Proof images - use the active UID (member being viewed by admin, or own UID)
   const proofImageUid = adminViewingUid || user?.uid
   const { uploadingShift: proofUploadingShift, uploadImages: uploadProofImages, deleteImage: deleteProofImage } = useProofImages(proofImageUid)
+
+  // Apply working month as initial view once loaded (only on first load)
+  useEffect(() => {
+    if (!workingMonthLoading && !initialMonthApplied) {
+      if (configYear !== null && configMonth !== null) {
+        setViewYear(configYear)
+        setViewMonth(configMonth)
+      }
+      setInitialMonthApplied(true)
+    }
+  }, [workingMonthLoading, initialMonthApplied, configYear, configMonth])
 
   // Initialize or clear Firestore service when auth state changes
   useEffect(() => {
@@ -202,6 +220,16 @@ export function App() {
 
   useEffect(() => {
     const path = window.location.pathname
+    const salaryPath = `/salary/${viewYear}/${String(viewMonth + 1).padStart(2, '0')}`
+    if (showSalaryModal && path !== salaryPath) {
+      window.history.pushState({ salary: true }, '', salaryPath)
+    } else if (!showSalaryModal && path.startsWith('/salary')) {
+      window.history.pushState({}, '', '/')
+    }
+  }, [showSalaryModal, viewYear, viewMonth])
+
+  useEffect(() => {
+    const path = window.location.pathname
     const expectedPath = adminViewingUid ? `/member/${adminViewingUid}` : null
     if (adminViewingUid && path !== expectedPath) {
       window.history.pushState({ member: adminViewingUid }, '', expectedPath)
@@ -214,6 +242,14 @@ export function App() {
     const handlePopState = () => {
       const path = window.location.pathname
       setShowRoster(path === '/roster')
+      const salaryMatch = path.match(/^\/salary\/(\d{4})\/(\d{1,2})$/)
+      if (salaryMatch) {
+        setViewYear(Number(salaryMatch[1]))
+        setViewMonth(Number(salaryMatch[2]) - 1)
+        setShowSalaryModal(true)
+      } else {
+        setShowSalaryModal(path.startsWith('/salary'))
+      }
       const memberMatch = path.match(/^\/member\/(.+)$/)
       if (memberMatch) {
         const uid = memberMatch[1]
@@ -587,7 +623,7 @@ export function App() {
   }
   const confirmationProgress = adminViewingUid ? getConfirmationProgress() : null
 
-  if (authLoading) {
+  if (authLoading || (!initialMonthApplied && workingMonthLoading)) {
     return (
       <div className="app">
         <div className="loading-screen">Loading...</div>
@@ -630,6 +666,11 @@ export function App() {
           onOpenRoster={() => setShowRoster(true)}
           onLocationPerformance={handleOpenLocPerf}
           onLocationCalendar={handleOpenLocCal}
+          workingMonth={configMonth}
+          workingYear={configYear}
+          currentMonth={currentMonth}
+          currentYear={currentYear}
+          onSaveWorkingMonth={async (y, m) => { await saveWorkingMonth(y, m, user?.uid); setViewYear(y); setViewMonth(m) }}
         />
       ) : (
         <>
@@ -996,9 +1037,11 @@ export function App() {
           goals={goals}
           monthlyEarnings={calculateMonthlyEarnings()}
           myBonusShare={myBonusShare}
+          myBonusBreakdown={myBonusBreakdown}
           miscItems={miscItems}
           miscTotal={miscTotal}
           viewingMember={adminViewingUid ? viewingMember : null}
+          fullScreen
           onClose={() => setShowSalaryModal(false)}
         />
       )}
@@ -1041,10 +1084,11 @@ export function App() {
           year={viewYear}
           month={viewMonth}
           members={members.filter(m => !m.disabled)}
+          locations={visibleLocations}
           adminUid={user?.uid}
           existingBonus={teamBonus}
-          onSave={async (amount, allocations, totalHours, adminUid) => {
-            await saveTeamBonus(amount, allocations, totalHours, adminUid)
+          onSave={async (locationsData, adminUid) => {
+            await saveTeamBonus(locationsData, adminUid)
           }}
           onClose={() => setShowTeamBonusModal(false)}
         />

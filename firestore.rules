@@ -2,10 +2,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Admin config - any authenticated user can read (needed for admin check)
-    match /config/{doc} {
+    // Admin config - read-only, only editable via Firebase Console
+    match /config/admins {
       allow read: if request.auth != null;
-      allow write: if false; // Only editable via Firebase Console
+      allow write: if false;
+    }
+
+    // App settings - any authenticated user can read, only admin can write
+    match /config/appSettings {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
 
     // User profile document - any authenticated user can read (for member listing)

@@ -16,21 +16,34 @@ export function BulkLocationModal({ goals, viewYear, viewMonth, locations, onApp
       const shifts = []
       if (goal.morningConfirmed) shifts.push('A')
       if (goal.afternoonConfirmed) shifts.push('B')
+      const morningLoc = goal.morningConfirmed ? goal.morningLocation : null
+      const afternoonLoc = goal.afternoonConfirmed ? goal.afternoonLocation : null
+      let currentLocation = null
+      if (goal.morningConfirmed && goal.afternoonConfirmed) {
+        if (morningLoc && afternoonLoc && morningLoc === afternoonLoc) {
+          currentLocation = morningLoc
+        } else if (morningLoc || afternoonLoc) {
+          currentLocation = `A: ${morningLoc || '—'} / B: ${afternoonLoc || '—'}`
+        }
+      } else {
+        currentLocation = morningLoc || afternoonLoc
+      }
+
       eligibleDays.push({
         dateStr,
         day,
         shifts,
         label: `${viewMonth + 1}/${day}`,
-        currentLocation: goal.morningLocation || goal.afternoonLocation || null
+        currentLocation
       })
     }
   }
 
-  // Sort shifts without a location to the top
+  // Sort days with missing locations to the top
   eligibleDays.sort((a, b) => {
-    const aHas = a.currentLocation ? 1 : 0
-    const bHas = b.currentLocation ? 1 : 0
-    return aHas - bHas
+    const aMissing = !a.currentLocation || a.currentLocation.includes('—') ? 0 : 1
+    const bMissing = !b.currentLocation || b.currentLocation.includes('—') ? 0 : 1
+    return aMissing - bMissing
   })
 
   const toggleDay = (dateStr) => {

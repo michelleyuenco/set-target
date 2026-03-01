@@ -3569,7 +3569,9 @@ body {
 
 .team-bonus-table th:nth-child(2),
 .team-bonus-table th:nth-child(3),
-.team-bonus-table th:nth-child(4) {
+.team-bonus-table th:nth-child(4),
+.team-bonus-table th:nth-child(5),
+.team-bonus-table th:nth-child(6) {
   text-align: right;
 }
 
@@ -3607,6 +3609,22 @@ body {
   color: #d97706;
 }
 
+.member-rate,
+.member-rate-bonus {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+.member-rate {
+  color: #6b7280;
+}
+
+.member-rate-bonus {
+  color: #059669;
+  font-weight: 600;
+}
+
 .team-bonus-table tfoot td {
   border-top: 2px solid #e5e7eb;
   border-bottom: none;
@@ -3619,6 +3637,78 @@ body {
   font-size: 11px;
   color: #9ca3af;
   margin-bottom: 8px;
+}
+
+/* ── Per-location team bonus cards ── */
+.team-bonus-locations-scroll {
+  max-height: 55vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
+}
+
+.team-bonus-location-card {
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #fefefe;
+}
+
+.team-bonus-location-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.team-bonus-location-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.team-bonus-location-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.team-bonus-location-revenue {
+  font-size: 12px;
+  color: #059669;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.team-bonus-location-hours {
+  font-size: 12px;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+
+.team-bonus-location-card .team-bonus-input-section {
+  margin-bottom: 8px;
+}
+
+.team-bonus-location-card .team-bonus-amount-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.team-bonus-location-card .team-bonus-table-wrapper {
+  margin: 0;
+}
+
+.team-bonus-grand-total {
+  text-align: right;
+  font-size: 15px;
+  font-weight: 700;
+  color: #d97706;
+  padding: 8px 4px;
+  border-top: 2px solid #e5e7eb;
 }
 
 .team-bonus-row .monthly-label {
@@ -3993,17 +4083,30 @@ body {
     width: 100%;
   }
 
+  .team-bonus-locations-scroll {
+    max-height: 50vh;
+  }
+
+  .team-bonus-location-card {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  .team-bonus-location-name {
+    font-size: 13px;
+  }
+
   .team-bonus-table {
     font-size: 12px;
   }
 
   .team-bonus-table th,
   .team-bonus-table td {
-    padding: 6px 6px;
+    padding: 6px 4px;
   }
 
   .member-name {
-    max-width: 100px;
+    max-width: 80px;
   }
 
   .admin-bar {
@@ -6892,6 +6995,56 @@ body {
   color: #5b21b6;
 }
 
+/* ── Working Month Picker ── */
+.admin-dashboard-working-month {
+  padding: 8px 0 12px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 8px;
+}
+
+.working-month-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.working-month-label {
+  font-size: 15px;
+  font-weight: 600;
+  min-width: 150px;
+  text-align: center;
+}
+
+.working-month-set-btn {
+  padding: 4px 16px;
+  border-radius: 6px;
+  border: 1.5px solid #7c3aed;
+  background: #7c3aed;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.working-month-set-btn:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.working-month-set-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.working-month-current {
+  text-align: center;
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 6px;
+}
+
 .admin-dashboard-members {
   display: flex;
   flex-direction: column;
@@ -7588,11 +7741,25 @@ body {
   border-top: 1px solid #f3f4f6;
 }
 
-.salary-day-date {
+.salary-day-info {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.salary-day-date {
   font-weight: 600;
   color: #374151;
-  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.salary-day-location {
+  font-size: 10px;
+  color: #9ca3af;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -7622,6 +7789,52 @@ body {
   min-width: 55px;
   text-align: right;
   flex-shrink: 0;
+}
+
+/* ===== Monthly Salary Full-Screen Page ===== */
+
+.monthly-salary-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #ffffff;
+  z-index: 1000;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.monthly-salary-fullscreen-content {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+}
+
+.monthly-salary-fullscreen .salary-daily-list {
+  max-height: none;
+}
+
+.monthly-salary-fullscreen .salary-section-title {
+  font-size: 12px;
+}
+
+.monthly-salary-fullscreen .salary-row {
+  font-size: 14px;
+  padding: 7px 0;
+}
+
+.monthly-salary-fullscreen .salary-take-home {
+  font-size: 20px;
+}
+
+.monthly-salary-fullscreen .salary-gross-row {
+  font-size: 15px;
+}
+
+.monthly-salary-fullscreen .salary-day-row {
+  font-size: 13px;
+  padding: 9px 12px;
 }
 
 /* Mobile overrides for salary modal */

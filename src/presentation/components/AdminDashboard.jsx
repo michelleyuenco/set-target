@@ -1,3 +1,10 @@
+import { useState } from 'react'
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+]
+
 export function AdminDashboard({
   members,
   membersLoading,
@@ -9,8 +16,47 @@ export function AdminDashboard({
   onOpenRoster,
   onLocationPerformance,
   onLocationCalendar,
+  workingMonth,
+  workingYear,
+  currentMonth,
+  currentYear,
+  onSaveWorkingMonth,
 }) {
   const teamMembers = members.filter((m) => m.uid !== currentUserUid && !m.isAdmin && !m.disabled)
+
+  const [pickerYear, setPickerYear] = useState(workingYear ?? currentYear)
+  const [pickerMonth, setPickerMonth] = useState(workingMonth ?? currentMonth)
+  const [saving, setSaving] = useState(false)
+
+  const pickerIsCurrentMonth = pickerYear === currentYear && pickerMonth === currentMonth
+
+  const handlePickerPrev = () => {
+    const pm = pickerMonth === 0 ? 11 : pickerMonth - 1
+    const py = pickerMonth === 0 ? pickerYear - 1 : pickerYear
+    setPickerYear(py)
+    setPickerMonth(pm)
+  }
+
+  const handlePickerNext = () => {
+    if (pickerIsCurrentMonth) return
+    const nm = pickerMonth === 11 ? 0 : pickerMonth + 1
+    const ny = pickerMonth === 11 ? pickerYear + 1 : pickerYear
+    setPickerYear(ny)
+    setPickerMonth(nm)
+  }
+
+  const handleSetWorkingMonth = async () => {
+    setSaving(true)
+    try {
+      await onSaveWorkingMonth(pickerYear, pickerMonth)
+    } catch (err) {
+      console.error('Failed to save working month:', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const isAlreadySet = pickerYear === workingYear && pickerMonth === workingMonth
 
   return (
     <div className="admin-dashboard">
@@ -43,6 +89,29 @@ export function AdminDashboard({
           <span className="action-icon">&#128205;</span>
           <span className="action-label">Loc Calendar</span>
         </button>
+      </div>
+
+      <div className="admin-dashboard-working-month">
+        <h3 className="dashboard-section-title">Working Month</h3>
+        <div className="working-month-picker">
+          <button className="nav-btn" onClick={handlePickerPrev}>&larr;</button>
+          <span className="working-month-label">
+            {MONTH_NAMES[pickerMonth]} {pickerYear}
+          </span>
+          <button className="nav-btn" onClick={handlePickerNext} disabled={pickerIsCurrentMonth}>&rarr;</button>
+          <button
+            className="working-month-set-btn"
+            onClick={handleSetWorkingMonth}
+            disabled={saving || isAlreadySet}
+          >
+            {saving ? 'Saving...' : 'Set'}
+          </button>
+        </div>
+        {workingMonth !== null && workingMonth !== undefined && (
+          <div className="working-month-current">
+            Currently set to: {MONTH_NAMES[workingMonth]} {workingYear}
+          </div>
+        )}
       </div>
 
       <div className="admin-dashboard-members">

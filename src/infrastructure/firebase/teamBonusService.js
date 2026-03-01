@@ -71,6 +71,64 @@ export const teamBonusService = {
     return results
   },
 
+  // Returns per-location hours for all members for a given month.
+  // Result shape: { [locationName]: [{ uid, displayName, hours }] }
+  async getAllMembersLocationHours(members, year, month) {
+    const pad = (n) => String(n).padStart(2, '0')
+    const monthPrefix = `${year}-${pad(month + 1)}`
+    const locationMap = {}
+
+    await Promise.all(
+      members.map(async (member) => {
+        try {
+          const goalsRef = collection(db, 'users', member.uid, 'goals')
+          const snapshot = await getDocs(goalsRef)
+          const displayName = member.displayName || member.email || `Member (${member.uid.slice(0, 8)})`
+
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data()
+            if (data._deleted) return
+            if (!data.day || !data.day.startsWith(monthPrefix)) return
+
+            const goal = Goal.fromJSON(data)
+
+            for (const shift of ['morning', 'afternoon']) {
+              const confirmed = shift === 'morning' ? goal.morningConfirmed : goal.afternoonConfirmed
+              if (!confirmed) continue
+
+              const rawLocation = shift === 'morning' ? goal.morningLocation : goal.afternoonLocation
+              const locationKey = rawLocation || '(No Location)'
+              const hours = shift === 'morning' ? goal.morningShiftHours : goal.afternoonShiftHours
+
+              const actual = (shift === 'morning' ? goal.morningActual : goal.afternoonActual) || 0
+              const shiftSalaryCost = teamBonusService._calculateShiftSalaryCost(goal, shift)
+
+              if (!locationMap[locationKey]) locationMap[locationKey] = {}
+              if (!locationMap[locationKey][member.uid]) {
+                locationMap[locationKey][member.uid] = { uid: member.uid, displayName, hours: 0, revenue: 0, salaryCost: 0 }
+              }
+              locationMap[locationKey][member.uid].hours += hours
+              locationMap[locationKey][member.uid].revenue += actual
+              locationMap[locationKey][member.uid].salaryCost += shiftSalaryCost
+            }
+          })
+        } catch (err) {
+          console.error(`Failed to fetch location hours for member ${member.uid}:`, err)
+        }
+      })
+    )
+
+    const result = {}
+    for (const [loc, membersMap] of Object.entries(locationMap)) {
+      const members = Object.values(membersMap)
+        .map(m => ({ ...m, hours: Math.round(m.hours * 100) / 100 }))
+        .sort((a, b) => b.hours - a.hours)
+      const totalRevenue = members.reduce((sum, m) => sum + (m.revenue || 0), 0)
+      result[loc] = { members, totalRevenue: Math.round(totalRevenue * 100) / 100 }
+    }
+    return result
+  },
+
   // Returns all goals for all members for a given month.
   // Result shape: { [uid]: { uid, displayName, goals: { [dateStr]: Goal } } }
   async getAllMembersGoalsForMonth(members, year, month) {

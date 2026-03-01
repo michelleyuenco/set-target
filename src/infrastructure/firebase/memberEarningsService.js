@@ -30,7 +30,15 @@ export const memberEarningsService = {
       result[member.uid] = {}
       for (const { year, month, monthKey, membersGoals, teamBonus, adjustmentsDoc } of monthDataList) {
         const goals = membersGoals[member.uid]?.goals || {}
-        const bonusShare = teamBonus?.allocations?.[member.uid]?.share || 0
+        let bonusShare = 0
+        if (teamBonus?.locations) {
+          for (const locData of Object.values(teamBonus.locations)) {
+            bonusShare += locData.allocations?.[member.uid]?.share || 0
+          }
+          bonusShare = Math.round(bonusShare * 100) / 100
+        } else {
+          bonusShare = teamBonus?.allocations?.[member.uid]?.share || 0
+        }
         const miscItems = adjustmentsDoc?.adjustments?.[member.uid]?.items || []
         const miscTotal = miscItems.reduce((sum, item) => sum + (item.amount || 0), 0)
 
