@@ -171,7 +171,10 @@ export function MonthlySalaryModal({
   }, [showActionButton, checkScrollPosition])
 
   const scrollToAction = () => {
-    buttonGroupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    const container = scrollContainerRef.current
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+    }
   }
 
   const actionLabel = isAdmin ? 'Publish' : 'Confirm'
