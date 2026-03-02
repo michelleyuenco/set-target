@@ -7988,12 +7988,10 @@ body {
 
 /* Salary scroll-to-action FAB */
 .salary-scroll-fab {
-  position: sticky;
-  bottom: 16px;
+  position: fixed;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  display: block;
-  margin: 0 auto;
   padding: 10px 24px;
   background: #2563eb;
   color: #fff;
@@ -8003,7 +8001,7 @@ body {
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
-  z-index: 10;
+  z-index: 1100;
   transition: opacity 0.2s, transform 0.2s;
 }
 
