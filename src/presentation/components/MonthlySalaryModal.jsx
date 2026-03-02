@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { DEFAULT_SHIFT_HOURS } from '../../domain/entities/Goal'
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -141,6 +141,40 @@ export function MonthlySalaryModal({
 
   // Members can only see salary details after admin has published
   const canViewDetails = isAdmin || adminConfirmed
+
+  // Floating scroll-to-confirm button
+  const showActionButton = (isAdmin && onPublishSalary && !adminConfirmed) || (!isAdmin && adminConfirmed && onConfirmSalary && !memberConfirmed)
+  const buttonGroupRef = useRef(null)
+  const scrollContainerRef = useRef(null)
+  const [showScrollFab, setShowScrollFab] = useState(showActionButton)
+
+  const checkScrollPosition = useCallback(() => {
+    if (!buttonGroupRef.current) return
+    const rect = buttonGroupRef.current.getBoundingClientRect()
+    // Hide FAB when button group is visible in viewport
+    setShowScrollFab(rect.top > window.innerHeight)
+  }, [])
+
+  useEffect(() => {
+    if (!showActionButton) { setShowScrollFab(false); return }
+    const container = scrollContainerRef.current
+    if (!container) return
+    // Check initially after a tick (content may not be laid out yet)
+    const timer = setTimeout(checkScrollPosition, 100)
+    container.addEventListener('scroll', checkScrollPosition, { passive: true })
+    window.addEventListener('resize', checkScrollPosition, { passive: true })
+    return () => {
+      clearTimeout(timer)
+      container.removeEventListener('scroll', checkScrollPosition)
+      window.removeEventListener('resize', checkScrollPosition)
+    }
+  }, [showActionButton, checkScrollPosition])
+
+  const scrollToAction = () => {
+    buttonGroupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }
+
+  const actionLabel = isAdmin ? 'Publish' : 'Confirm'
 
   const content = (
     <>
@@ -294,7 +328,7 @@ export function MonthlySalaryModal({
           </div>
         )}
 
-        <div className="button-group">
+        <div className="button-group" ref={buttonGroupRef}>
           {isAdmin && onPublishSalary && !adminConfirmed && (
             <button
               className="save-btn salary-publish-btn"
@@ -317,20 +351,28 @@ export function MonthlySalaryModal({
     </>
   )
 
+  const fab = showScrollFab && (
+    <button className="salary-scroll-fab" onClick={scrollToAction}>
+      {actionLabel} &#8595;
+    </button>
+  )
+
   if (fullScreen) {
     return (
-      <div className="monthly-salary-fullscreen">
+      <div className="monthly-salary-fullscreen" ref={scrollContainerRef}>
         <div className="monthly-salary-fullscreen-content">
           {content}
         </div>
+        {fab}
       </div>
     )
   }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal monthly-salary-modal" onClick={e => e.stopPropagation()}>
+      <div className="modal monthly-salary-modal" ref={scrollContainerRef} onClick={e => e.stopPropagation()}>
         {content}
+        {fab}
       </div>
     </div>
   )
