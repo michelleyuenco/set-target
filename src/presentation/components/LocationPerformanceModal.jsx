@@ -14,8 +14,8 @@ function pct(hit, total) {
   return Math.round((hit / total) * 100) + '%'
 }
 
-export function LocationPerformanceModal({ stats, loading, year, month, members, onLoadStats, onClose }) {
-  const [expanded, setExpanded] = useState({})
+export function LocationPerformanceModal({ stats, teamBonus, loading, year, month, members, onLoadStats, onClose }) {
+  const [expanded, setExpanded] = useState({ '(No Location)': true })
   const [modalYear, setModalYear] = useState(year)
   const [modalMonth, setModalMonth] = useState(month)
 
@@ -56,6 +56,7 @@ export function LocationPerformanceModal({ stats, loading, year, month, members,
   const grandShifts = sorted.reduce((s, [, v]) => s + v.shiftCount, 0)
   const grandHits = sorted.reduce((s, [, v]) => s + (v.hitCount || 0), 0)
   const grandSalaryCost = sorted.reduce((s, [, v]) => s + (v.totalSalaryCost || 0), 0)
+  const grandBonusCost = sorted.reduce((s, [name]) => s + (teamBonus?.locations?.[name]?.amount || 0), 0)
   const achievementPct = grandTarget > 0 ? Math.round((grandActual / grandTarget) * 100) : 0
 
   return (
@@ -125,7 +126,9 @@ export function LocationPerformanceModal({ stats, loading, year, month, members,
                         />
                       </div>
                       <div className="loc-perf-target-hint">
-                        Target: {fmt(grandTarget)} &middot; Salary Cost: {fmt(grandSalaryCost)}
+                        Target: {fmt(grandTarget)} &middot; Salary: {fmt(grandSalaryCost)}
+                        {grandBonusCost > 0 && <> &middot; Bonus: {fmt(grandBonusCost)}</>}
+                        {grandBonusCost > 0 && <> &middot; Total: {fmt(grandSalaryCost + grandBonusCost)}</>}
                       </div>
                     </>
                   )}
@@ -136,13 +139,20 @@ export function LocationPerformanceModal({ stats, loading, year, month, members,
                   {sorted.map(([name, loc]) => {
                     const locHitRate = pct(loc.hitCount || 0, loc.shiftCount)
                     const locAchievement = loc.totalTarget > 0 ? Math.round((loc.totalActual / loc.totalTarget) * 100) + '%' : '—'
+                    const locBonusAmount = teamBonus?.locations?.[name]?.amount || 0
+                    const locBonusAllocations = teamBonus?.locations?.[name]?.allocations || {}
                     return (
                       <div key={name} className="loc-perf-item">
                         <button
                           className="loc-perf-row"
                           onClick={() => toggle(name)}
                         >
-                          <span className={`loc-perf-name ${name === '(No Location)' ? 'loc-perf-name-unset' : ''}`}>{name}</span>
+                          <span className={`loc-perf-name ${name === '(No Location)' ? 'loc-perf-name-unset' : ''}`}>
+                            {name}
+                            {name === '(No Location)' && loc.members.length > 0 && (
+                              <span className="loc-perf-name-who"> — {loc.members.map(m => m.displayName).join(', ')}</span>
+                            )}
+                          </span>
                           <span className="loc-perf-meta">
                             <span className="loc-perf-shifts">{loc.shiftCount} shift{loc.shiftCount !== 1 ? 's' : ''}</span>
                             <span className="loc-perf-hit-badge">{locHitRate}</span>
@@ -157,7 +167,10 @@ export function LocationPerformanceModal({ stats, loading, year, month, members,
 
                         <div className="loc-perf-row-secondary">
                           <span className="loc-perf-target-subdued">Target: {fmt(loc.totalTarget)}</span>
-                          <span className="loc-perf-salary-cost">Salary: {fmt(loc.totalSalaryCost || 0)}</span>
+                          <span className="loc-perf-salary-cost">
+                            Salary: {fmt(loc.totalSalaryCost || 0)}
+                            {locBonusAmount > 0 && <> + Bonus: {fmt(locBonusAmount)}</>}
+                          </span>
                         </div>
 
                         {loc.totalTarget > 0 && (
@@ -171,21 +184,27 @@ export function LocationPerformanceModal({ stats, loading, year, month, members,
 
                         {expanded[name] && (
                           <div className="loc-perf-members">
-                            {loc.members.map(member => (
-                              <div key={member.uid} className="loc-perf-member-row">
-                                <span className="loc-perf-member-name">{member.displayName}</span>
-                                <span className="loc-perf-member-detail">
-                                  <span className="loc-perf-member-shifts">
-                                    {member.shifts.length} shift{member.shifts.length !== 1 ? 's' : ''}
+                            {loc.members.map(member => {
+                              const memberBonus = locBonusAllocations[member.uid]?.share || 0
+                              return (
+                                <div key={member.uid} className="loc-perf-member-row">
+                                  <span className="loc-perf-member-name">{member.displayName}</span>
+                                  <span className="loc-perf-member-detail">
+                                    <span className="loc-perf-member-shifts">
+                                      {member.shifts.length} shift{member.shifts.length !== 1 ? 's' : ''}
+                                    </span>
+                                    <span className="loc-perf-member-hit">{pct(member.hitCount || 0, member.shifts.length)}</span>
                                   </span>
-                                  <span className="loc-perf-member-hit">{pct(member.hitCount || 0, member.shifts.length)}</span>
-                                </span>
-                                <span className="loc-perf-member-amounts">
-                                  <span className="loc-perf-member-actual">{fmt(member.totalActual)}</span>
-                                  <span className="loc-perf-member-salary">{fmt(member.totalSalaryCost || 0)}</span>
-                                </span>
-                              </div>
-                            ))}
+                                  <span className="loc-perf-member-amounts">
+                                    <span className="loc-perf-member-actual">{fmt(member.totalActual)}</span>
+                                    <span className="loc-perf-member-salary">{fmt(member.totalSalaryCost || 0)}</span>
+                                    {memberBonus > 0 && (
+                                      <span className="loc-perf-member-bonus">+{fmt(memberBonus)}</span>
+                                    )}
+                                  </span>
+                                </div>
+                              )
+                            })}
                           </div>
                         )}
                       </div>

@@ -62,12 +62,12 @@ export class SaveGoal {
 
         const calculatedWage = shift === 'morning' ? goal.morningCalculatedWage : goal.afternoonCalculatedWage
         const amount = shift === 'morning' ? goal.morningAmount : goal.afternoonAmount
-        const actual = shift === 'morning' ? goal.morningActual : goal.afternoonActual
+        const effectiveActual = shift === 'morning' ? goal.morningEffectiveActual : goal.afternoonEffectiveActual
         const boughtBack = shift === 'morning' ? goal.morningBoughtBack : goal.afternoonBoughtBack
 
-        if (calculatedWage === 80 && actual > 0) {
-          if (amount && actual > amount) {
-            excessRevenue += actual - amount
+        if (calculatedWage === 80 && effectiveActual > 0) {
+          if (amount && effectiveActual > amount) {
+            excessRevenue += effectiveActual - amount
           }
         } else if (boughtBack && amount) {
           totalBuybackCost += amount

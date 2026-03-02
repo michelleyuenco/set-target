@@ -5,6 +5,7 @@ import { teamBonusService } from '../../infrastructure/firebase/teamBonusService
 // year/month follow the same 0-based month convention as the rest of App.jsx.
 export function useLocationPerformance() {
   const [stats, setStats] = useState(null)   // { [locationName]: { totalActual, totalTarget, shiftCount, members } }
+  const [teamBonus, setTeamBonus] = useState(null) // { locations: { [locName]: { amount, allocations } } }
   const [loading, setLoading] = useState(false)
   const [loadedKey, setLoadedKey] = useState(null) // "YYYY-M" of last successful load
 
@@ -12,8 +13,14 @@ export function useLocationPerformance() {
     if (members.length === 0) return   // nothing to load yet
     setLoading(true)
     try {
-      const data = await teamBonusService.getAllMembersLocationStats(members, year, month)
+      const pad = (n) => String(n).padStart(2, '0')
+      const monthKey = `${year}-${pad(month + 1)}`
+      const [data, bonus] = await Promise.all([
+        teamBonusService.getAllMembersLocationStats(members, year, month),
+        teamBonusService.getTeamBonus(monthKey)
+      ])
       setStats(data)
+      setTeamBonus(bonus)
       setLoadedKey(`${year}-${month}`)
     } catch (err) {
       console.error('Failed to load location performance:', err)
@@ -22,5 +29,5 @@ export function useLocationPerformance() {
     }
   }, [])
 
-  return { stats, loading, loadedKey, loadStats }
+  return { stats, teamBonus, loading, loadedKey, loadStats }
 }

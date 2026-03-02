@@ -46,5 +46,19 @@ export function useAdminMembers(isAdmin, isAuthenticated = false) {
     )
   }, [])
 
-  return { members, loading, updateMemberDisplayName, toggleMemberDisabled }
+  const updateMemberColor = useCallback(async (uid, colorIndex) => {
+    await userProfileService.updateColor(uid, colorIndex)
+    setMembers((prev) =>
+      prev.map((m) => m.uid === uid ? { ...m, colorIndex } : m)
+    )
+  }, [])
+
+  const updateMemberEmail = useCallback(async (uid, newEmail) => {
+    await userProfileService.updateEmail(uid, newEmail)
+    setMembers((prev) =>
+      prev.map((m) => m.uid === uid ? { ...m, email: newEmail } : m)
+    )
+  }, [])
+
+  return { members, loading, updateMemberDisplayName, toggleMemberDisabled, updateMemberColor, updateMemberEmail }
 }

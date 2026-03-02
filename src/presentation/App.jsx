@@ -32,6 +32,8 @@ import { useMemberEarnings } from './hooks/useMemberEarnings'
 import { MiscAdjustmentsSection } from './components/MiscAdjustmentsSection'
 import { useMiscAdjustments } from './hooks/useMiscAdjustments'
 import { useWorkingMonth } from './hooks/useWorkingMonth'
+import { useSalaryConfirmation } from './hooks/useSalaryConfirmation'
+import { salaryConfirmationService } from '../infrastructure/firebase/salaryConfirmationService'
 import { initFirestoreService, clearFirestoreService, getLocalGoalService, getFirestoreRepository, initAdminMemberService, clearAdminMemberService } from '../di/container'
 import { DataMigrationService } from '../application/services/DataMigrationService'
 import { DEFAULT_SHIFT_HOURS } from '../domain/entities/Goal'
@@ -49,7 +51,7 @@ export function App() {
 
   const { user, loading: authLoading, isAdmin, profileDisplayName, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, changeEmail, changePassword, setPassword } = useAuth()
   const { workingMonth: configMonth, workingYear: configYear, loading: workingMonthLoading, saveWorkingMonth } = useWorkingMonth()
-  const { members, loading: membersLoading, updateMemberDisplayName, toggleMemberDisabled } = useAdminMembers(isAdmin, !!user)
+  const { members, loading: membersLoading, updateMemberDisplayName, toggleMemberDisabled, updateMemberColor, updateMemberEmail } = useAdminMembers(isAdmin, !!user)
   const { earnings: memberEarnings, loading: memberEarningsLoading, loadEarnings: loadMemberEarnings } = useMemberEarnings()
   const [initialSalaryUrl] = useState(() => {
     const match = window.location.pathname.match(/^\/salary\/(\d{4})\/(\d{1,2})$/)
@@ -74,7 +76,7 @@ export function App() {
     return match ? match[1] : null
   })
   const [showLocPerf, setShowLocPerf] = useState(false)
-  const { stats: locPerfStats, loading: locPerfLoading, loadedKey: locPerfLoadedKey, loadStats: loadLocPerf } = useLocationPerformance()
+  const { stats: locPerfStats, teamBonus: locPerfBonus, loading: locPerfLoading, loadedKey: locPerfLoadedKey, loadStats: loadLocPerf } = useLocationPerformance()
   const { membersGoals: locCalGoals, loading: locCalLoading, loadedKey: locCalLoadedKey, loadGoals: loadLocCalGoals } = useLocationCalendar()
   const [showLocCalModal, setShowLocCalModal] = useState(false)
 
@@ -107,6 +109,18 @@ export function App() {
 
   // Misc adjustments - same uid pattern as team bonus
   const { miscItems, miscTotal, saveAdjustments: saveMiscAdjustments } = useMiscAdjustments(viewYear, viewMonth, bonusViewUid)
+
+  // Salary confirmation
+  const { adminConfirmed: salaryAdminConfirmed, adminConfirmedAt: salaryAdminConfirmedAt, memberConfirmed: salaryMemberConfirmed, memberConfirmedAt: salaryMemberConfirmedAt, publishSalary, confirmSalary } = useSalaryConfirmation(viewYear, viewMonth, bonusViewUid)
+
+  // All salary confirmations for the working month (admin dashboard indicators)
+  const [salaryStatuses, setSalaryStatuses] = useState({})
+  useEffect(() => {
+    if (!isAdmin || configMonth === null || configMonth === undefined || configYear === null || configYear === undefined) return
+    const pad = (n) => String(n).padStart(2, '0')
+    const monthKey = `${configYear}-${pad(configMonth + 1)}`
+    salaryConfirmationService.getAllConfirmations(monthKey).then(setSalaryStatuses)
+  }, [isAdmin, configMonth, configYear])
 
   // Proof images - use the active UID (member being viewed by admin, or own UID)
   const proofImageUid = adminViewingUid || user?.uid
@@ -478,6 +492,7 @@ export function App() {
     let commission45 = 0
     let commission35 = 0
     let commissionCustom = 0
+    let commissionIg = 0
     let excessRevenue = 0
     let totalBuybackCost = 0
     let totalActual = 0
@@ -501,17 +516,37 @@ export function App() {
           const morningHours = goal.morningShiftHours ?? DEFAULT_SHIFT_HOURS
           wages += Math.round(morningWage * morningHours * 100) / 100
 
-          if (goal.morningCalculatedWage === 80 && goal.morningActual > 0) {
-            commission45 += goal.morningAmount * 0.045
-            if (goal.morningAmount && goal.morningActual > goal.morningAmount) {
-              const excess = goal.morningActual - goal.morningAmount
+          const morningIgFeatured = goal.morningIgFeaturedAmount || 0
+          const morningIgOther = goal.morningIgOtherAmount || 0
+          const morningHasIg = morningIgFeatured > 0 || morningIgOther > 0
+          const morningEffectiveActual = (goal.morningActual || 0) + morningIgFeatured + morningIgOther
+
+          if (morningHasIg) {
+            // IG commission replaces standard 4.5%/3.5%
+            commissionIg += morningIgFeatured * 0.07 + morningIgOther * 0.05
+            // Excess still tracked using effective actual
+            if (goal.morningCalculatedWage === 80 && goal.morningAmount && morningEffectiveActual > goal.morningAmount) {
+              const excess = morningEffectiveActual - goal.morningAmount
               excessRevenue += excess
-              excessSources.push({ key: `${dateStr}:morning`, dateStr, day, shift: 'morning', shiftLabel: 'A', target: goal.morningAmount, actual: goal.morningActual, excess })
+              excessSources.push({ key: `${dateStr}:morning`, dateStr, day, shift: 'morning', shiftLabel: 'A', target: goal.morningAmount, actual: morningEffectiveActual, excess })
             }
-          } else if (goal.morningBoughtBack && goal.morningAmount) {
-            commission35 += goal.morningAmount * 0.035
-            totalBuybackCost += goal.morningAmount
-            buybackTargets.push({ key: `${dateStr}:morning`, dateStr, day, shift: 'morning', shiftLabel: 'A', amount: goal.morningAmount, actual: goal.morningActual || 0 })
+            if (goal.morningBoughtBack && goal.morningAmount) {
+              totalBuybackCost += goal.morningAmount
+              buybackTargets.push({ key: `${dateStr}:morning`, dateStr, day, shift: 'morning', shiftLabel: 'A', amount: goal.morningAmount, actual: morningEffectiveActual })
+            }
+          } else {
+            if (goal.morningCalculatedWage === 80 && goal.morningActual > 0) {
+              commission45 += goal.morningAmount * 0.045
+              if (goal.morningAmount && goal.morningActual > goal.morningAmount) {
+                const excess = goal.morningActual - goal.morningAmount
+                excessRevenue += excess
+                excessSources.push({ key: `${dateStr}:morning`, dateStr, day, shift: 'morning', shiftLabel: 'A', target: goal.morningAmount, actual: goal.morningActual, excess })
+              }
+            } else if (goal.morningBoughtBack && goal.morningAmount) {
+              commission35 += goal.morningAmount * 0.035
+              totalBuybackCost += goal.morningAmount
+              buybackTargets.push({ key: `${dateStr}:morning`, dateStr, day, shift: 'morning', shiftLabel: 'A', amount: goal.morningAmount, actual: goal.morningActual || 0 })
+            }
           }
 
           if (goal.morningCustomRate && goal.morningCustomAmount) {
@@ -527,17 +562,35 @@ export function App() {
           const afternoonHours = goal.afternoonShiftHours ?? DEFAULT_SHIFT_HOURS
           wages += Math.round(afternoonWage * afternoonHours * 100) / 100
 
-          if (goal.afternoonCalculatedWage === 80 && goal.afternoonActual > 0) {
-            commission45 += goal.afternoonAmount * 0.045
-            if (goal.afternoonAmount && goal.afternoonActual > goal.afternoonAmount) {
-              const excess = goal.afternoonActual - goal.afternoonAmount
+          const afternoonIgFeatured = goal.afternoonIgFeaturedAmount || 0
+          const afternoonIgOther = goal.afternoonIgOtherAmount || 0
+          const afternoonHasIg = afternoonIgFeatured > 0 || afternoonIgOther > 0
+          const afternoonEffectiveActual = (goal.afternoonActual || 0) + afternoonIgFeatured + afternoonIgOther
+
+          if (afternoonHasIg) {
+            commissionIg += afternoonIgFeatured * 0.07 + afternoonIgOther * 0.05
+            if (goal.afternoonCalculatedWage === 80 && goal.afternoonAmount && afternoonEffectiveActual > goal.afternoonAmount) {
+              const excess = afternoonEffectiveActual - goal.afternoonAmount
               excessRevenue += excess
-              excessSources.push({ key: `${dateStr}:afternoon`, dateStr, day, shift: 'afternoon', shiftLabel: 'B', target: goal.afternoonAmount, actual: goal.afternoonActual, excess })
+              excessSources.push({ key: `${dateStr}:afternoon`, dateStr, day, shift: 'afternoon', shiftLabel: 'B', target: goal.afternoonAmount, actual: afternoonEffectiveActual, excess })
             }
-          } else if (goal.afternoonBoughtBack && goal.afternoonAmount) {
-            commission35 += goal.afternoonAmount * 0.035
-            totalBuybackCost += goal.afternoonAmount
-            buybackTargets.push({ key: `${dateStr}:afternoon`, dateStr, day, shift: 'afternoon', shiftLabel: 'B', amount: goal.afternoonAmount, actual: goal.afternoonActual || 0 })
+            if (goal.afternoonBoughtBack && goal.afternoonAmount) {
+              totalBuybackCost += goal.afternoonAmount
+              buybackTargets.push({ key: `${dateStr}:afternoon`, dateStr, day, shift: 'afternoon', shiftLabel: 'B', amount: goal.afternoonAmount, actual: afternoonEffectiveActual })
+            }
+          } else {
+            if (goal.afternoonCalculatedWage === 80 && goal.afternoonActual > 0) {
+              commission45 += goal.afternoonAmount * 0.045
+              if (goal.afternoonAmount && goal.afternoonActual > goal.afternoonAmount) {
+                const excess = goal.afternoonActual - goal.afternoonAmount
+                excessRevenue += excess
+                excessSources.push({ key: `${dateStr}:afternoon`, dateStr, day, shift: 'afternoon', shiftLabel: 'B', target: goal.afternoonAmount, actual: goal.afternoonActual, excess })
+              }
+            } else if (goal.afternoonBoughtBack && goal.afternoonAmount) {
+              commission35 += goal.afternoonAmount * 0.035
+              totalBuybackCost += goal.afternoonAmount
+              buybackTargets.push({ key: `${dateStr}:afternoon`, dateStr, day, shift: 'afternoon', shiftLabel: 'B', amount: goal.afternoonAmount, actual: goal.afternoonActual || 0 })
+            }
           }
 
           if (goal.afternoonCustomRate && goal.afternoonCustomAmount) {
@@ -584,6 +637,7 @@ export function App() {
       commission45: Math.round(commission45 * 100) / 100,
       commission35: Math.round(commission35 * 100) / 100,
       commissionCustom: Math.round(commissionCustom * 100) / 100,
+      commissionIg: Math.round(commissionIg * 100) / 100,
       customRates: Array.from(customRates).sort((a, b) => a - b),
       excessRevenue: Math.round(excessRevenue * 100) / 100,
       totalBuybackCost: Math.round(totalBuybackCost * 100) / 100,
@@ -596,8 +650,8 @@ export function App() {
     }
   }
 
-  const { wages: monthlyWages, commission45, commission35, commissionCustom, customRates, excessRevenue: monthlyExcess, totalBuybackCost: monthlyBuybackCost, availableExcess, excessAllocation, excessSources: monthlyExcessSources, buybackTargets: monthlyBuybackTargets, totalActual: monthlyTotalActual, totalAllowance: monthlyTotalAllowance } = calculateMonthlyEarnings()
-  const monthlyTotal = Math.round((monthlyWages + commission45 + commission35 + commissionCustom + myBonusShare + monthlyTotalAllowance + miscTotal) * 100) / 100
+  const { wages: monthlyWages, commission45, commission35, commissionCustom, commissionIg, customRates, excessRevenue: monthlyExcess, totalBuybackCost: monthlyBuybackCost, availableExcess, excessAllocation, excessSources: monthlyExcessSources, buybackTargets: monthlyBuybackTargets, totalActual: monthlyTotalActual, totalAllowance: monthlyTotalAllowance } = calculateMonthlyEarnings()
+  const monthlyTotal = Math.round((monthlyWages + commission45 + commission35 + commissionCustom + commissionIg + myBonusShare + monthlyTotalAllowance + miscTotal) * 100) / 100
 
   // Calculate admin confirmation progress for the viewing month (per-shift)
   const getConfirmationProgress = () => {
@@ -651,7 +705,17 @@ export function App() {
         />
       </div>
 
-      {isAdmin && (showAdminDashboard || !adminViewingUid) ? (
+      {!user ? (
+        <div className="auth-screen">
+          <LoginModal
+            onSignIn={handleSignIn}
+            onSignUp={handleSignUp}
+            onGoogleSignIn={handleGoogleSignIn}
+            onClose={() => {}}
+            inline
+          />
+        </div>
+      ) : isAdmin && (showAdminDashboard || !adminViewingUid) ? (
         <AdminDashboard
           members={members}
           membersLoading={membersLoading}
@@ -671,6 +735,7 @@ export function App() {
           currentMonth={currentMonth}
           currentYear={currentYear}
           onSaveWorkingMonth={async (y, m) => { await saveWorkingMonth(y, m, user?.uid); setViewYear(y); setViewMonth(m) }}
+          salaryStatuses={salaryStatuses}
         />
       ) : (
         <>
@@ -759,7 +824,9 @@ export function App() {
             <button className="nav-btn" onClick={handlePrev} disabled={!canGoPrev}>&larr;</button>
             <h1>{MONTH_NAMES[viewMonth]} {viewYear}</h1>
             <button className="nav-btn" onClick={handleNext} disabled={!canGoNext}>&rarr;</button>
-            <button className="salary-btn" onClick={() => setShowSalaryModal(true)} title="View Salary Details">Salary</button>
+            {(isAdmin || salaryAdminConfirmed) && (
+              <button className="salary-btn" onClick={() => setShowSalaryModal(true)} title="View Salary Details">Salary</button>
+            )}
           </div>
 
           <CalendarGrid
@@ -785,6 +852,12 @@ export function App() {
                   <span className="monthly-label">Wages:</span>
                   <span className="monthly-value">${monthlyWages.toLocaleString()}</span>
                 </div>
+                {commissionIg > 0 && (
+                  <div className="monthly-row commission-ig-row">
+                    <span className="monthly-label">IG Commission (7%/5%):</span>
+                    <span className="monthly-value">+${commissionIg.toLocaleString()}</span>
+                  </div>
+                )}
                 {commission45 > 0 && (
                   <div className="monthly-row commission-row">
                     <span className="monthly-label">Commission (4.5%):</span>
@@ -907,8 +980,8 @@ export function App() {
               const takeHome = hasMpf ? Math.round((monthlyTotal - mpfDeduction) * 100) / 100 : 0
               return (
                 <>
-                  <div className="monthly-total" onClick={() => setShowSalaryModal(true)} style={{ cursor: 'pointer' }}>
-                    <span className="monthly-label">Total: <span className="salary-details-hint">Tap for details</span></span>
+                  <div className="monthly-total" onClick={(isAdmin || salaryAdminConfirmed) ? () => setShowSalaryModal(true) : undefined} style={(isAdmin || salaryAdminConfirmed) ? { cursor: 'pointer' } : undefined}>
+                    <span className="monthly-label">Total: {(isAdmin || salaryAdminConfirmed) && <span className="salary-details-hint">Tap for details</span>}</span>
                     <span className="monthly-amount">${monthlyTotal.toLocaleString()}</span>
                   </div>
                   {hasMpf && !summaryExpanded && (
@@ -1030,7 +1103,7 @@ export function App() {
         />
       )}
 
-      {showSalaryModal && (
+      {showSalaryModal && user && (
         <MonthlySalaryModal
           year={viewYear}
           month={viewMonth}
@@ -1040,18 +1113,32 @@ export function App() {
           myBonusBreakdown={myBonusBreakdown}
           miscItems={miscItems}
           miscTotal={miscTotal}
-          viewingMember={adminViewingUid ? viewingMember : null}
+          viewingMember={adminViewingUid ? viewingMember : { displayName: profileDisplayName, email: user?.email }}
           fullScreen
+          isAdmin={isAdmin && !!adminViewingUid}
+          allShiftsVerified={confirmationProgress ? confirmationProgress.confirmed === confirmationProgress.total && confirmationProgress.total > 0 : false}
+          verificationProgress={confirmationProgress}
+          adminConfirmed={salaryAdminConfirmed}
+          adminConfirmedAt={salaryAdminConfirmedAt}
+          memberConfirmed={salaryMemberConfirmed}
+          memberConfirmedAt={salaryMemberConfirmedAt}
+          onPublishSalary={isAdmin && adminViewingUid ? async (grossTotal, takeHome) => {
+            await publishSalary(user.uid, grossTotal, takeHome)
+            const pad = (n) => String(n).padStart(2, '0')
+            const monthKey = `${configYear}-${pad(configMonth + 1)}`
+            salaryConfirmationService.getAllConfirmations(monthKey).then(setSalaryStatuses)
+          } : undefined}
+          onConfirmSalary={!isAdmin || !adminViewingUid ? confirmSalary : undefined}
           onClose={() => setShowSalaryModal(false)}
         />
       )}
 
-      {showLoginModal && (
+      {(showLoginModal || (showSalaryModal && !user)) && (
         <LoginModal
           onSignIn={handleSignIn}
           onSignUp={handleSignUp}
           onGoogleSignIn={handleGoogleSignIn}
-          onClose={() => setShowLoginModal(false)}
+          onClose={() => { setShowLoginModal(false); if (!user) setShowSalaryModal(false) }}
         />
       )}
 
@@ -1110,6 +1197,8 @@ export function App() {
         <MemberManagerModal
           members={members}
           onUpdateDisplayName={updateMemberDisplayName}
+          onUpdateEmail={updateMemberEmail}
+          onUpdateColor={updateMemberColor}
           onToggleDisabled={toggleMemberDisabled}
           earnings={memberEarnings}
           earningsLoading={memberEarningsLoading}
@@ -1124,6 +1213,7 @@ export function App() {
           currentUserDisplayName={profileDisplayName || user.displayName || user.email}
           members={members}
           locations={visibleLocations}
+          onUpdateMyColor={(colorIndex) => updateMemberColor(user.uid, colorIndex)}
           onClose={() => setShowRoster(false)}
         />
       )}
@@ -1131,6 +1221,7 @@ export function App() {
       {showLocPerf && (
         <LocationPerformanceModal
           stats={locPerfStats}
+          teamBonus={locPerfBonus}
           loading={locPerfLoading}
           year={viewYear}
           month={viewMonth}

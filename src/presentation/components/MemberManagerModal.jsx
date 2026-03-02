@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { MEMBER_COLORS, getMemberColor } from '../utils/memberColors'
 
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-export function MemberManagerModal({ members, onUpdateDisplayName, onToggleDisabled, earnings, earningsLoading, onClose }) {
+export function MemberManagerModal({ members, onUpdateDisplayName, onUpdateEmail, onUpdateColor, onToggleDisabled, earnings, earningsLoading, onClose }) {
   const [editingUid, setEditingUid] = useState(null)
+  const [editingField, setEditingField] = useState(null) // 'name' or 'email'
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [confirmDisableUid, setConfirmDisableUid] = useState(null)
@@ -13,13 +15,15 @@ export function MemberManagerModal({ members, onUpdateDisplayName, onToggleDisab
   const activeMembers = nonAdminMembers.filter((m) => !m.disabled)
   const disabledMembers = nonAdminMembers.filter((m) => m.disabled)
 
-  const startEdit = (member) => {
+  const startEdit = (member, field = 'name') => {
     setEditingUid(member.uid)
-    setDraft(member.displayName || '')
+    setEditingField(field)
+    setDraft(field === 'email' ? (member.email || '') : (member.displayName || ''))
   }
 
   const cancelEdit = () => {
     setEditingUid(null)
+    setEditingField(null)
     setDraft('')
   }
 
@@ -27,11 +31,16 @@ export function MemberManagerModal({ members, onUpdateDisplayName, onToggleDisab
     if (!editingUid || !draft.trim()) return
     setSaving(true)
     try {
-      await onUpdateDisplayName(editingUid, draft.trim())
+      if (editingField === 'email') {
+        await onUpdateEmail(editingUid, draft.trim())
+      } else {
+        await onUpdateDisplayName(editingUid, draft.trim())
+      }
       setEditingUid(null)
+      setEditingField(null)
       setDraft('')
     } catch (err) {
-      console.error('Failed to update display name:', err)
+      console.error(`Failed to update ${editingField}:`, err)
     } finally {
       setSaving(false)
     }
@@ -92,7 +101,7 @@ export function MemberManagerModal({ members, onUpdateDisplayName, onToggleDisab
             onKeyDown={handleKeyDown}
             disabled={saving}
             autoFocus
-            placeholder="Display name"
+            placeholder={editingField === 'email' ? 'Email address' : 'Display name'}
           />
           <button
             className="member-manager-save-btn"
@@ -121,13 +130,38 @@ export function MemberManagerModal({ members, onUpdateDisplayName, onToggleDisab
               </span>
               <span className="member-manager-email">{member.email}</span>
             </div>
-            <button
-              className="member-manager-edit-btn"
-              onClick={() => startEdit(member)}
-              title="Edit display name"
-            >
-              &#9998;
-            </button>
+            <div className="member-manager-edit-btns">
+              <button
+                className="member-manager-edit-btn"
+                onClick={() => startEdit(member, 'name')}
+                title="Edit display name"
+              >
+                &#9998;
+              </button>
+              <button
+                className="member-manager-edit-btn member-manager-edit-email-btn"
+                onClick={() => startEdit(member, 'email')}
+                title="Edit email"
+              >
+                &#9993;
+              </button>
+            </div>
+          </div>
+
+          <div className="member-color-picker">
+            {MEMBER_COLORS.map((c, i) => {
+              const current = getMemberColor(member.uid, member.colorIndex)
+              const isSelected = c.bg === current.bg && c.text === current.text
+              return (
+                <button
+                  key={i}
+                  className={`member-color-dot ${isSelected ? 'selected' : ''}`}
+                  style={{ background: c.bg, borderColor: c.text }}
+                  onClick={() => onUpdateColor(member.uid, i)}
+                  title={`Color ${i + 1}`}
+                />
+              )
+            })}
           </div>
 
           {renderWages(member.uid)}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export function LoginModal({ onSignIn, onSignUp, onGoogleSignIn, onClose }) {
+export function LoginModal({ onSignIn, onSignUp, onGoogleSignIn, onClose, inline }) {
   const [tab, setTab] = useState('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -55,9 +55,8 @@ export function LoginModal({ onSignIn, onSignUp, onGoogleSignIn, onClose }) {
     }
   }
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal login-modal" onClick={e => e.stopPropagation()}>
+  const content = (
+      <div className={`modal login-modal${inline ? ' login-modal-inline' : ''}`} onClick={e => e.stopPropagation()}>
         <div className="login-tabs">
           <button
             className={`login-tab ${tab === 'signin' ? 'active' : ''}`}
@@ -137,10 +136,19 @@ export function LoginModal({ onSignIn, onSignUp, onGoogleSignIn, onClose }) {
           Continue with Google
         </button>
 
-        <div className="button-group">
-          <button className="cancel-btn" onClick={onClose} disabled={loading}>Cancel</button>
-        </div>
+        {!inline && (
+          <div className="button-group">
+            <button className="cancel-btn" onClick={onClose} disabled={loading}>Cancel</button>
+          </div>
+        )}
       </div>
+  )
+
+  if (inline) return content
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      {content}
     </div>
   )
 }

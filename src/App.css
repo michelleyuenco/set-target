@@ -696,6 +696,14 @@ body {
   color: #db2777;
 }
 
+.commission-inline.allowance-badge {
+  color: #d97706;
+}
+
+.commission-inline.ig-commission {
+  color: #8b5cf6;
+}
+
 .labor-total {
   margin-top: 2px;
   padding: 3px 4px;
@@ -1265,6 +1273,15 @@ body {
   border-radius: 6px;
 }
 
+.ig-commission-toggle label {
+  color: #7c3aed;
+}
+
+.ig-commission-inputs {
+  background: #ede9fe;
+  border-color: #8b5cf6;
+}
+
 .monthly-summary {
   flex-shrink: 0;
   padding: 8px 20px;
@@ -1322,6 +1339,10 @@ body {
 }
 
 .monthly-row.commission35-row .monthly-value {
+  color: #c4b5fd;
+}
+
+.monthly-row.commission-ig-row .monthly-value {
   color: #c4b5fd;
 }
 
@@ -2638,6 +2659,14 @@ body {
   border-top: 1px dashed #e5e7eb;
 }
 
+.breakdown-row.ig-commission-row .breakdown-label {
+  color: #7c3aed;
+}
+
+.breakdown-row.ig-commission-row .breakdown-value {
+  color: #7c3aed;
+}
+
 .breakdown-row.buyback-row {
   margin-top: 4px;
   padding-top: 8px;
@@ -2878,6 +2907,20 @@ body {
 /* Login Modal */
 .login-modal {
   max-width: 360px;
+}
+
+/* Auth screen (shown when not logged in) */
+.auth-screen {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.login-modal-inline {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  width: 100%;
 }
 
 .login-tabs {
@@ -6200,13 +6243,17 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding-bottom: 4px;
+}
+
+.loc-perf-modal .button-group {
+  flex-shrink: 0;
 }
 
 /* Each location card */
 .loc-perf-item {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  overflow: hidden;
 }
 
 .loc-perf-row {
@@ -6240,6 +6287,13 @@ body {
 .loc-perf-name-unset {
   color: #9ca3af;
   font-style: italic;
+}
+
+.loc-perf-name-who {
+  font-style: normal;
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 11px;
 }
 
 .loc-perf-meta {
@@ -6391,6 +6445,13 @@ body {
 
 .loc-perf-member-salary {
   color: #dc2626;
+  font-weight: 600;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.loc-perf-member-bonus {
+  color: #7c3aed;
   font-weight: 600;
   font-size: 10px;
   white-space: nowrap;
@@ -6699,6 +6760,12 @@ body {
   white-space: nowrap;
 }
 
+.member-manager-edit-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .member-manager-edit-btn {
   flex-shrink: 0;
   background: none;
@@ -6730,11 +6797,13 @@ body {
   border-radius: 5px;
   font-size: 13px;
   color: #111827;
+  background: #f5f3ff;
 }
 
 .member-manager-input:focus {
   outline: none;
   border-color: #7c3aed;
+  background: #ffffff;
 }
 
 .member-manager-save-btn,
@@ -6817,6 +6886,49 @@ body {
   font-size: 11px;
   color: #9ca3af;
   margin-top: 4px;
+}
+
+/* ── Color Picker Dots (shared by MemberManager + Roster) ── */
+.member-color-picker {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.member-color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.member-color-dot:hover {
+  transform: scale(1.2);
+}
+
+.member-color-dot.selected {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px currentColor;
+  transform: scale(1.1);
+}
+
+/* Roster "My Color" bar */
+.roster-my-color {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  flex-shrink: 0;
+}
+
+.roster-my-color-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
 }
 
 /* ── Member Manager: Disable/Enable ── */
@@ -7129,6 +7241,30 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.dashboard-member-salary-status {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.salary-status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.salary-status-confirmed {
+  background: #10b981;
+}
+
+.salary-status-published {
+  background: #3b82f6;
+}
+
+.salary-status-unpublished {
+  background: #d1d5db;
 }
 
 .admin-dashboard-back-btn {
@@ -7630,11 +7766,11 @@ body {
 }
 
 .salary-member-name {
-  display: block;
-  font-size: 13px;
+  text-align: center;
+  font-size: 15px;
   color: #6d28d9;
   font-weight: 700;
-  margin-top: 2px;
+  margin-bottom: 2px;
 }
 
 .salary-section {
@@ -7715,6 +7851,65 @@ body {
   padding-top: 8px;
   margin-top: 4px;
   border-top: 2px solid #a78bfa;
+}
+
+.salary-confirmed-badge {
+  text-align: center;
+  padding: 8px 12px;
+  margin-top: 12px;
+  background: #ecfdf5;
+  color: #059669;
+  font-weight: 700;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid #a7f3d0;
+}
+
+.salary-published-badge {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.salary-confirm-btn {
+  background: #7c3aed !important;
+}
+
+.salary-publish-btn {
+  background: #2563eb !important;
+}
+
+.salary-publish-btn:disabled {
+  background: #9ca3af !important;
+  cursor: not-allowed;
+}
+
+.salary-verification-warning {
+  text-align: center;
+  padding: 8px 12px;
+  margin-top: 12px;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+  font-size: 12px;
+  border-radius: 8px;
+  border: 1px solid #fcd34d;
+}
+
+.salary-not-published {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.salary-not-published-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+
+.salary-not-published-text {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .salary-daily-list {

@@ -28,6 +28,12 @@ export function GoalModal({
   const [afternoonCustomAmount, setAfternoonCustomAmount] = useState('')
   const [showMorningCustom, setShowMorningCustom] = useState(false)
   const [showAfternoonCustom, setShowAfternoonCustom] = useState(false)
+  const [morningIgFeatured, setMorningIgFeatured] = useState('')
+  const [morningIgOther, setMorningIgOther] = useState('')
+  const [afternoonIgFeatured, setAfternoonIgFeatured] = useState('')
+  const [afternoonIgOther, setAfternoonIgOther] = useState('')
+  const [showMorningIg, setShowMorningIg] = useState(false)
+  const [showAfternoonIg, setShowAfternoonIg] = useState(false)
   const [morningStartTime, setMorningStartTime] = useState(DEFAULT_MORNING_START)
   const [morningEndTime, setMorningEndTime] = useState(DEFAULT_MORNING_END)
   const [afternoonStartTime, setAfternoonStartTime] = useState(DEFAULT_AFTERNOON_START)
@@ -63,6 +69,12 @@ export function GoalModal({
     setAfternoonCustomAmount(goal?.afternoonCustomAmount || '')
     setShowMorningCustom(!!(goal?.morningCustomRate || goal?.morningCustomAmount))
     setShowAfternoonCustom(!!(goal?.afternoonCustomRate || goal?.afternoonCustomAmount))
+    setMorningIgFeatured(goal?.morningIgFeaturedAmount ?? '')
+    setMorningIgOther(goal?.morningIgOtherAmount ?? '')
+    setAfternoonIgFeatured(goal?.afternoonIgFeaturedAmount ?? '')
+    setAfternoonIgOther(goal?.afternoonIgOtherAmount ?? '')
+    setShowMorningIg(!!(goal?.morningIgFeaturedAmount || goal?.morningIgOtherAmount))
+    setShowAfternoonIg(!!(goal?.afternoonIgFeaturedAmount || goal?.afternoonIgOtherAmount))
     setMorningStartTime(goal?.morningStartTime || DEFAULT_MORNING_START)
     setMorningEndTime(goal?.morningEndTime || DEFAULT_MORNING_END)
     setAfternoonStartTime(goal?.afternoonStartTime || DEFAULT_AFTERNOON_START)
@@ -197,7 +209,11 @@ export function GoalModal({
         morningAllowance,
         afternoonAllowance,
         morningCustomWage,
-        afternoonCustomWage
+        afternoonCustomWage,
+        morningIgFeaturedAmount: morningIgFeatured,
+        morningIgOtherAmount: morningIgOther,
+        afternoonIgFeaturedAmount: afternoonIgFeatured,
+        afternoonIgOtherAmount: afternoonIgOther
       })
     } catch (err) {
       setSaveError(err.message || 'Failed to upload images')
@@ -229,19 +245,26 @@ export function GoalModal({
     norm(morningAllowance) !== norm(goal?.morningAllowance) ||
     norm(afternoonAllowance) !== norm(goal?.afternoonAllowance) ||
     norm(morningCustomWage) !== norm(goal?.morningCustomWage) ||
-    norm(afternoonCustomWage) !== norm(goal?.afternoonCustomWage)
+    norm(afternoonCustomWage) !== norm(goal?.afternoonCustomWage) ||
+    norm(morningIgFeatured) !== norm(goal?.morningIgFeaturedAmount) ||
+    norm(morningIgOther) !== norm(goal?.morningIgOtherAmount) ||
+    norm(afternoonIgFeatured) !== norm(goal?.afternoonIgFeaturedAmount) ||
+    norm(afternoonIgOther) !== norm(goal?.afternoonIgOtherAmount)
   )
 
-  const getWage = (target, actual, customWage) => {
+  const getWage = (target, actual, customWage, igFeatured, igOther) => {
     const cw = customWage === '' ? null : Number(customWage)
     if (cw !== null && !isNaN(cw) && cw >= 0) return cw
     const t = target === '' ? null : Number(target)
-    const a = actual === '' ? null : Number(actual)
-    return Goal.calculateWage(t, a)
+    const a = actual === '' ? 0 : (Number(actual) || 0)
+    const igF = igFeatured === '' ? 0 : (Number(igFeatured) || 0)
+    const igO = igOther === '' ? 0 : (Number(igOther) || 0)
+    const effectiveActual = a + igF + igO
+    return Goal.calculateWage(t, effectiveActual > 0 ? effectiveActual : null)
   }
 
-  const morningWage = getWage(morningGoal, morningActual, morningCustomWage)
-  const afternoonWage = getWage(afternoonGoal, afternoonActual, afternoonCustomWage)
+  const morningWage = getWage(morningGoal, morningActual, morningCustomWage, morningIgFeatured, morningIgOther)
+  const afternoonWage = getWage(afternoonGoal, afternoonActual, afternoonCustomWage, afternoonIgFeatured, afternoonIgOther)
 
   const morningHours = Goal.calculateHoursFromTimes(morningStartTime, morningEndTime)
   const afternoonHours = Goal.calculateHoursFromTimes(afternoonStartTime, afternoonEndTime)
@@ -253,9 +276,9 @@ export function GoalModal({
     return `${h}h ${m}m`
   }
 
-  // Lock shifts that have been admin-verified (unless admin is viewing)
-  const morningLocked = !isAdminViewing && !!goal?.morningAdminConfirmed
-  const afternoonLocked = !isAdminViewing && !!goal?.afternoonAdminConfirmed
+  // Lock shifts that have been admin-verified (for everyone, including admins)
+  const morningLocked = !!goal?.morningAdminConfirmed
+  const afternoonLocked = !!goal?.afternoonAdminConfirmed
 
   const wageClass = (wage, customWage) => {
     const cw = customWage === '' ? null : Number(customWage)
@@ -356,6 +379,47 @@ export function GoalModal({
                 {formatHours(morningHours)}
               </div>
             </div>
+            <div className="custom-commission-toggle ig-commission-toggle">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={showMorningIg}
+                  disabled={readOnly || !morningConfirmed || morningLocked}
+                  onChange={(e) => {
+                    setShowMorningIg(e.target.checked)
+                    if (!e.target.checked) {
+                      setMorningIgFeatured('')
+                      setMorningIgOther('')
+                    }
+                  }}
+                />
+                <span>IG Story Sales</span>
+              </label>
+            </div>
+            {showMorningIg && (
+              <div className="custom-commission-inputs ig-commission-inputs">
+                <div className="input-compact">
+                  <label>Featured ($)</label>
+                  <input
+                    type="number"
+                    value={morningIgFeatured}
+                    onChange={(e) => setMorningIgFeatured(e.target.value)}
+                    placeholder="0"
+                    disabled={readOnly || !morningConfirmed || morningLocked}
+                  />
+                </div>
+                <div className="input-compact">
+                  <label>Other ($)</label>
+                  <input
+                    type="number"
+                    value={morningIgOther}
+                    onChange={(e) => setMorningIgOther(e.target.value)}
+                    placeholder="0"
+                    disabled={readOnly || !morningConfirmed || morningLocked}
+                  />
+                </div>
+              </div>
+            )}
             <div className="custom-commission-toggle">
               <label>
                 <input
@@ -481,6 +545,47 @@ export function GoalModal({
                 {formatHours(afternoonHours)}
               </div>
             </div>
+            <div className="custom-commission-toggle ig-commission-toggle">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={showAfternoonIg}
+                  disabled={readOnly || !afternoonConfirmed || afternoonLocked}
+                  onChange={(e) => {
+                    setShowAfternoonIg(e.target.checked)
+                    if (!e.target.checked) {
+                      setAfternoonIgFeatured('')
+                      setAfternoonIgOther('')
+                    }
+                  }}
+                />
+                <span>IG Story Sales</span>
+              </label>
+            </div>
+            {showAfternoonIg && (
+              <div className="custom-commission-inputs ig-commission-inputs">
+                <div className="input-compact">
+                  <label>Featured ($)</label>
+                  <input
+                    type="number"
+                    value={afternoonIgFeatured}
+                    onChange={(e) => setAfternoonIgFeatured(e.target.value)}
+                    placeholder="0"
+                    disabled={readOnly || !afternoonConfirmed || afternoonLocked}
+                  />
+                </div>
+                <div className="input-compact">
+                  <label>Other ($)</label>
+                  <input
+                    type="number"
+                    value={afternoonIgOther}
+                    onChange={(e) => setAfternoonIgOther(e.target.value)}
+                    placeholder="0"
+                    disabled={readOnly || !afternoonConfirmed || afternoonLocked}
+                  />
+                </div>
+              </div>
+            )}
             <div className="custom-commission-toggle">
               <label>
                 <input
@@ -535,7 +640,7 @@ export function GoalModal({
               onDelete={(image) => handleDeleteUploadedImage('morning', image)}
               onRemovePending={(index) => handleRemovePending('morning', index)}
               uploading={proofUploadingShift === 'morning'}
-              disabled={!morningConfirmed}
+              disabled={!morningConfirmed || morningLocked}
               readOnly={readOnly}
             />
           </div>
@@ -547,7 +652,7 @@ export function GoalModal({
               onDelete={(image) => handleDeleteUploadedImage('afternoon', image)}
               onRemovePending={(index) => handleRemovePending('afternoon', index)}
               uploading={proofUploadingShift === 'afternoon'}
-              disabled={!afternoonConfirmed}
+              disabled={!afternoonConfirmed || afternoonLocked}
               readOnly={readOnly}
             />
           </div>
@@ -566,6 +671,7 @@ export function GoalModal({
                     value={morningAllowance}
                     onChange={(e) => setMorningAllowance(e.target.value)}
                     placeholder="0"
+                    disabled={readOnly || morningLocked}
                   />
                 </div>
               ) : <div className="admin-allowance-field" />}
@@ -579,6 +685,7 @@ export function GoalModal({
                     value={afternoonAllowance}
                     onChange={(e) => setAfternoonAllowance(e.target.value)}
                     placeholder="0"
+                    disabled={readOnly || afternoonLocked}
                   />
                 </div>
               ) : <div className="admin-allowance-field" />}
@@ -594,6 +701,7 @@ export function GoalModal({
                     value={morningCustomWage}
                     onChange={(e) => setMorningCustomWage(e.target.value)}
                     placeholder="Auto"
+                    disabled={readOnly || morningLocked}
                   />
                 </div>
               ) : <div className="admin-allowance-field" />}
@@ -607,6 +715,7 @@ export function GoalModal({
                     value={afternoonCustomWage}
                     onChange={(e) => setAfternoonCustomWage(e.target.value)}
                     placeholder="Auto"
+                    disabled={readOnly || afternoonLocked}
                   />
                 </div>
               ) : <div className="admin-allowance-field" />}

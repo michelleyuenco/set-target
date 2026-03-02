@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRoster } from '../hooks/useRoster'
 import { useRosterApplications } from '../hooks/useRosterApplications'
+import { MEMBER_COLORS, getMemberColor } from '../utils/memberColors'
 import {
   DEFAULT_MORNING_START, DEFAULT_MORNING_END,
   DEFAULT_AFTERNOON_START, DEFAULT_AFTERNOON_END
@@ -31,27 +32,6 @@ const SHIFT_TIMES = {
   allday: `${formatTime12(DEFAULT_MORNING_START)} – ${formatTime12(DEFAULT_AFTERNOON_END)}`,
 }
 
-// Stable color palette for member badges — each member gets a unique hue via UID hash.
-const MEMBER_COLORS = [
-  { bg: '#dbeafe', text: '#1e40af' }, // blue
-  { bg: '#dcfce7', text: '#166534' }, // green
-  { bg: '#fef3c7', text: '#92400e' }, // amber
-  { bg: '#fce7f3', text: '#9d174d' }, // pink
-  { bg: '#e0e7ff', text: '#3730a3' }, // indigo
-  { bg: '#f3e8ff', text: '#6b21a8' }, // purple
-  { bg: '#ccfbf1', text: '#115e59' }, // teal
-  { bg: '#fee2e2', text: '#991b1b' }, // red
-  { bg: '#ffedd5', text: '#9a3412' }, // orange
-  { bg: '#ecfccb', text: '#3f6212' }, // lime
-]
-
-const getMemberColor = (uid) => {
-  let hash = 0
-  for (let i = 0; i < uid.length; i++) {
-    hash = ((hash << 5) - hash + uid.charCodeAt(i)) | 0
-  }
-  return MEMBER_COLORS[Math.abs(hash) % MEMBER_COLORS.length]
-}
 
 export function RosterModal({
   isAdmin,
@@ -59,6 +39,7 @@ export function RosterModal({
   currentUserDisplayName,
   members,
   locations,
+  onUpdateMyColor,
   onClose
 }) {
   const now = new Date()
@@ -353,6 +334,12 @@ export function RosterModal({
     return member?.displayName || fallbackName || '?'
   }
 
+  // Look up a member's custom colorIndex (null if not set)
+  const getColorIndex = (uid) => {
+    const member = members.find(m => m.uid === uid)
+    return member?.colorIndex ?? null
+  }
+
   // Compact day cell — renders the day's status without AM/PM breakdown
   const renderCompactDayCell = (day, amSlot, pmSlot, myAmStatus, myPmStatus) => {
     if (isAdmin) {
@@ -380,7 +367,7 @@ export function RosterModal({
       return (
         <div className="roster-color-badges">
           {[...assignedUids.entries()].map(([uid, name]) => {
-            const color = getMemberColor(uid)
+            const color = getMemberColor(uid, getColorIndex(uid))
             return (
               <span
                 key={uid}
@@ -393,7 +380,7 @@ export function RosterModal({
             )
           })}
           {applicants.map(a => {
-            const color = getMemberColor(a.uid)
+            const color = getMemberColor(a.uid, getColorIndex(a.uid))
             const name = resolveDisplayName(a.uid, a.displayName)
             return (
               <span
@@ -492,6 +479,25 @@ export function RosterModal({
           )}
           <button className="roster-close-btn" onClick={onClose} title="Close">&times;</button>
         </div>
+
+        {onUpdateMyColor && (
+          <div className="roster-my-color">
+            <span className="roster-my-color-label">My color:</span>
+            {MEMBER_COLORS.map((c, i) => {
+              const current = getMemberColor(currentUserUid, getColorIndex(currentUserUid))
+              const isSelected = c.bg === current.bg && c.text === current.text
+              return (
+                <button
+                  key={i}
+                  className={`member-color-dot ${isSelected ? 'selected' : ''}`}
+                  style={{ background: c.bg, borderColor: c.text }}
+                  onClick={() => onUpdateMyColor(i)}
+                  title={`Color ${i + 1}`}
+                />
+              )
+            })}
+          </div>
+        )}
 
         <div className="roster-content-area">
           {loading && <div className="roster-loading-overlay" />}

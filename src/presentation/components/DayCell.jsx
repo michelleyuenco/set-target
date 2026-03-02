@@ -75,7 +75,22 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     return cost
   }
 
+  // IG detection
+  const morningHasIg = goal?.morningConfirmed && ((goal?.morningIgFeaturedAmount || 0) > 0 || (goal?.morningIgOtherAmount || 0) > 0)
+  const afternoonHasIg = goal?.afternoonConfirmed && ((goal?.afternoonIgFeaturedAmount || 0) > 0 || (goal?.afternoonIgOtherAmount || 0) > 0)
+
+  const getMorningIgCommission = () => {
+    if (!morningHasIg) return 0
+    return Math.round(((goal.morningIgFeaturedAmount || 0) * 0.07 + (goal.morningIgOtherAmount || 0) * 0.05) * 100) / 100
+  }
+
+  const getAfternoonIgCommission = () => {
+    if (!afternoonHasIg) return 0
+    return Math.round(((goal.afternoonIgFeaturedAmount || 0) * 0.07 + (goal.afternoonIgOtherAmount || 0) * 0.05) * 100) / 100
+  }
+
   const getMorningCommission = () => {
+    if (morningHasIg) return 0 // IG replaces standard commission
     if (goal?.morningConfirmed && goal?.morningCalculatedWage === 80 && goal?.morningActual > 0) {
       return Math.round(goal.morningAmount * 0.045 * 100) / 100
     }
@@ -83,6 +98,7 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
   }
 
   const getAfternoonCommission = () => {
+    if (afternoonHasIg) return 0 // IG replaces standard commission
     if (goal?.afternoonConfirmed && goal?.afternoonCalculatedWage === 80 && goal?.afternoonActual > 0) {
       return Math.round(goal.afternoonAmount * 0.045 * 100) / 100
     }
@@ -93,7 +109,7 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     if (goal?.morningConfirmed && goal?.morningBoughtBack && goal?.morningAmount) {
       return {
         amount: goal.morningAmount,
-        commission: Math.round(goal.morningAmount * 0.035 * 100) / 100
+        commission: morningHasIg ? 0 : Math.round(goal.morningAmount * 0.035 * 100) / 100
       }
     }
     return { amount: 0, commission: 0 }
@@ -103,7 +119,7 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     if (goal?.afternoonConfirmed && goal?.afternoonBoughtBack && goal?.afternoonAmount) {
       return {
         amount: goal.afternoonAmount,
-        commission: Math.round(goal.afternoonAmount * 0.035 * 100) / 100
+        commission: afternoonHasIg ? 0 : Math.round(goal.afternoonAmount * 0.035 * 100) / 100
       }
     }
     return { amount: 0, commission: 0 }
@@ -126,15 +142,19 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
   const laborCost = calculateLaborCost()
   const morningCommission = getMorningCommission()
   const afternoonCommission = getAfternoonCommission()
+  const morningIgCommission = getMorningIgCommission()
+  const afternoonIgCommission = getAfternoonIgCommission()
   const morningBuyback = getMorningBuyback()
   const afternoonBuyback = getAfternoonBuyback()
   const morningCustomCommission = getMorningCustomCommission()
   const afternoonCustomCommission = getAfternoonCustomCommission()
   const totalBuybackCommission = morningBuyback.commission + afternoonBuyback.commission
   const totalCustomCommission = morningCustomCommission + afternoonCustomCommission
-  const totalCommission = morningCommission + afternoonCommission + totalBuybackCommission + totalCustomCommission
-  const totalAllowance = (goal?.morningConfirmed && goal?.morningAllowance ? goal.morningAllowance : 0)
-    + (goal?.afternoonConfirmed && goal?.afternoonAllowance ? goal.afternoonAllowance : 0)
+  const totalIgCommission = morningIgCommission + afternoonIgCommission
+  const totalCommission = morningCommission + afternoonCommission + totalBuybackCommission + totalCustomCommission + totalIgCommission
+  const morningAllowance = goal?.morningConfirmed && goal?.morningAllowance ? goal.morningAllowance : 0
+  const afternoonAllowance = goal?.afternoonConfirmed && goal?.afternoonAllowance ? goal.afternoonAllowance : 0
+  const totalAllowance = morningAllowance + afternoonAllowance
   const totalEarnings = Math.round((laborCost + totalCommission + totalAllowance) * 100) / 100
 
   // Shift state detection (use calculated wage, ignoring custom overrides)
@@ -198,12 +218,16 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     || (isMorningBoughtBack && morningBuyback.commission > 0)
     || isMorningUnmet
     || morningCustomCommission > 0
+    || morningAllowance > 0
+    || morningIgCommission > 0
 
   const hasAfternoonMeta = afternoonExcess > 0
     || (isAfternoonMet && afternoonCommission > 0)
     || (isAfternoonBoughtBack && afternoonBuyback.commission > 0)
     || isAfternoonUnmet
     || afternoonCustomCommission > 0
+    || afternoonAllowance > 0
+    || afternoonIgCommission > 0
 
   return (
     <div className={cellClass} onClick={onClick}>
@@ -266,6 +290,9 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                         )}
                       </span>
                     )}
+                    {morningIgCommission > 0 && (
+                      <span className="commission-inline ig-commission" title={`IG 7%/5%`}>+${morningIgCommission}</span>
+                    )}
                     {isMorningMet && morningCommission > 0 && (
                       <span className="commission-inline" title="Standard 4.5%">+${morningCommission}</span>
                     )}
@@ -285,6 +312,9 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                     )}
                     {morningCustomCommission > 0 && (
                       <span className="commission-inline custom-commission" title={`Custom ${goal.morningCustomRate}%`}>+${morningCustomCommission}</span>
+                    )}
+                    {morningAllowance > 0 && (
+                      <span className="commission-inline allowance-badge" title="Allowance">+${morningAllowance}</span>
                     )}
                   </div>
                 )}
@@ -347,6 +377,9 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                         )}
                       </span>
                     )}
+                    {afternoonIgCommission > 0 && (
+                      <span className="commission-inline ig-commission" title={`IG 7%/5%`}>+${afternoonIgCommission}</span>
+                    )}
                     {isAfternoonMet && afternoonCommission > 0 && (
                       <span className="commission-inline" title="Standard 4.5%">+${afternoonCommission}</span>
                     )}
@@ -366,6 +399,9 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                     )}
                     {afternoonCustomCommission > 0 && (
                       <span className="commission-inline custom-commission" title={`Custom ${goal.afternoonCustomRate}%`}>+${afternoonCustomCommission}</span>
+                    )}
+                    {afternoonAllowance > 0 && (
+                      <span className="commission-inline allowance-badge" title="Allowance">+${afternoonAllowance}</span>
                     )}
                   </div>
                 )}

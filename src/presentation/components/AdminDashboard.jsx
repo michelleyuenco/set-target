@@ -21,6 +21,7 @@ export function AdminDashboard({
   currentMonth,
   currentYear,
   onSaveWorkingMonth,
+  salaryStatuses,
 }) {
   const teamMembers = members.filter((m) => m.uid !== currentUserUid && !m.isAdmin && !m.disabled)
 
@@ -122,25 +123,39 @@ export function AdminDashboard({
           <div className="dashboard-empty">No team members found</div>
         ) : (
           <div className="dashboard-member-list">
-            {teamMembers.map((member) => (
-              <button
-                key={member.uid}
-                className="dashboard-member-item"
-                onClick={() => onSelectMember(member.uid)}
-              >
-                <span className="dashboard-member-avatar">
-                  {(member.displayName || member.email || '?').charAt(0).toUpperCase()}
-                </span>
-                <span className="dashboard-member-info">
-                  <span className="dashboard-member-name">
-                    {member.displayName || member.email}
+            {teamMembers.map((member) => {
+              const status = salaryStatuses?.[member.uid]
+              const published = !!status?.adminConfirmedAt
+              const confirmed = !!status?.memberConfirmedAt
+              return (
+                <button
+                  key={member.uid}
+                  className="dashboard-member-item"
+                  onClick={() => onSelectMember(member.uid)}
+                >
+                  <span className="dashboard-member-avatar">
+                    {(member.displayName || member.email || '?').charAt(0).toUpperCase()}
                   </span>
-                  {member.displayName && (
-                    <span className="dashboard-member-email">{member.email}</span>
-                  )}
-                </span>
-              </button>
-            ))}
+                  <span className="dashboard-member-info">
+                    <span className="dashboard-member-name">
+                      {member.displayName || member.email}
+                    </span>
+                    {member.displayName && (
+                      <span className="dashboard-member-email">{member.email}</span>
+                    )}
+                  </span>
+                  <span className="dashboard-member-salary-status">
+                    {confirmed ? (
+                      <span className="salary-status-dot salary-status-confirmed" title="Confirmed by member" />
+                    ) : published ? (
+                      <span className="salary-status-dot salary-status-published" title="Published, awaiting confirmation" />
+                    ) : (
+                      <span className="salary-status-dot salary-status-unpublished" title="Not published" />
+                    )}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         )}
       </div>

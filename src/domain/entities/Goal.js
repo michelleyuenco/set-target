@@ -33,6 +33,10 @@ export class Goal {
     this.afternoonAllowance = this.parseAmount(data.afternoonAllowance)
     this.morningCustomWage = this.parseAmount(data.morningCustomWage)
     this.afternoonCustomWage = this.parseAmount(data.afternoonCustomWage)
+    this.morningIgFeaturedAmount = this.parseAmount(data.morningIgFeaturedAmount)
+    this.morningIgOtherAmount = this.parseAmount(data.morningIgOtherAmount)
+    this.afternoonIgFeaturedAmount = this.parseAmount(data.afternoonIgFeaturedAmount)
+    this.afternoonIgOtherAmount = this.parseAmount(data.afternoonIgOtherAmount)
   }
 
   parseAmount(value) {
@@ -66,12 +70,22 @@ export class Goal {
     return 75
   }
 
+  get morningEffectiveActual() {
+    const total = (this.morningActual || 0) + (this.morningIgFeaturedAmount || 0) + (this.morningIgOtherAmount || 0)
+    return total > 0 ? total : null
+  }
+
+  get afternoonEffectiveActual() {
+    const total = (this.afternoonActual || 0) + (this.afternoonIgFeaturedAmount || 0) + (this.afternoonIgOtherAmount || 0)
+    return total > 0 ? total : null
+  }
+
   get morningCalculatedWage() {
-    return Goal.calculateWage(this.morningAmount, this.morningActual)
+    return Goal.calculateWage(this.morningAmount, this.morningEffectiveActual)
   }
 
   get afternoonCalculatedWage() {
-    return Goal.calculateWage(this.afternoonAmount, this.afternoonActual)
+    return Goal.calculateWage(this.afternoonAmount, this.afternoonEffectiveActual)
   }
 
   get morningWage() {
@@ -117,7 +131,11 @@ export class Goal {
       morningAllowance: this.morningAllowance,
       afternoonAllowance: this.afternoonAllowance,
       morningCustomWage: this.morningCustomWage,
-      afternoonCustomWage: this.afternoonCustomWage
+      afternoonCustomWage: this.afternoonCustomWage,
+      morningIgFeaturedAmount: this.morningIgFeaturedAmount,
+      morningIgOtherAmount: this.morningIgOtherAmount,
+      afternoonIgFeaturedAmount: this.afternoonIgFeaturedAmount,
+      afternoonIgOtherAmount: this.afternoonIgOtherAmount
     }
   }
 
@@ -157,7 +175,11 @@ export class Goal {
       morningAllowance: data.morningAllowance ?? null,
       afternoonAllowance: data.afternoonAllowance ?? null,
       morningCustomWage: data.morningCustomWage ?? null,
-      afternoonCustomWage: data.afternoonCustomWage ?? null
+      afternoonCustomWage: data.afternoonCustomWage ?? null,
+      morningIgFeaturedAmount: data.morningIgFeaturedAmount ?? null,
+      morningIgOtherAmount: data.morningIgOtherAmount ?? null,
+      afternoonIgFeaturedAmount: data.afternoonIgFeaturedAmount ?? null,
+      afternoonIgOtherAmount: data.afternoonIgOtherAmount ?? null
     })
   }
 }

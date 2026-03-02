@@ -9,6 +9,7 @@ export function calculateMemberMonthlyEarnings(goals, year, month, teamBonusShar
   let commission45 = 0
   let commission35 = 0
   let commissionCustom = 0
+  let commissionIg = 0
   let totalAllowance = 0
   let totalHours = 0
   let totalShifts = 0
@@ -39,10 +40,19 @@ export function calculateMemberMonthlyEarnings(goals, year, month, teamBonusShar
       const customAmount = shift === 'morning' ? goal.morningCustomAmount : goal.afternoonCustomAmount
       const allowance = (shift === 'morning' ? goal.morningAllowance : goal.afternoonAllowance) || 0
 
-      if (calculatedWage === 80 && actual > 0) {
-        commission45 += amount * 0.045
-      } else if (boughtBack && amount) {
-        commission35 += amount * 0.035
+      const igFeatured = (shift === 'morning' ? goal.morningIgFeaturedAmount : goal.afternoonIgFeaturedAmount) || 0
+      const igOther = (shift === 'morning' ? goal.morningIgOtherAmount : goal.afternoonIgOtherAmount) || 0
+      const hasIg = igFeatured > 0 || igOther > 0
+
+      if (hasIg) {
+        // IG commission replaces standard 4.5%/3.5%
+        commissionIg += igFeatured * 0.07 + igOther * 0.05
+      } else {
+        if (calculatedWage === 80 && actual > 0) {
+          commission45 += amount * 0.045
+        } else if (boughtBack && amount) {
+          commission35 += amount * 0.035
+        }
       }
 
       if (customRate && customAmount) {
@@ -57,14 +67,15 @@ export function calculateMemberMonthlyEarnings(goals, year, month, teamBonusShar
   commission45 = Math.round(commission45 * 100) / 100
   commission35 = Math.round(commission35 * 100) / 100
   commissionCustom = Math.round(commissionCustom * 100) / 100
+  commissionIg = Math.round(commissionIg * 100) / 100
   totalAllowance = Math.round(totalAllowance * 100) / 100
   totalHours = Math.round(totalHours * 100) / 100
 
-  const grossTotal = Math.round((wages + commission45 + commission35 + commissionCustom + totalAllowance + teamBonusShare + miscTotal) * 100) / 100
+  const grossTotal = Math.round((wages + commission45 + commission35 + commissionCustom + commissionIg + totalAllowance + teamBonusShare + miscTotal) * 100) / 100
   const effectiveHourlyWage = totalHours > 0 ? Math.round((grossTotal / totalHours) * 100) / 100 : null
 
   return {
-    wages, commission45, commission35, commissionCustom,
+    wages, commission45, commission35, commissionCustom, commissionIg,
     totalAllowance, totalHours, totalShifts, grossTotal, effectiveHourlyWage
   }
 }

@@ -33,6 +33,12 @@ export class GoalViewModel {
     this.afternoonAllowance = goal.afternoonAllowance
     this.morningCustomWage = goal.morningCustomWage
     this.afternoonCustomWage = goal.afternoonCustomWage
+    this.morningIgFeaturedAmount = goal.morningIgFeaturedAmount
+    this.morningIgOtherAmount = goal.morningIgOtherAmount
+    this.afternoonIgFeaturedAmount = goal.afternoonIgFeaturedAmount
+    this.afternoonIgOtherAmount = goal.afternoonIgOtherAmount
+    this.morningEffectiveActual = goal.morningEffectiveActual
+    this.afternoonEffectiveActual = goal.afternoonEffectiveActual
     this.morningCalculatedWage = goal.morningCalculatedWage
     this.afternoonCalculatedWage = goal.afternoonCalculatedWage
     this.hasGoals = goal.hasGoals
