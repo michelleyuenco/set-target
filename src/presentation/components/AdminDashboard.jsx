@@ -15,7 +15,7 @@ export function AdminDashboard({
   onManageMembers,
   onOpenRoster,
   onLocationPerformance,
-  onLocationCalendar,
+  onViewAll,
   workingMonth,
   workingYear,
   currentMonth,
@@ -86,10 +86,6 @@ export function AdminDashboard({
           <span className="action-icon">&#128200;</span>
           <span className="action-label">Performance</span>
         </button>
-        <button className="admin-action-btn" onClick={onLocationCalendar}>
-          <span className="action-icon">&#128205;</span>
-          <span className="action-label">Loc Calendar</span>
-        </button>
       </div>
 
       <div className="admin-dashboard-working-month">
@@ -123,6 +119,13 @@ export function AdminDashboard({
           <div className="dashboard-empty">No team members found</div>
         ) : (
           <div className="dashboard-member-list">
+            <button className="dashboard-member-item dashboard-all-members-item" onClick={onViewAll}>
+              <span className="dashboard-member-avatar dashboard-all-members-avatar">&#128101;</span>
+              <span className="dashboard-member-info">
+                <span className="dashboard-member-name">All Members</span>
+                <span className="dashboard-member-email">View full team calendar</span>
+              </span>
+            </button>
             {teamMembers.map((member) => {
               const status = salaryStatuses?.[member.uid]
               const published = !!status?.adminConfirmedAt

@@ -216,7 +216,6 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
   const hasMorningMeta = morningExcess > 0
     || (isMorningMet && morningCommission > 0)
     || (isMorningBoughtBack && morningBuyback.commission > 0)
-    || isMorningUnmet
     || morningCustomCommission > 0
     || morningAllowance > 0
     || morningIgCommission > 0
@@ -224,21 +223,20 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
   const hasAfternoonMeta = afternoonExcess > 0
     || (isAfternoonMet && afternoonCommission > 0)
     || (isAfternoonBoughtBack && afternoonBuyback.commission > 0)
-    || isAfternoonUnmet
     || afternoonCustomCommission > 0
     || afternoonAllowance > 0
     || afternoonIgCommission > 0
 
   return (
     <div className={cellClass} onClick={onClick}>
-      <div className="day-number">
-        {day}
+      <div className="day-header-row">
+        <span className="day-number">{day}</span>
+        {sameLocation && (
+          <span className="day-location-badge" title={goal.morningLocation}>{sameLocation}</span>
+        )}
       </div>
       {goal?.hasGoals && hasAnyConfirmed && (
         <div className="goals-display">
-          {sameLocation && (
-            <div className="day-location-badge" title={goal.morningLocation}>{sameLocation}</div>
-          )}
           <div className="shift-wages">
             {goal.morningConfirmed && (
               <div className={`shift ${shiftStateClass('morning')}`}>
@@ -256,6 +254,17 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                     <span className="shift-actual-no-target">${goal.morningActual.toLocaleString()}</span>
                   ) : (
                     <span className="no-target-badge">No Target Yet</span>
+                  )}
+                  {isMorningUnmet && (
+                    <span
+                      className={`unmet-badge unmet-badge-inline ${canBuyMorning ? 'buyable' : ''}`}
+                      onClick={(e) => canBuyMorning && handleBuyback('morning', e)}
+                      title={canBuyMorning ? `${Math.round((goal.morningActual || 0) / goal.morningAmount * 100)}% — Click to buy back` : `Unmet: ${Math.round((goal.morningActual || 0) / goal.morningAmount * 100)}% of $${goal.morningAmount}`}
+                      style={{ backgroundImage: `linear-gradient(to right, ${canBuyMorning ? '#6ee7b7' : '#fca5a5'} ${Math.min(100, Math.round((goal.morningActual || 0) / goal.morningAmount * 100))}%, transparent ${Math.min(100, Math.round((goal.morningActual || 0) / goal.morningAmount * 100))}%)` }}
+                    >
+                      <span className="unmet-badge-label">Unmet</span>
+                      {canBuyMorning && <span className="buyback-star">★</span>}
+                    </span>
                   )}
                   {goal.morningProofImages?.length > 0 && (
                     <span className="proof-icon proof-icon-clickable" title={`${goal.morningProofImages.length} proof image${goal.morningProofImages.length > 1 ? 's' : ''} — click to preview`} onClick={(e) => openProofPreview(goal.morningProofImages, 0, e)}>&#128247;</span>
@@ -299,30 +308,12 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                     {isMorningBoughtBack && morningBuyback.commission > 0 && (
                       <span className="commission-inline buyback-commission" title="Buyback 3.5%">+${morningBuyback.commission}</span>
                     )}
-                    {isMorningUnmet && (
-                      <span
-                        className={`unmet-badge ${canBuyMorning ? 'buyable' : ''}`}
-                        onClick={(e) => canBuyMorning && handleBuyback('morning', e)}
-                        title={canBuyMorning ? 'Click to buy back' : `Unmet target: $${goal.morningAmount}`}
-                      >
-                        <span className="unmet-badge-label">Unmet</span>
-                        <span className="unmet-badge-amount">${goal.morningAmount}</span>
-                        {canBuyMorning && <span className="buyback-star">★</span>}
-                      </span>
-                    )}
                     {morningCustomCommission > 0 && (
                       <span className="commission-inline custom-commission" title={`Custom ${goal.morningCustomRate}%`}>+${morningCustomCommission}</span>
                     )}
                     {morningAllowance > 0 && (
                       <span className="commission-inline allowance-badge" title="Allowance">+${morningAllowance}</span>
                     )}
-                  </div>
-                )}
-                {isMorningUnmet && (
-                  <div className="shift-progress">
-                    <span className="shift-progress-bar">
-                      <span className="shift-progress-fill" style={{ width: `${Math.min(100, Math.round((goal.morningActual || 0) / goal.morningAmount * 100))}%` }} />
-                    </span>
                   </div>
                 )}
               </div>
@@ -343,6 +334,17 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                     <span className="shift-actual-no-target">${goal.afternoonActual.toLocaleString()}</span>
                   ) : (
                     <span className="no-target-badge">No Target Yet</span>
+                  )}
+                  {isAfternoonUnmet && (
+                    <span
+                      className={`unmet-badge unmet-badge-inline ${canBuyAfternoon ? 'buyable' : ''}`}
+                      onClick={(e) => canBuyAfternoon && handleBuyback('afternoon', e)}
+                      title={canBuyAfternoon ? `${Math.round((goal.afternoonActual || 0) / goal.afternoonAmount * 100)}% — Click to buy back` : `Unmet: ${Math.round((goal.afternoonActual || 0) / goal.afternoonAmount * 100)}% of $${goal.afternoonAmount}`}
+                      style={{ backgroundImage: `linear-gradient(to right, ${canBuyAfternoon ? '#6ee7b7' : '#fca5a5'} ${Math.min(100, Math.round((goal.afternoonActual || 0) / goal.afternoonAmount * 100))}%, transparent ${Math.min(100, Math.round((goal.afternoonActual || 0) / goal.afternoonAmount * 100))}%)` }}
+                    >
+                      <span className="unmet-badge-label">Unmet</span>
+                      {canBuyAfternoon && <span className="buyback-star">★</span>}
+                    </span>
                   )}
                   {goal.afternoonProofImages?.length > 0 && (
                     <span className="proof-icon proof-icon-clickable" title={`${goal.afternoonProofImages.length} proof image${goal.afternoonProofImages.length > 1 ? 's' : ''} — click to preview`} onClick={(e) => openProofPreview(goal.afternoonProofImages, 0, e)}>&#128247;</span>
@@ -386,30 +388,12 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                     {isAfternoonBoughtBack && afternoonBuyback.commission > 0 && (
                       <span className="commission-inline buyback-commission" title="Buyback 3.5%">+${afternoonBuyback.commission}</span>
                     )}
-                    {isAfternoonUnmet && (
-                      <span
-                        className={`unmet-badge ${canBuyAfternoon ? 'buyable' : ''}`}
-                        onClick={(e) => canBuyAfternoon && handleBuyback('afternoon', e)}
-                        title={canBuyAfternoon ? 'Click to buy back' : `Unmet target: $${goal.afternoonAmount}`}
-                      >
-                        <span className="unmet-badge-label">Unmet</span>
-                        <span className="unmet-badge-amount">${goal.afternoonAmount}</span>
-                        {canBuyAfternoon && <span className="buyback-star">★</span>}
-                      </span>
-                    )}
                     {afternoonCustomCommission > 0 && (
                       <span className="commission-inline custom-commission" title={`Custom ${goal.afternoonCustomRate}%`}>+${afternoonCustomCommission}</span>
                     )}
                     {afternoonAllowance > 0 && (
                       <span className="commission-inline allowance-badge" title="Allowance">+${afternoonAllowance}</span>
                     )}
-                  </div>
-                )}
-                {isAfternoonUnmet && (
-                  <div className="shift-progress">
-                    <span className="shift-progress-bar">
-                      <span className="shift-progress-fill" style={{ width: `${Math.min(100, Math.round((goal.afternoonActual || 0) / goal.afternoonAmount * 100))}%` }} />
-                    </span>
                   </div>
                 )}
               </div>

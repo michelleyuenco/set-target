@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Goal, DEFAULT_MORNING_START, DEFAULT_MORNING_END, DEFAULT_AFTERNOON_START, DEFAULT_AFTERNOON_END } from '../../domain/entities/Goal'
 import { ProofImages } from './ProofImages'
 
@@ -7,6 +7,7 @@ export function GoalModal({
   goal,
   isAdminViewing,
   locations,
+  autoLocation,
   onSave,
   onCancel,
   onConfirmShift,
@@ -46,6 +47,8 @@ export function GoalModal({
   const [afternoonAllowance, setAfternoonAllowance] = useState('')
   const [morningCustomWage, setMorningCustomWage] = useState('')
   const [afternoonCustomWage, setAfternoonCustomWage] = useState('')
+  const [morningLocation, setMorningLocation] = useState(null)
+  const [afternoonLocation, setAfternoonLocation] = useState(null)
   const [pendingMorningFiles, setPendingMorningFiles] = useState([])
   const [pendingAfternoonFiles, setPendingAfternoonFiles] = useState([])
   const [saving, setSaving] = useState(false)
@@ -87,7 +90,9 @@ export function GoalModal({
     setAfternoonAllowance(goal?.afternoonAllowance ?? '')
     setMorningCustomWage(goal?.morningCustomWage ?? '')
     setAfternoonCustomWage(goal?.afternoonCustomWage ?? '')
-  }, [goal])
+    setMorningLocation(goal?.morningLocation || autoLocation || null)
+    setAfternoonLocation(goal?.afternoonLocation || autoLocation || null)
+  }, [goal, autoLocation])
 
   // Stage files locally — no upload until Save
   const handleStageFiles = (shift, files) => {
@@ -213,7 +218,9 @@ export function GoalModal({
         morningIgFeaturedAmount: morningIgFeatured,
         morningIgOtherAmount: morningIgOther,
         afternoonIgFeaturedAmount: afternoonIgFeatured,
-        afternoonIgOtherAmount: afternoonIgOther
+        afternoonIgOtherAmount: afternoonIgOther,
+        morningLocation,
+        afternoonLocation
       })
     } catch (err) {
       setSaveError(err.message || 'Failed to upload images')
@@ -288,14 +295,87 @@ export function GoalModal({
     return 'wage-none'
   }
 
+  // ── Swipe-down-to-dismiss ──
+  const modalRef = useRef(null)
+  const dragStartY = useRef(null)
+  const dragOffset = useRef(0)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 600
+
+  const handleTouchStartRef = useRef()
+  const handleTouchMoveRef = useRef()
+  const handleTouchEndRef = useRef()
+
+  handleTouchStartRef.current = (e) => {
+    if (modalRef.current && modalRef.current.scrollTop > 0) return
+    dragStartY.current = e.touches[0].clientY
+    dragOffset.current = 0
+    if (modalRef.current) modalRef.current.style.transition = 'none'
+  }
+
+  handleTouchMoveRef.current = (e) => {
+    if (dragStartY.current === null) return
+    const dy = e.touches[0].clientY - dragStartY.current
+    if (dy < 0) { dragOffset.current = 0; return }
+    dragOffset.current = dy
+    if (modalRef.current) {
+      modalRef.current.style.transform = `translateY(${dy}px)`
+    }
+    if (dy > 10) e.preventDefault()
+  }
+
+  handleTouchEndRef.current = () => {
+    if (dragStartY.current === null) return
+    const dy = dragOffset.current
+    dragStartY.current = null
+    if (modalRef.current) {
+      modalRef.current.style.transition = 'transform 0.25s ease'
+      if (dy > 120) {
+        modalRef.current.style.transform = 'translateY(100%)'
+        setTimeout(handleCancel, 200)
+      } else {
+        modalRef.current.style.transform = 'translateY(0)'
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (!isMobile) return
+    const el = modalRef.current
+    if (!el) return
+    const onStart = (e) => handleTouchStartRef.current(e)
+    const onMove = (e) => handleTouchMoveRef.current(e)
+    const onEnd = () => handleTouchEndRef.current()
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchmove', onMove, { passive: false })
+    el.addEventListener('touchend', onEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove', onMove)
+      el.removeEventListener('touchend', onEnd)
+    }
+  }, [isMobile])
+
   return (
     <div className="modal-overlay" onClick={handleCancel}>
-      <div className="modal modal-compact" onClick={e => e.stopPropagation()}>
-        <h2>{day}</h2>
-
-        {readOnly && (
-          <div className="read-only-badge">View Only</div>
-        )}
+      <div
+        className="modal modal-compact"
+        ref={modalRef}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="modal-sticky-header">
+          {isMobile && <div className="modal-drag-handle" />}
+          <div className="modal-header-row">
+            <h2>{day}{readOnly && <span className="read-only-badge-inline">View Only</span>}</h2>
+            {!readOnly && (hasChanges || saving) ? (
+              <button className="modal-save-btn-top" onClick={handleSave} disabled={saving}>
+                {saving ? '...' : 'Save'}
+              </button>
+            ) : (
+              <span className="modal-header-spacer" />
+            )}
+            <button className="modal-close-btn" onClick={handleCancel} disabled={saving} aria-label="Close">&#x2715;</button>
+          </div>
+        </div>
 
         <div className="shifts-compact">
           <div className={`shift-section-wrapper ${!morningConfirmed ? 'shift-unconfirmed' : ''}`}>
@@ -304,7 +384,12 @@ export function GoalModal({
                 <input
                   type="checkbox"
                   checked={morningConfirmed}
-                  onChange={(e) => setMorningConfirmed(e.target.checked)}
+                  onChange={(e) => {
+                    setMorningConfirmed(e.target.checked)
+                    if (e.target.checked && !morningLocation && autoLocation) {
+                      setMorningLocation(autoLocation)
+                    }
+                  }}
                   disabled={readOnly || morningLocked}
                 />
                 <span>Shift A (Morning)</span>
@@ -379,89 +464,97 @@ export function GoalModal({
                 {formatHours(morningHours)}
               </div>
             </div>
-            <div className="custom-commission-toggle ig-commission-toggle">
-              <label>
+            <div className="commission-toggles-row">
+              <label className="commission-toggle-label">
                 <input
                   type="checkbox"
                   checked={showMorningIg}
                   disabled={readOnly || !morningConfirmed || morningLocked}
                   onChange={(e) => {
                     setShowMorningIg(e.target.checked)
-                    if (!e.target.checked) {
-                      setMorningIgFeatured('')
-                      setMorningIgOther('')
-                    }
+                    if (!e.target.checked) { setMorningIgFeatured(''); setMorningIgOther('') }
                   }}
                 />
-                <span>IG Story Sales</span>
+                <span>IG Sales</span>
               </label>
-            </div>
-            {showMorningIg && (
-              <div className="custom-commission-inputs ig-commission-inputs">
-                <div className="input-compact">
-                  <label>Featured ($)</label>
-                  <input
-                    type="number"
-                    value={morningIgFeatured}
-                    onChange={(e) => setMorningIgFeatured(e.target.value)}
-                    placeholder="0"
-                    disabled={readOnly || !morningConfirmed || morningLocked}
-                  />
-                </div>
-                <div className="input-compact">
-                  <label>Other ($)</label>
-                  <input
-                    type="number"
-                    value={morningIgOther}
-                    onChange={(e) => setMorningIgOther(e.target.value)}
-                    placeholder="0"
-                    disabled={readOnly || !morningConfirmed || morningLocked}
-                  />
-                </div>
-              </div>
-            )}
-            <div className="custom-commission-toggle">
-              <label>
+              <label className="commission-toggle-label">
                 <input
                   type="checkbox"
                   checked={showMorningCustom}
                   disabled={readOnly || !morningConfirmed || morningLocked}
                   onChange={(e) => {
                     setShowMorningCustom(e.target.checked)
-                    if (!e.target.checked) {
-                      setMorningCustomRate('')
-                      setMorningCustomAmount('')
-                    }
+                    if (!e.target.checked) { setMorningCustomRate(''); setMorningCustomAmount('') }
                   }}
                 />
-                <span>Custom Commission</span>
+                <span>Custom Comm.</span>
               </label>
             </div>
-            {showMorningCustom && (
-              <div className="custom-commission-inputs">
-                <div className="input-compact">
-                  <label>Rate (%)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={morningCustomRate}
-                    onChange={(e) => setMorningCustomRate(e.target.value)}
-                    placeholder="5"
-                    disabled={readOnly || !morningConfirmed || morningLocked}
-                  />
-                </div>
-                <div className="input-compact">
-                  <label>Amount ($)</label>
-                  <input
-                    type="number"
-                    value={morningCustomAmount}
-                    onChange={(e) => setMorningCustomAmount(e.target.value)}
-                    placeholder="1000"
-                    disabled={readOnly || !morningConfirmed || morningLocked}
-                  />
-                </div>
+            {(showMorningIg || showMorningCustom) && (
+              <div className="commission-expanded-inputs">
+                {showMorningIg && (
+                  <div className="custom-commission-inputs ig-commission-inputs">
+                    <div className="input-compact">
+                      <label>IG Featured ($)</label>
+                      <input
+                        type="number"
+                        value={morningIgFeatured}
+                        onChange={(e) => setMorningIgFeatured(e.target.value)}
+                        placeholder="0"
+                        disabled={readOnly || !morningConfirmed || morningLocked}
+                      />
+                    </div>
+                    <div className="input-compact">
+                      <label>IG Other ($)</label>
+                      <input
+                        type="number"
+                        value={morningIgOther}
+                        onChange={(e) => setMorningIgOther(e.target.value)}
+                        placeholder="0"
+                        disabled={readOnly || !morningConfirmed || morningLocked}
+                      />
+                    </div>
+                  </div>
+                )}
+                {showMorningCustom && (
+                  <div className="custom-commission-inputs">
+                    <div className="input-compact">
+                      <label>Rate (%)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={morningCustomRate}
+                        onChange={(e) => setMorningCustomRate(e.target.value)}
+                        placeholder="5"
+                        disabled={readOnly || !morningConfirmed || morningLocked}
+                      />
+                    </div>
+                    <div className="input-compact">
+                      <label>Amount ($)</label>
+                      <input
+                        type="number"
+                        value={morningCustomAmount}
+                        onChange={(e) => setMorningCustomAmount(e.target.value)}
+                        placeholder="1000"
+                        disabled={readOnly || !morningConfirmed || morningLocked}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
+            <div className={`shift-proof-inline${!morningConfirmed ? ' shift-unconfirmed' : ''}`}>
+              <ProofImages
+                images={morningProofImages}
+                pendingFiles={pendingMorningFiles}
+                onUpload={(files) => handleStageFiles('morning', files)}
+                onDelete={(image) => handleDeleteUploadedImage('morning', image)}
+                onRemovePending={(index) => handleRemovePending('morning', index)}
+                uploading={proofUploadingShift === 'morning'}
+                disabled={!morningConfirmed || morningLocked}
+                readOnly={readOnly}
+              />
+            </div>
           </div>
 
           <div className={`shift-section-wrapper ${!afternoonConfirmed ? 'shift-unconfirmed' : ''}`}>
@@ -470,7 +563,12 @@ export function GoalModal({
                 <input
                   type="checkbox"
                   checked={afternoonConfirmed}
-                  onChange={(e) => setAfternoonConfirmed(e.target.checked)}
+                  onChange={(e) => {
+                    setAfternoonConfirmed(e.target.checked)
+                    if (e.target.checked && !afternoonLocation && autoLocation) {
+                      setAfternoonLocation(autoLocation)
+                    }
+                  }}
                   disabled={readOnly || afternoonLocked}
                 />
                 <span>Shift B (Afternoon)</span>
@@ -545,116 +643,97 @@ export function GoalModal({
                 {formatHours(afternoonHours)}
               </div>
             </div>
-            <div className="custom-commission-toggle ig-commission-toggle">
-              <label>
+            <div className="commission-toggles-row">
+              <label className="commission-toggle-label">
                 <input
                   type="checkbox"
                   checked={showAfternoonIg}
                   disabled={readOnly || !afternoonConfirmed || afternoonLocked}
                   onChange={(e) => {
                     setShowAfternoonIg(e.target.checked)
-                    if (!e.target.checked) {
-                      setAfternoonIgFeatured('')
-                      setAfternoonIgOther('')
-                    }
+                    if (!e.target.checked) { setAfternoonIgFeatured(''); setAfternoonIgOther('') }
                   }}
                 />
-                <span>IG Story Sales</span>
+                <span>IG Sales</span>
               </label>
-            </div>
-            {showAfternoonIg && (
-              <div className="custom-commission-inputs ig-commission-inputs">
-                <div className="input-compact">
-                  <label>Featured ($)</label>
-                  <input
-                    type="number"
-                    value={afternoonIgFeatured}
-                    onChange={(e) => setAfternoonIgFeatured(e.target.value)}
-                    placeholder="0"
-                    disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                  />
-                </div>
-                <div className="input-compact">
-                  <label>Other ($)</label>
-                  <input
-                    type="number"
-                    value={afternoonIgOther}
-                    onChange={(e) => setAfternoonIgOther(e.target.value)}
-                    placeholder="0"
-                    disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                  />
-                </div>
-              </div>
-            )}
-            <div className="custom-commission-toggle">
-              <label>
+              <label className="commission-toggle-label">
                 <input
                   type="checkbox"
                   checked={showAfternoonCustom}
                   disabled={readOnly || !afternoonConfirmed || afternoonLocked}
                   onChange={(e) => {
                     setShowAfternoonCustom(e.target.checked)
-                    if (!e.target.checked) {
-                      setAfternoonCustomRate('')
-                      setAfternoonCustomAmount('')
-                    }
+                    if (!e.target.checked) { setAfternoonCustomRate(''); setAfternoonCustomAmount('') }
                   }}
                 />
-                <span>Custom Commission</span>
+                <span>Custom Comm.</span>
               </label>
             </div>
-            {showAfternoonCustom && (
-              <div className="custom-commission-inputs">
-                <div className="input-compact">
-                  <label>Rate (%)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={afternoonCustomRate}
-                    onChange={(e) => setAfternoonCustomRate(e.target.value)}
-                    placeholder="5"
-                    disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                  />
-                </div>
-                <div className="input-compact">
-                  <label>Amount ($)</label>
-                  <input
-                    type="number"
-                    value={afternoonCustomAmount}
-                    onChange={(e) => setAfternoonCustomAmount(e.target.value)}
-                    placeholder="1000"
-                    disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                  />
-                </div>
+            {(showAfternoonIg || showAfternoonCustom) && (
+              <div className="commission-expanded-inputs">
+                {showAfternoonIg && (
+                  <div className="custom-commission-inputs ig-commission-inputs">
+                    <div className="input-compact">
+                      <label>IG Featured ($)</label>
+                      <input
+                        type="number"
+                        value={afternoonIgFeatured}
+                        onChange={(e) => setAfternoonIgFeatured(e.target.value)}
+                        placeholder="0"
+                        disabled={readOnly || !afternoonConfirmed || afternoonLocked}
+                      />
+                    </div>
+                    <div className="input-compact">
+                      <label>IG Other ($)</label>
+                      <input
+                        type="number"
+                        value={afternoonIgOther}
+                        onChange={(e) => setAfternoonIgOther(e.target.value)}
+                        placeholder="0"
+                        disabled={readOnly || !afternoonConfirmed || afternoonLocked}
+                      />
+                    </div>
+                  </div>
+                )}
+                {showAfternoonCustom && (
+                  <div className="custom-commission-inputs">
+                    <div className="input-compact">
+                      <label>Rate (%)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={afternoonCustomRate}
+                        onChange={(e) => setAfternoonCustomRate(e.target.value)}
+                        placeholder="5"
+                        disabled={readOnly || !afternoonConfirmed || afternoonLocked}
+                      />
+                    </div>
+                    <div className="input-compact">
+                      <label>Amount ($)</label>
+                      <input
+                        type="number"
+                        value={afternoonCustomAmount}
+                        onChange={(e) => setAfternoonCustomAmount(e.target.value)}
+                        placeholder="1000"
+                        disabled={readOnly || !afternoonConfirmed || afternoonLocked}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        </div>
-
-        <div className="shifts-proof-row">
-          <div className={`shift-proof-col${!morningConfirmed ? ' shift-unconfirmed' : ''}`}>
-            <ProofImages
-              images={morningProofImages}
-              pendingFiles={pendingMorningFiles}
-              onUpload={(files) => handleStageFiles('morning', files)}
-              onDelete={(image) => handleDeleteUploadedImage('morning', image)}
-              onRemovePending={(index) => handleRemovePending('morning', index)}
-              uploading={proofUploadingShift === 'morning'}
-              disabled={!morningConfirmed || morningLocked}
-              readOnly={readOnly}
-            />
-          </div>
-          <div className={`shift-proof-col${!afternoonConfirmed ? ' shift-unconfirmed' : ''}`}>
-            <ProofImages
-              images={afternoonProofImages}
-              pendingFiles={pendingAfternoonFiles}
-              onUpload={(files) => handleStageFiles('afternoon', files)}
-              onDelete={(image) => handleDeleteUploadedImage('afternoon', image)}
-              onRemovePending={(index) => handleRemovePending('afternoon', index)}
-              uploading={proofUploadingShift === 'afternoon'}
-              disabled={!afternoonConfirmed || afternoonLocked}
-              readOnly={readOnly}
-            />
+            <div className={`shift-proof-inline${!afternoonConfirmed ? ' shift-unconfirmed' : ''}`}>
+              <ProofImages
+                images={afternoonProofImages}
+                pendingFiles={pendingAfternoonFiles}
+                onUpload={(files) => handleStageFiles('afternoon', files)}
+                onDelete={(image) => handleDeleteUploadedImage('afternoon', image)}
+                onRemovePending={(index) => handleRemovePending('afternoon', index)}
+                uploading={proofUploadingShift === 'afternoon'}
+                disabled={!afternoonConfirmed || afternoonLocked}
+                readOnly={readOnly}
+              />
+            </div>
           </div>
         </div>
 

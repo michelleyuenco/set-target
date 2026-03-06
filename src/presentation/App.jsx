@@ -27,6 +27,7 @@ import { useProofImages } from './hooks/useProofImages'
 import { useLocationPerformance } from './hooks/useLocationPerformance'
 import { useLocationCalendar } from './hooks/useLocationCalendar'
 import { LocationCalendarModal } from './components/LocationCalendarModal'
+import { AllMembersCalendar } from './components/AllMembersCalendar'
 import { MonthlySalaryModal } from './components/MonthlySalaryModal'
 import { useMemberEarnings } from './hooks/useMemberEarnings'
 import { MiscAdjustmentsSection } from './components/MiscAdjustmentsSection'
@@ -85,12 +86,13 @@ export function App() {
   const [adminViewingUid, setAdminViewingUid] = useState(null)
   const [adminSwitching, setAdminSwitching] = useState(false)
   const [adminEditMode, setAdminEditMode] = useState(false)
+  const [viewAllMode, setViewAllMode] = useState(false)
   const [showConfirmSave, setShowConfirmSave] = useState(null)
   const [editingDisplayName, setEditingDisplayName] = useState(false)
   const [displayNameDraft, setDisplayNameDraft] = useState('')
   const [displayNameSaving, setDisplayNameSaving] = useState(false)
 
-  const { goals, saveGoal, getGoalByDay, buybackTarget, confirmShift, unconfirmShift, bulkUpdateLocations, bulkVerifyShifts, bulkUpdateAllowances, exportData, loadGoals } = useGoals(user)
+  const { goals, saveGoal, getGoalByDay, buybackTarget, confirmShift, unconfirmShift, bulkUpdateLocations, bulkVerifyShifts, bulkUpdateAllowances, exportData, loadGoals, getLastLockedLocation } = useGoals(user)
   const [selectedDay, setSelectedDay] = useState(null)
   const [editingGoal, setEditingGoal] = useState(null)
   const [showBuybackModal, setShowBuybackModal] = useState(false)
@@ -125,6 +127,16 @@ export function App() {
   // Proof images - use the active UID (member being viewed by admin, or own UID)
   const proofImageUid = adminViewingUid || user?.uid
   const { uploadingShift: proofUploadingShift, uploadImages: uploadProofImages, deleteImage: deleteProofImage } = useProofImages(proofImageUid)
+
+  // Reload all-members goals when year/month changes while in viewAllMode
+  useEffect(() => {
+    if (!viewAllMode || !isAdmin) return
+    const teamMembers = members.filter(m => !m.isAdmin && !m.disabled)
+    if (teamMembers.length === 0) return
+    const key = `${viewYear}-${viewMonth}`
+    if (locCalLoadedKey !== key) loadLocCalGoals(teamMembers, viewYear, viewMonth)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewAllMode, viewYear, viewMonth])
 
   // Apply working month as initial view once loaded (only on first load)
   useEffect(() => {
@@ -411,6 +423,20 @@ export function App() {
     const key = `${viewYear}-${viewMonth}`
     if (locCalLoadedKey !== key) loadLocCalGoals(teamMembers, viewYear, viewMonth)
     setShowLocCalModal(true)
+  }
+
+  const handleEnterViewAll = () => {
+    setViewAllMode(true)
+    setShowAdminDashboard(false)
+    setAdminViewingUid(null)
+    const teamMembers = members.filter(m => !m.isAdmin && !m.disabled)
+    const key = `${viewYear}-${viewMonth}`
+    if (locCalLoadedKey !== key) loadLocCalGoals(teamMembers, viewYear, viewMonth)
+  }
+
+  const handleExitViewAll = () => {
+    setViewAllMode(false)
+    setShowAdminDashboard(true)
   }
 
   const handleBulkLocationApply = (dateStrs, location) => {
@@ -715,7 +741,7 @@ export function App() {
             inline
           />
         </div>
-      ) : isAdmin && (showAdminDashboard || !adminViewingUid) ? (
+      ) : isAdmin && (showAdminDashboard || !adminViewingUid) && !viewAllMode ? (
         <AdminDashboard
           members={members}
           membersLoading={membersLoading}
@@ -729,7 +755,7 @@ export function App() {
           }}
           onOpenRoster={() => setShowRoster(true)}
           onLocationPerformance={handleOpenLocPerf}
-          onLocationCalendar={handleOpenLocCal}
+          onViewAll={handleEnterViewAll}
           workingMonth={configMonth}
           workingYear={configYear}
           currentMonth={currentMonth}
@@ -746,9 +772,11 @@ export function App() {
               selectedUid={adminViewingUid}
               currentUserUid={user?.uid}
               editMode={adminEditMode}
+              viewAllMode={viewAllMode}
               onSelectMember={handleAdminSelectMember}
               onToggleEditMode={() => setAdminEditMode(!adminEditMode)}
               onBackToDashboard={handleBackToDashboard}
+              onExitViewAll={handleExitViewAll}
             />
           )}
 
@@ -824,25 +852,35 @@ export function App() {
             <button className="nav-btn" onClick={handlePrev} disabled={!canGoPrev}>&larr;</button>
             <h1>{MONTH_NAMES[viewMonth]} {viewYear}</h1>
             <button className="nav-btn" onClick={handleNext} disabled={!canGoNext}>&rarr;</button>
-            {(isAdmin || salaryAdminConfirmed) && (
+            {!viewAllMode && (isAdmin || salaryAdminConfirmed) && (
               <button className="salary-btn" onClick={() => setShowSalaryModal(true)} title="View Salary Details">Salary</button>
             )}
           </div>
 
-          <CalendarGrid
-            year={viewYear}
-            month={viewMonth}
-            goals={goals}
-            selectedDay={selectedDay}
-            availableExcess={availableExcess}
-            excessAllocation={excessAllocation}
-            locations={visibleLocations}
-            onDayClick={handleDayClick}
-            onBuyback={handleQuickBuyback}
-            onWageClick={handleWageClick}
-          />
+          {viewAllMode ? (
+            <AllMembersCalendar
+              membersGoals={locCalGoals}
+              loading={locCalLoading}
+              year={viewYear}
+              month={viewMonth}
+              locations={visibleLocations}
+            />
+          ) : (
+            <CalendarGrid
+              year={viewYear}
+              month={viewMonth}
+              goals={goals}
+              selectedDay={selectedDay}
+              availableExcess={availableExcess}
+              excessAllocation={excessAllocation}
+              locations={visibleLocations}
+              onDayClick={handleDayClick}
+              onBuyback={handleQuickBuyback}
+              onWageClick={handleWageClick}
+            />
+          )}
 
-          <div className={`monthly-summary ${summaryExpanded ? 'expanded' : 'collapsed'}`}>
+          {!viewAllMode && <div className={`monthly-summary ${summaryExpanded ? 'expanded' : 'collapsed'}`}>
             <div className="summary-toggle" onClick={() => setSummaryExpanded(!summaryExpanded)}>
               <span className="toggle-arrow">{summaryExpanded ? '\u25BC' : '\u25B2'}</span>
             </div>
@@ -1017,7 +1055,7 @@ export function App() {
                 )}
               </>
             )}
-          </div>
+          </div>}
         </>
       )}
 
@@ -1027,6 +1065,7 @@ export function App() {
           goal={editingGoal}
           isAdminViewing={!!adminViewingUid}
           locations={visibleLocations}
+          autoLocation={getLastLockedLocation(selectedDay)}
           onSave={handleSave}
           onCancel={handleCancel}
           onConfirmShift={handleAdminConfirmShift}

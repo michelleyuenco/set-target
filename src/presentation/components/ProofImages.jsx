@@ -49,15 +49,38 @@ export function ProofImages({
     e.target.value = ''
   }
 
+  // Compact empty state: just show upload button inline
+  if (allItems.length === 0) {
+    if (readOnly || disabled) {
+      return <div className="proof-empty-hint">No proof photos</div>
+    }
+    return (
+      <div className="proof-empty-row">
+        <span className="proof-empty-hint">No proof photos</span>
+        <label className="proof-upload-btn proof-upload-btn-sm">
+          {uploading ? 'Uploading...' : '+ Add Photo'}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/heic,image/webp"
+            multiple
+            onChange={handleFileSelect}
+            disabled={uploading || disabled}
+            style={{ display: 'none' }}
+          />
+        </label>
+      </div>
+    )
+  }
+
   return (
     <div className="proof-images-section">
       <div className="proof-images-header">
         <span className="proof-images-label">
-          Proof Images {allItems.length > 0 && `(${allItems.length})`}
+          Proof ({allItems.length})
         </span>
         {!readOnly && !disabled && (
           <label className="proof-upload-btn">
-            {uploading ? 'Uploading...' : '+ Add Photo'}
+            {uploading ? 'Uploading...' : '+ Add'}
             <input
               type="file"
               accept="image/jpeg,image/png,image/heic,image/webp"
@@ -70,32 +93,30 @@ export function ProofImages({
         )}
       </div>
 
-      {allItems.length > 0 && (
-        <div className="proof-thumbnails">
-          {allItems.map((item, idx) => (
-            <div
-              key={item.isPending ? `pending-${item.pendingIndex}` : (item.original.path || idx)}
-              className={`proof-thumbnail${item.isPending ? ' proof-thumbnail-pending' : ''}`}
-            >
-              <img
-                src={item.url}
-                alt={item.name}
-                onClick={() => setPreviewIndex(idx)}
-              />
-              {item.isPending && <span className="proof-pending-badge">Pending</span>}
-              {!readOnly && !disabled && (
-                <button
-                  className="proof-delete-btn"
-                  onClick={(e) => handleDelete(e, item, idx)}
-                  title={item.isPending ? 'Remove (not yet saved)' : 'Delete image'}
-                >
-                  &times;
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="proof-thumbnails">
+        {allItems.map((item, idx) => (
+          <div
+            key={item.isPending ? `pending-${item.pendingIndex}` : (item.original.path || idx)}
+            className={`proof-thumbnail${item.isPending ? ' proof-thumbnail-pending' : ''}`}
+          >
+            <img
+              src={item.url}
+              alt={item.name}
+              onClick={() => setPreviewIndex(idx)}
+            />
+            {item.isPending && <span className="proof-pending-badge">Pending</span>}
+            {!readOnly && !disabled && (
+              <button
+                className="proof-delete-btn"
+                onClick={(e) => handleDelete(e, item, idx)}
+                title={item.isPending ? 'Remove (not yet saved)' : 'Delete image'}
+              >
+                &times;
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
 
       {previewItem && (
         <div className="proof-preview-overlay" onClick={() => setPreviewIndex(null)}>

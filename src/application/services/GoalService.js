@@ -77,6 +77,20 @@ export class GoalService {
     return this.getGoalByDayUseCase.execute(day)
   }
 
+  getLastLockedLocation(beforeDay) {
+    const allGoals = this.getGoalsUseCase.execute()
+    const sortedDays = Object.keys(allGoals)
+      .filter(day => day < beforeDay)
+      .sort((a, b) => b.localeCompare(a))
+
+    for (const day of sortedDays) {
+      const goal = allGoals[day]
+      if (goal.afternoonConfirmed && goal.afternoonLocation) return goal.afternoonLocation
+      if (goal.morningConfirmed && goal.morningLocation) return goal.morningLocation
+    }
+    return null
+  }
+
   exportData() {
     const rawGoals = this.goalRepository.getRawData()
     return {
