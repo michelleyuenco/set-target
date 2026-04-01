@@ -22,7 +22,16 @@ export async function initFirestoreService(uid) {
   return firestoreGoalService
 }
 
+export function subscribeFirestoreGoals(onChange) {
+  if (firestoreRepository) {
+    firestoreRepository.subscribe(onChange)
+  }
+}
+
 export function clearFirestoreService() {
+  if (firestoreRepository) {
+    firestoreRepository.unsubscribe()
+  }
   firestoreRepository = null
   firestoreGoalService = null
 }
@@ -35,7 +44,16 @@ export async function initAdminMemberService(uid) {
   return adminMemberGoalService
 }
 
+export function subscribeAdminMemberGoals(onChange) {
+  if (adminMemberRepository) {
+    adminMemberRepository.subscribe(onChange)
+  }
+}
+
 export function clearAdminMemberService() {
+  if (adminMemberRepository) {
+    adminMemberRepository.unsubscribe()
+  }
   adminMemberRepository = null
   adminMemberGoalService = null
   viewingAsMember = false

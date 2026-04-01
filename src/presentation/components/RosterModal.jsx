@@ -48,8 +48,8 @@ export function RosterModal({
   const nextMonthMonth = todayMonth === 12 ? 1 : todayMonth + 1
   const nextMonthYear  = todayMonth === 12 ? todayYear + 1 : todayYear
 
-  const [rosterYear,  setRosterYear]  = useState(nextMonthYear)
-  const [rosterMonth, setRosterMonth] = useState(nextMonthMonth)
+  const [rosterYear,  setRosterYear]  = useState(todayYear)
+  const [rosterMonth, setRosterMonth] = useState(todayMonth)
 
   // Look up location abbreviation from the locations array
   const getLocationAbbr = (locationName) => {

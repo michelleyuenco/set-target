@@ -34,8 +34,10 @@ import { MiscAdjustmentsSection } from './components/MiscAdjustmentsSection'
 import { useMiscAdjustments } from './hooks/useMiscAdjustments'
 import { useWorkingMonth } from './hooks/useWorkingMonth'
 import { useSalaryConfirmation } from './hooks/useSalaryConfirmation'
+import { useUpdateChecker } from './hooks/useUpdateChecker'
 import { salaryConfirmationService } from '../infrastructure/firebase/salaryConfirmationService'
-import { initFirestoreService, clearFirestoreService, getLocalGoalService, getFirestoreRepository, initAdminMemberService, clearAdminMemberService } from '../di/container'
+import { authService } from '../infrastructure/firebase/authService'
+import { initFirestoreService, clearFirestoreService, getLocalGoalService, getFirestoreRepository, initAdminMemberService, clearAdminMemberService, subscribeAdminMemberGoals } from '../di/container'
 import { DataMigrationService } from '../application/services/DataMigrationService'
 import { DEFAULT_SHIFT_HOURS } from '../domain/entities/Goal'
 import '../App.css'
@@ -115,6 +117,9 @@ export function App() {
   // Salary confirmation
   const { adminConfirmed: salaryAdminConfirmed, adminConfirmedAt: salaryAdminConfirmedAt, memberConfirmed: salaryMemberConfirmed, memberConfirmedAt: salaryMemberConfirmedAt, publishSalary, confirmSalary } = useSalaryConfirmation(viewYear, viewMonth, bonusViewUid)
 
+  // Update checker
+  const { updateAvailable, reload: reloadForUpdate, dismiss: dismissUpdate } = useUpdateChecker()
+
   // All salary confirmations for the working month (admin dashboard indicators)
   const [salaryStatuses, setSalaryStatuses] = useState({})
   useEffect(() => {
@@ -138,16 +143,16 @@ export function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewAllMode, viewYear, viewMonth])
 
-  // Apply working month as initial view once loaded (only on first load)
+  // Apply working month as initial view once loaded (only on first load, skip if URL specified a month)
   useEffect(() => {
     if (!workingMonthLoading && !initialMonthApplied) {
-      if (configYear !== null && configMonth !== null) {
+      if (!initialSalaryUrl && configYear !== null && configMonth !== null) {
         setViewYear(configYear)
         setViewMonth(configMonth)
       }
       setInitialMonthApplied(true)
     }
-  }, [workingMonthLoading, initialMonthApplied, configYear, configMonth])
+  }, [workingMonthLoading, initialMonthApplied, configYear, configMonth, initialSalaryUrl])
 
   // Initialize or clear Firestore service when auth state changes
   useEffect(() => {
@@ -192,6 +197,7 @@ export function App() {
     setShowAdminDashboard(false)
     try {
       await initAdminMemberService(memberUid)
+      subscribeAdminMemberGoals(() => loadGoals())
       setAdminViewingUid(memberUid)
       loadGoals()
     } catch (err) {
@@ -339,20 +345,25 @@ export function App() {
   const doSaveGoal = (data) => {
     // When member edits their own data, clear admin confirmations (requires re-verification)
     // When admin edits member data, preserve existing admin confirmations
-    saveGoal({
+    const payload = {
       ...data,
       morningAdminConfirmed: adminViewingUid ? undefined : false,
       afternoonAdminConfirmed: adminViewingUid ? undefined : false,
-      morningAllowance: adminViewingUid ? (data.morningAllowance !== '' ? data.morningAllowance : undefined) : undefined,
-      afternoonAllowance: adminViewingUid ? (data.afternoonAllowance !== '' ? data.afternoonAllowance : undefined) : undefined
-    })
+      // Admin-only fields: pass through when admin is editing (empty → null via parseAmount),
+      // set undefined when non-admin saves to preserve existing values
+      morningAllowance: adminViewingUid ? data.morningAllowance : undefined,
+      afternoonAllowance: adminViewingUid ? data.afternoonAllowance : undefined,
+      morningCustomWage: adminViewingUid ? data.morningCustomWage : undefined,
+      afternoonCustomWage: adminViewingUid ? data.afternoonCustomWage : undefined
+    }
+    saveGoal(payload)
     setSelectedDay(null)
     setEditingGoal(null)
   }
 
-  const handleAdminConfirmShift = (shift, location) => {
+  const handleAdminConfirmShift = (shift) => {
     if (selectedDay && adminViewingUid) {
-      confirmShift(selectedDay, shift, location)
+      confirmShift(selectedDay, shift)
       const updated = getGoalByDay(selectedDay)
       setEditingGoal(updated)
     }
@@ -713,23 +724,33 @@ export function App() {
 
   return (
     <div className="app">
-      <div className="app-header">
-        {user && !isAdmin && (
-          <button className="roster-trigger-btn" onClick={() => setShowRoster(true)}>
-            My Roster
-          </button>
-        )}
-        <AuthButton
-          user={user}
-          profileDisplayName={profileDisplayName}
-          onSignInClick={() => setShowLoginModal(true)}
-          onSignOut={handleSignOut}
-          onChangeEmail={() => setShowChangeEmailModal(true)}
-          onChangePassword={() => setShowChangePasswordModal(true)}
-          onSetPassword={() => setShowChangePasswordModal(true)}
-          onSetLocations={user && !isAdmin ? () => setShowBulkLocationModal(true) : undefined}
-        />
-      </div>
+      {(!user || !isAdmin) && (
+        <div className="app-header">
+          {user && !isAdmin && (
+            <>
+              <button className="roster-trigger-btn" onClick={() => setShowRoster(true)}>
+                My Roster
+              </button>
+              <AuthButton
+                user={user}
+                profileDisplayName={profileDisplayName}
+                onSignInClick={() => setShowLoginModal(true)}
+                onSignOut={handleSignOut}
+                onChangeEmail={() => setShowChangeEmailModal(true)}
+                onChangePassword={() => setShowChangePasswordModal(true)}
+                onSetPassword={() => setShowChangePasswordModal(true)}
+                onSetLocations={() => setShowBulkLocationModal(true)}
+              />
+            </>
+          )}
+          {!user && (
+            <AuthButton
+              user={user}
+              onSignInClick={() => setShowLoginModal(true)}
+            />
+          )}
+        </div>
+      )}
 
       {!user ? (
         <div className="auth-screen">
@@ -777,6 +798,12 @@ export function App() {
               onToggleEditMode={() => setAdminEditMode(!adminEditMode)}
               onBackToDashboard={handleBackToDashboard}
               onExitViewAll={handleExitViewAll}
+              user={user}
+              profileDisplayName={profileDisplayName}
+              onSignOut={handleSignOut}
+              onChangeEmail={() => setShowChangeEmailModal(true)}
+              onChangePassword={() => setShowChangePasswordModal(true)}
+              onSetPassword={() => setShowChangePasswordModal(true)}
             />
           )}
 
@@ -832,16 +859,13 @@ export function App() {
               <button className="bulk-verify-trigger-btn bulk-location-trigger-btn" onClick={() => setShowBulkAllowanceModal(true)}>
                 Set Allowance
               </button>
+              <MiscAdjustmentsSection
+                items={miscItems}
+                miscTotal={miscTotal}
+                onSave={saveMiscAdjustments}
+                adminUid={user?.uid}
+              />
             </div>
-          )}
-
-          {adminViewingUid && (
-            <MiscAdjustmentsSection
-              items={miscItems}
-              miscTotal={miscTotal}
-              onSave={saveMiscAdjustments}
-              adminUid={user?.uid}
-            />
           )}
 
           {(syncing || adminSwitching) && (
@@ -1155,7 +1179,7 @@ export function App() {
           viewingMember={adminViewingUid ? viewingMember : { displayName: profileDisplayName, email: user?.email }}
           fullScreen
           isAdmin={isAdmin && !!adminViewingUid}
-          allShiftsVerified={confirmationProgress ? confirmationProgress.confirmed === confirmationProgress.total && confirmationProgress.total > 0 : false}
+          allShiftsVerified={confirmationProgress ? confirmationProgress.confirmed === confirmationProgress.total : true}
           verificationProgress={confirmationProgress}
           adminConfirmed={salaryAdminConfirmed}
           adminConfirmedAt={salaryAdminConfirmedAt}
@@ -1239,6 +1263,7 @@ export function App() {
           onUpdateEmail={updateMemberEmail}
           onUpdateColor={updateMemberColor}
           onToggleDisabled={toggleMemberDisabled}
+          onResetPassword={(uid, newPassword) => authService.adminResetPassword(uid, newPassword)}
           earnings={memberEarnings}
           earningsLoading={memberEarningsLoading}
           onClose={() => setShowMemberManager(false)}
@@ -1279,6 +1304,14 @@ export function App() {
           onLoad={() => loadLocCalGoals(members.filter(m => !m.isAdmin && !m.disabled), viewYear, viewMonth)}
           onClose={() => setShowLocCalModal(false)}
         />
+      )}
+
+      {updateAvailable && (
+        <div className="update-toast">
+          <span>A new version is available</span>
+          <button className="update-toast-btn" onClick={reloadForUpdate}>Refresh</button>
+          <button className="update-toast-dismiss" onClick={dismissUpdate}>&times;</button>
+        </div>
       )}
     </div>
   )

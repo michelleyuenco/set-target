@@ -6,7 +6,8 @@ import {
   doc,
   getDocs,
   setDoc,
-  writeBatch
+  writeBatch,
+  onSnapshot
 } from 'firebase/firestore'
 
 export class CachedFirestoreGoalRepository extends GoalRepository {
@@ -15,6 +16,10 @@ export class CachedFirestoreGoalRepository extends GoalRepository {
     this.uid = uid
     this.cache = {}
     this.goalsCollection = collection(db, 'users', uid, 'goals')
+    this._unsubscribe = null
+    this._onChange = null
+    // Track local writes to suppress echo from onSnapshot
+    this._localWrites = new Set()
   }
 
   async initialize() {
@@ -25,9 +30,45 @@ export class CachedFirestoreGoalRepository extends GoalRepository {
     })
   }
 
+  subscribe(onChange) {
+    this._onChange = onChange
+    this._unsubscribe = onSnapshot(this.goalsCollection, (snapshot) => {
+      let changed = false
+      snapshot.docChanges().forEach((change) => {
+        const id = change.doc.id
+        // Skip echoes from our own writes
+        if (this._localWrites.has(id)) {
+          this._localWrites.delete(id)
+          return
+        }
+        if (change.type === 'removed' || change.doc.data()?._deleted) {
+          if (this.cache[id]) {
+            delete this.cache[id]
+            changed = true
+          }
+        } else {
+          this.cache[id] = change.doc.data()
+          changed = true
+        }
+      })
+      if (changed && this._onChange) {
+        this._onChange()
+      }
+    })
+  }
+
+  unsubscribe() {
+    if (this._unsubscribe) {
+      this._unsubscribe()
+      this._unsubscribe = null
+    }
+    this._onChange = null
+  }
+
   save(goal) {
     const json = goal.toJSON()
     this.cache[goal.day] = json
+    this._localWrites.add(goal.day)
 
     // Fire-and-forget write to Firestore
     const docRef = doc(this.goalsCollection, goal.day)
@@ -52,6 +93,7 @@ export class CachedFirestoreGoalRepository extends GoalRepository {
 
   delete(day) {
     delete this.cache[day]
+    this._localWrites.add(day)
 
     const docRef = doc(this.goalsCollection, day)
     setDoc(docRef, { _deleted: true }).catch((err) => {

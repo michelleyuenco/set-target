@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
-import { getActiveGoalService } from '../../di/container'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { getActiveGoalService, subscribeFirestoreGoals, subscribeAdminMemberGoals } from '../../di/container'
 import { GoalViewModel } from '../viewModels/GoalViewModel'
 
 export function useGoals(authUser) {
   const [goals, setGoals] = useState({})
+  const subscribedRef = useRef(false)
 
   const loadGoals = useCallback(() => {
     const service = getActiveGoalService()
@@ -14,6 +15,30 @@ export function useGoals(authUser) {
   useEffect(() => {
     loadGoals()
   }, [loadGoals, authUser])
+
+  // Set up real-time listener after initial load
+  useEffect(() => {
+    if (!authUser || subscribedRef.current) return
+
+    // Small delay to ensure firestoreRepository is initialized
+    const timer = setTimeout(() => {
+      subscribeFirestoreGoals(() => {
+        loadGoals()
+      })
+      subscribedRef.current = true
+    }, 100)
+
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [authUser, loadGoals])
+
+  // Reset subscription flag on logout
+  useEffect(() => {
+    if (!authUser) {
+      subscribedRef.current = false
+    }
+  }, [authUser])
 
   const saveGoal = useCallback((data) => {
     const service = getActiveGoalService()

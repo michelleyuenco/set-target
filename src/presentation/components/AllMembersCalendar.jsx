@@ -140,13 +140,13 @@ export function AllMembersCalendar({ membersGoals, loading, year, month, locatio
                         <span
                           className={`shift-pill all-members-pill ${shiftPillClass(m.goal, 'morning')}${m.goal.morningAdminConfirmed ? ' pill-verified' : ''}`}
                           title={m.goal.morningLocation || ''}
-                        >A{m.goal.morningAdminConfirmed && <span className="pill-check">&#10003;</span>}</span>
+                        >A</span>
                       )}
                       {m.hasPM && (
                         <span
                           className={`shift-pill all-members-pill ${shiftPillClass(m.goal, 'afternoon')}${m.goal.afternoonAdminConfirmed ? ' pill-verified' : ''}`}
                           title={m.goal.afternoonLocation || ''}
-                        >B{m.goal.afternoonAdminConfirmed && <span className="pill-check">&#10003;</span>}</span>
+                        >B</span>
                       )}
                     </span>
                   </div>

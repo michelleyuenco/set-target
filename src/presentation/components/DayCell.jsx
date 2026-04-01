@@ -26,11 +26,15 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     e.stopPropagation()
     setProofPreview(p => ({ ...p, index: p.index < p.images.length - 1 ? p.index + 1 : 0 }))
   }
+  const bothShiftsVerified = goal?.morningConfirmed && goal?.morningAdminConfirmed &&
+    goal?.afternoonConfirmed && goal?.afternoonAdminConfirmed
+
   const cellClass = [
     'day-cell',
     goal?.hasGoals ? 'has-goals' : '',
     isSelected ? 'selected' : '',
-    isToday ? 'today' : ''
+    isToday ? 'today' : '',
+    bothShiftsVerified ? 'day-verified' : ''
   ].filter(Boolean).join(' ')
 
   const wageClass = (wage, customWage) => {
@@ -239,9 +243,9 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
         <div className="goals-display">
           <div className="shift-wages">
             {goal.morningConfirmed && (
-              <div className={`shift ${shiftStateClass('morning')}`}>
+              <div className={`shift ${shiftStateClass('morning')}${goal.morningAdminConfirmed && !bothShiftsVerified ? ' shift-verified' : ''}`}>
                 <div className="shift-primary">
-                  <span className={`shift-pill ${pillClass('morning')}${goal.morningAdminConfirmed ? ' pill-verified' : ''}`} title={goal.morningAdminConfirmed ? `Verified${goal.morningLocation ? ` - ${goal.morningLocation}` : ''}` : (goal.morningLocation || undefined)}>A{goal.morningAdminConfirmed && <span className="pill-check">&#10003;</span>}</span>
+                  <span className={`shift-pill ${pillClass('morning')}`} title={goal.morningAdminConfirmed ? `Verified${goal.morningLocation ? ` - ${goal.morningLocation}` : ''}` : (goal.morningLocation || undefined)}>A</span>
                   {!sameLocation && morningLocAbbr && (
                     <span className="shift-location-badge" title={goal.morningLocation}>{morningLocAbbr}</span>
                   )}
@@ -319,9 +323,9 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
               </div>
             )}
             {goal.afternoonConfirmed && (
-              <div className={`shift ${shiftStateClass('afternoon')}`}>
+              <div className={`shift ${shiftStateClass('afternoon')}${goal.afternoonAdminConfirmed && !bothShiftsVerified ? ' shift-verified' : ''}`}>
                 <div className="shift-primary">
-                  <span className={`shift-pill ${pillClass('afternoon')}${goal.afternoonAdminConfirmed ? ' pill-verified' : ''}`} title={goal.afternoonAdminConfirmed ? `Verified${goal.afternoonLocation ? ` - ${goal.afternoonLocation}` : ''}` : (goal.afternoonLocation || undefined)}>B{goal.afternoonAdminConfirmed && <span className="pill-check">&#10003;</span>}</span>
+                  <span className={`shift-pill ${pillClass('afternoon')}`} title={goal.afternoonAdminConfirmed ? `Verified${goal.afternoonLocation ? ` - ${goal.afternoonLocation}` : ''}` : (goal.afternoonLocation || undefined)}>B</span>
                   {!sameLocation && afternoonLocAbbr && (
                     <span className="shift-location-badge" title={goal.afternoonLocation}>{afternoonLocAbbr}</span>
                   )}

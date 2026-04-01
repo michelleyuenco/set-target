@@ -3,13 +3,14 @@ import { MEMBER_COLORS, getMemberColor } from '../utils/memberColors'
 
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-export function MemberManagerModal({ members, onUpdateDisplayName, onUpdateEmail, onUpdateColor, onToggleDisabled, earnings, earningsLoading, onClose }) {
+export function MemberManagerModal({ members, onUpdateDisplayName, onUpdateEmail, onUpdateColor, onToggleDisabled, onResetPassword, earnings, earningsLoading, onClose }) {
   const [editingUid, setEditingUid] = useState(null)
-  const [editingField, setEditingField] = useState(null) // 'name' or 'email'
+  const [editingField, setEditingField] = useState(null) // 'name', 'email', or 'password'
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [confirmDisableUid, setConfirmDisableUid] = useState(null)
   const [toggling, setToggling] = useState(false)
+  const [passwordSuccess, setPasswordSuccess] = useState(null)
 
   const nonAdminMembers = members.filter((m) => !m.isAdmin)
   const activeMembers = nonAdminMembers.filter((m) => !m.disabled)
@@ -29,9 +30,14 @@ export function MemberManagerModal({ members, onUpdateDisplayName, onUpdateEmail
 
   const handleSave = async () => {
     if (!editingUid || !draft.trim()) return
+    if (editingField === 'password' && draft.length < 6) return
     setSaving(true)
     try {
-      if (editingField === 'email') {
+      if (editingField === 'password') {
+        await onResetPassword(editingUid, draft)
+        setPasswordSuccess(editingUid)
+        setTimeout(() => setPasswordSuccess(null), 2000)
+      } else if (editingField === 'email') {
         await onUpdateEmail(editingUid, draft.trim())
       } else {
         await onUpdateDisplayName(editingUid, draft.trim())
@@ -96,17 +102,18 @@ export function MemberManagerModal({ members, onUpdateDisplayName, onUpdateEmail
         <div className="member-manager-edit-row">
           <input
             className="member-manager-input"
+            type={editingField === 'password' ? 'password' : 'text'}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={saving}
             autoFocus
-            placeholder={editingField === 'email' ? 'Email address' : 'Display name'}
+            placeholder={editingField === 'password' ? 'New password (min 6 chars)' : editingField === 'email' ? 'Email address' : 'Display name'}
           />
           <button
             className="member-manager-save-btn"
             onClick={handleSave}
-            disabled={saving || !draft.trim()}
+            disabled={saving || !draft.trim() || (editingField === 'password' && draft.length < 6)}
             title="Save"
           >
             {saving ? '...' : '\u2713'}
@@ -145,8 +152,19 @@ export function MemberManagerModal({ members, onUpdateDisplayName, onUpdateEmail
               >
                 &#9993;
               </button>
+              <button
+                className="member-manager-edit-btn member-manager-reset-pw-btn"
+                onClick={() => startEdit(member, 'password')}
+                title="Reset password"
+              >
+                &#128274;
+              </button>
             </div>
           </div>
+
+          {passwordSuccess === member.uid && (
+            <div className="member-pw-success">Password updated</div>
+          )}
 
           <div className="member-color-picker">
             {MEMBER_COLORS.map((c, i) => {

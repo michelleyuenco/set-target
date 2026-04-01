@@ -1,4 +1,6 @@
-export function AdminBar({ members, membersLoading, selectedUid, currentUserUid, editMode, viewAllMode, onSelectMember, onToggleEditMode, onBackToDashboard, onExitViewAll }) {
+import { AuthButton } from './AuthButton'
+
+export function AdminBar({ members, membersLoading, selectedUid, currentUserUid, editMode, viewAllMode, onSelectMember, onToggleEditMode, onBackToDashboard, onExitViewAll, user, profileDisplayName, onSignOut, onChangeEmail, onChangePassword, onSetPassword }) {
   const isViewingMember = selectedUid && selectedUid !== currentUserUid
 
   return (
@@ -43,6 +45,14 @@ export function AdminBar({ members, membersLoading, selectedUid, currentUserUid,
           {editMode ? 'Editing ON' : 'Enable Edit'}
         </button>
       )}
+      <AuthButton
+        user={user}
+        profileDisplayName={profileDisplayName}
+        onSignOut={onSignOut}
+        onChangeEmail={onChangeEmail}
+        onChangePassword={onChangePassword}
+        onSetPassword={onSetPassword}
+      />
     </div>
   )
 }

@@ -11,6 +11,7 @@ import {
   EmailAuthProvider,
   linkWithCredential
 } from 'firebase/auth'
+import { getFunctions, httpsCallable } from 'firebase/functions'
 import { auth } from './config'
 import { userProfileService } from './userProfileService'
 
@@ -67,5 +68,11 @@ export const authService = {
 
     const credential = EmailAuthProvider.credential(user.email, newPassword)
     await linkWithCredential(user, credential)
+  },
+
+  async adminResetPassword(uid, newPassword) {
+    const functions = getFunctions()
+    const resetFn = httpsCallable(functions, 'adminResetPassword')
+    await resetFn({ uid, newPassword })
   }
 }

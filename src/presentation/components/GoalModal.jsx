@@ -295,6 +295,10 @@ export function GoalModal({
     return 'wage-none'
   }
 
+  // ── Detect whether modal content overflows (needs top Save btn) ──
+  const [contentOverflows, setContentOverflows] = useState(false)
+  const overflowLocked = useRef(false)
+
   // ── Swipe-down-to-dismiss ──
   const modalRef = useRef(null)
   const dragStartY = useRef(null)
@@ -355,10 +359,44 @@ export function GoalModal({
     }
   }, [isMobile])
 
+  // ── Show top Save only when modal content overflows its visible area ──
+  // Once locked to overflowing, stay locked to avoid layout oscillation.
+  // Only unlock when the modal is clearly non-overflowing (e.g. content shrinks a lot).
+  useEffect(() => {
+    const el = modalRef.current
+    if (!el) return
+    let raf = 0
+    const check = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const overflows = el.scrollHeight > el.clientHeight + 20
+        if (overflows) {
+          overflowLocked.current = true
+          setContentOverflows(true)
+        } else if (overflowLocked.current) {
+          // Only unlock if clearly not overflowing (with generous margin)
+          if (el.scrollHeight + 60 < el.clientHeight) {
+            overflowLocked.current = false
+            setContentOverflows(false)
+          }
+        } else {
+          setContentOverflows(false)
+        }
+      })
+    }
+    // Delay initial check to let the first paint settle
+    setTimeout(check, 50)
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    // Also watch child size changes (e.g. sections expanding/collapsing)
+    for (const child of el.children) ro.observe(child)
+    return () => { ro.disconnect(); cancelAnimationFrame(raf) }
+  }, [])
+
   return (
     <div className="modal-overlay" onClick={handleCancel}>
       <div
-        className="modal modal-compact"
+        className={`modal modal-compact${contentOverflows ? ' modal-scrollable' : ''}`}
         ref={modalRef}
         onClick={e => e.stopPropagation()}
       >
@@ -366,7 +404,7 @@ export function GoalModal({
           {isMobile && <div className="modal-drag-handle" />}
           <div className="modal-header-row">
             <h2>{day}{readOnly && <span className="read-only-badge-inline">View Only</span>}</h2>
-            {!readOnly && (hasChanges || saving) ? (
+            {!readOnly && (hasChanges || saving) && contentOverflows ? (
               <button className="modal-save-btn-top" onClick={handleSave} disabled={saving}>
                 {saving ? '...' : 'Save'}
               </button>
@@ -378,33 +416,44 @@ export function GoalModal({
         </div>
 
         <div className="shifts-compact">
+          <div className="shift-group">
+          <div
+            className={`shift-confirm-toggle${contentOverflows ? ' shift-confirm-sticky shift-confirm-sticky-a' : ''}${!morningConfirmed ? ' shift-toggle-dimmed' : ''}`}
+            onClick={contentOverflows ? (e) => {
+              // Only scroll to top if clicking the header bar itself, not child buttons/labels
+              if (e.target === e.currentTarget) {
+                modalRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+              }
+            } : undefined}
+          >
+            <label className="shift-confirm">
+              <input
+                type="checkbox"
+                checked={morningConfirmed}
+                onChange={(e) => {
+                  setMorningConfirmed(e.target.checked)
+                  if (e.target.checked && !morningLocation && autoLocation) {
+                    setMorningLocation(autoLocation)
+                  }
+                }}
+                disabled={readOnly || morningLocked}
+              />
+              <span>Shift A (Morning)</span>
+            </label>
+            {morningConfirmed && goal?.morningAdminConfirmed && (
+              <span className="shift-verified-tag"><span className="verified-icon">&#10003;</span><span className="verified-text"> Verified</span></span>
+            )}
+            {isAdminViewing && morningConfirmed && (
+              goal?.morningAdminConfirmed ? (
+                <button className="admin-unconfirm-btn" onClick={() => onUnconfirmShift('morning')}>Undo</button>
+              ) : (
+                hasChanges
+                  ? <span className="shift-save-first-hint" onClick={handleSave}>Save before verify</span>
+                  : <button className="admin-confirm-btn shift-verify-btn" onClick={() => onConfirmShift('morning')}>&#10003; Verify</button>
+              )
+            )}
+          </div>
           <div className={`shift-section-wrapper ${!morningConfirmed ? 'shift-unconfirmed' : ''}`}>
-            <div className="shift-confirm-toggle">
-              <label className="shift-confirm">
-                <input
-                  type="checkbox"
-                  checked={morningConfirmed}
-                  onChange={(e) => {
-                    setMorningConfirmed(e.target.checked)
-                    if (e.target.checked && !morningLocation && autoLocation) {
-                      setMorningLocation(autoLocation)
-                    }
-                  }}
-                  disabled={readOnly || morningLocked}
-                />
-                <span>Shift A (Morning)</span>
-              </label>
-              {morningConfirmed && goal?.morningAdminConfirmed && (
-                <span className="shift-verified-tag">&#10003; Verified</span>
-              )}
-              {isAdminViewing && morningConfirmed && (
-                goal?.morningAdminConfirmed ? (
-                  <button className="admin-unconfirm-btn" onClick={() => onUnconfirmShift('morning')}>Undo</button>
-                ) : (
-                  <button className="admin-confirm-btn shift-verify-btn" onClick={() => onConfirmShift('morning')}>&#10003; Verify</button>
-                )
-              )}
-            </div>
             <div className="shift-row">
               <div className="shift-inputs">
                 <div className="input-compact">
@@ -543,6 +592,34 @@ export function GoalModal({
                 )}
               </div>
             )}
+            {isAdminViewing && morningConfirmed && (
+              <div className="admin-allowance-inline">
+                <div className="admin-allowance-field">
+                  <label>Allowance ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={morningAllowance}
+                    onChange={(e) => setMorningAllowance(e.target.value)}
+                    placeholder="0"
+                    disabled={readOnly || morningLocked}
+                  />
+                </div>
+                <div className="admin-allowance-field">
+                  <label>Custom Wage ($/hr)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={morningCustomWage}
+                    onChange={(e) => setMorningCustomWage(e.target.value)}
+                    placeholder="Auto"
+                    disabled={readOnly || morningLocked}
+                  />
+                </div>
+              </div>
+            )}
             <div className={`shift-proof-inline${!morningConfirmed ? ' shift-unconfirmed' : ''}`}>
               <ProofImages
                 images={morningProofImages}
@@ -556,34 +633,42 @@ export function GoalModal({
               />
             </div>
           </div>
+          </div>
 
+          <div className="shift-group-divider" />
+
+          <div className="shift-group">
+          <div
+            className={`shift-confirm-toggle${contentOverflows ? ' shift-confirm-sticky shift-confirm-sticky-b' : ''}${!afternoonConfirmed ? ' shift-toggle-dimmed' : ''}`}
+          >
+            <label className="shift-confirm">
+              <input
+                type="checkbox"
+                checked={afternoonConfirmed}
+                onChange={(e) => {
+                  setAfternoonConfirmed(e.target.checked)
+                  if (e.target.checked && !afternoonLocation && autoLocation) {
+                    setAfternoonLocation(autoLocation)
+                  }
+                }}
+                disabled={readOnly || afternoonLocked}
+              />
+              <span>Shift B (Afternoon)</span>
+            </label>
+            {afternoonConfirmed && goal?.afternoonAdminConfirmed && (
+              <span className="shift-verified-tag"><span className="verified-icon">&#10003;</span><span className="verified-text"> Verified</span></span>
+            )}
+            {isAdminViewing && afternoonConfirmed && (
+              goal?.afternoonAdminConfirmed ? (
+                <button className="admin-unconfirm-btn" onClick={() => onUnconfirmShift('afternoon')}>Undo</button>
+              ) : (
+                hasChanges
+                  ? <span className="shift-save-first-hint" onClick={handleSave}>Save before verify</span>
+                  : <button className="admin-confirm-btn shift-verify-btn" onClick={() => onConfirmShift('afternoon')}>&#10003; Verify</button>
+              )
+            )}
+          </div>
           <div className={`shift-section-wrapper ${!afternoonConfirmed ? 'shift-unconfirmed' : ''}`}>
-            <div className="shift-confirm-toggle">
-              <label className="shift-confirm">
-                <input
-                  type="checkbox"
-                  checked={afternoonConfirmed}
-                  onChange={(e) => {
-                    setAfternoonConfirmed(e.target.checked)
-                    if (e.target.checked && !afternoonLocation && autoLocation) {
-                      setAfternoonLocation(autoLocation)
-                    }
-                  }}
-                  disabled={readOnly || afternoonLocked}
-                />
-                <span>Shift B (Afternoon)</span>
-              </label>
-              {afternoonConfirmed && goal?.afternoonAdminConfirmed && (
-                <span className="shift-verified-tag">&#10003; Verified</span>
-              )}
-              {isAdminViewing && afternoonConfirmed && (
-                goal?.afternoonAdminConfirmed ? (
-                  <button className="admin-unconfirm-btn" onClick={() => onUnconfirmShift('afternoon')}>Undo</button>
-                ) : (
-                  <button className="admin-confirm-btn shift-verify-btn" onClick={() => onConfirmShift('afternoon')}>&#10003; Verify</button>
-                )
-              )}
-            </div>
             <div className="shift-row">
               <div className="shift-inputs">
                 <div className="input-compact">
@@ -722,6 +807,34 @@ export function GoalModal({
                 )}
               </div>
             )}
+            {isAdminViewing && afternoonConfirmed && (
+              <div className="admin-allowance-inline">
+                <div className="admin-allowance-field">
+                  <label>Allowance ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={afternoonAllowance}
+                    onChange={(e) => setAfternoonAllowance(e.target.value)}
+                    placeholder="0"
+                    disabled={readOnly || afternoonLocked}
+                  />
+                </div>
+                <div className="admin-allowance-field">
+                  <label>Custom Wage ($/hr)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={afternoonCustomWage}
+                    onChange={(e) => setAfternoonCustomWage(e.target.value)}
+                    placeholder="Auto"
+                    disabled={readOnly || afternoonLocked}
+                  />
+                </div>
+              </div>
+            )}
             <div className={`shift-proof-inline${!afternoonConfirmed ? ' shift-unconfirmed' : ''}`}>
               <ProofImages
                 images={afternoonProofImages}
@@ -735,94 +848,32 @@ export function GoalModal({
               />
             </div>
           </div>
-        </div>
-
-        {isAdminViewing && (morningConfirmed || afternoonConfirmed) && (
-          <div className="admin-allowance-row">
-            <div className="admin-allowance-row-inner">
-              {morningConfirmed ? (
-                <div className="admin-allowance-field">
-                  <label>A Allowance ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={morningAllowance}
-                    onChange={(e) => setMorningAllowance(e.target.value)}
-                    placeholder="0"
-                    disabled={readOnly || morningLocked}
-                  />
-                </div>
-              ) : <div className="admin-allowance-field" />}
-              {afternoonConfirmed ? (
-                <div className="admin-allowance-field">
-                  <label>B Allowance ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={afternoonAllowance}
-                    onChange={(e) => setAfternoonAllowance(e.target.value)}
-                    placeholder="0"
-                    disabled={readOnly || afternoonLocked}
-                  />
-                </div>
-              ) : <div className="admin-allowance-field" />}
-            </div>
-            <div className="admin-allowance-row-inner">
-              {morningConfirmed ? (
-                <div className="admin-allowance-field">
-                  <label>A Custom Wage ($/hr)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={morningCustomWage}
-                    onChange={(e) => setMorningCustomWage(e.target.value)}
-                    placeholder="Auto"
-                    disabled={readOnly || morningLocked}
-                  />
-                </div>
-              ) : <div className="admin-allowance-field" />}
-              {afternoonConfirmed ? (
-                <div className="admin-allowance-field">
-                  <label>B Custom Wage ($/hr)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={afternoonCustomWage}
-                    onChange={(e) => setAfternoonCustomWage(e.target.value)}
-                    placeholder="Auto"
-                    disabled={readOnly || afternoonLocked}
-                  />
-                </div>
-              ) : <div className="admin-allowance-field" />}
-            </div>
           </div>
-        )}
+        </div>
 
         {saveError && <div className="login-error" style={{ margin: '8px 0 0' }}>{saveError}</div>}
 
-        <div className="button-group">
-          {readOnly ? (
-            <button className="cancel-btn" onClick={handleCancel}>Close</button>
-          ) : (
-            <>
-              {(hasChanges || saving) && (
-                <>
-                  <button className="cancel-btn" onClick={handleCancel} disabled={saving}>Cancel</button>
-                  <button className="save-btn" onClick={handleSave} disabled={saving}>
-                    {saving ? 'Saving...' : 'Save'}
-                  </button>
-                </>
-              )}
-              {!hasChanges && !saving && (
-                <button className="cancel-btn" onClick={handleCancel}>Close</button>
-              )}
-            </>
-          )}
-        </div>
+        {!contentOverflows && (
+          <div className="button-group">
+            {readOnly ? (
+              <button className="cancel-btn" onClick={handleCancel}>Close</button>
+            ) : (
+              <>
+                {(hasChanges || saving) && (
+                  <>
+                    <button className="save-btn" onClick={handleSave} disabled={saving}>
+                      {saving ? 'Saving...' : 'Save'}
+                    </button>
+                    <button className="cancel-btn" onClick={handleCancel} disabled={saving}>Cancel</button>
+                  </>
+                )}
+                {!hasChanges && !saving && (
+                  <button className="cancel-btn" onClick={handleCancel}>Close</button>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
