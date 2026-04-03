@@ -256,7 +256,9 @@ export function GoalModal({
     norm(morningIgFeatured) !== norm(goal?.morningIgFeaturedAmount) ||
     norm(morningIgOther) !== norm(goal?.morningIgOtherAmount) ||
     norm(afternoonIgFeatured) !== norm(goal?.afternoonIgFeaturedAmount) ||
-    norm(afternoonIgOther) !== norm(goal?.afternoonIgOtherAmount)
+    norm(afternoonIgOther) !== norm(goal?.afternoonIgOtherAmount) ||
+    norm(morningLocation) !== norm(goal?.morningLocation || autoLocation) ||
+    norm(afternoonLocation) !== norm(goal?.afternoonLocation || autoLocation)
   )
 
   const getWage = (target, actual, customWage, igFeatured, igOther) => {
@@ -432,8 +434,8 @@ export function GoalModal({
                 checked={morningConfirmed}
                 onChange={(e) => {
                   setMorningConfirmed(e.target.checked)
-                  if (e.target.checked && !morningLocation && autoLocation) {
-                    setMorningLocation(autoLocation)
+                  if (e.target.checked && !morningLocation) {
+                    setMorningLocation(afternoonLocation || autoLocation || null)
                   }
                 }}
                 disabled={readOnly || morningLocked}
@@ -513,6 +515,22 @@ export function GoalModal({
                 {formatHours(morningHours)}
               </div>
             </div>
+            {morningConfirmed && locations && locations.length > 0 && (
+              <div className="shift-location-row">
+                <label>Location</label>
+                <select
+                  className="location-select"
+                  value={morningLocation || ''}
+                  onChange={(e) => setMorningLocation(e.target.value || null)}
+                  disabled={readOnly || morningLocked}
+                >
+                  <option value="">— None —</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.name}>{loc.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="commission-toggles-row">
               <label className="commission-toggle-label">
                 <input
@@ -647,8 +665,8 @@ export function GoalModal({
                 checked={afternoonConfirmed}
                 onChange={(e) => {
                   setAfternoonConfirmed(e.target.checked)
-                  if (e.target.checked && !afternoonLocation && autoLocation) {
-                    setAfternoonLocation(autoLocation)
+                  if (e.target.checked && !afternoonLocation) {
+                    setAfternoonLocation(morningLocation || autoLocation || null)
                   }
                 }}
                 disabled={readOnly || afternoonLocked}
@@ -728,6 +746,22 @@ export function GoalModal({
                 {formatHours(afternoonHours)}
               </div>
             </div>
+            {afternoonConfirmed && locations && locations.length > 0 && (
+              <div className="shift-location-row">
+                <label>Location</label>
+                <select
+                  className="location-select"
+                  value={afternoonLocation || ''}
+                  onChange={(e) => setAfternoonLocation(e.target.value || null)}
+                  disabled={readOnly || afternoonLocked}
+                >
+                  <option value="">— None —</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.name}>{loc.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="commission-toggles-row">
               <label className="commission-toggle-label">
                 <input

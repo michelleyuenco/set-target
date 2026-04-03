@@ -1300,6 +1300,7 @@ body {
 
 .shift-section-wrapper.shift-unconfirmed .shift-row,
 .shift-section-wrapper.shift-unconfirmed .shift-time-row,
+.shift-section-wrapper.shift-unconfirmed .shift-location-row,
 .shift-section-wrapper.shift-unconfirmed .custom-commission-toggle,
 .shift-section-wrapper.shift-unconfirmed .custom-commission-inputs,
 .shift-section-wrapper.shift-unconfirmed .commission-toggles-row,
@@ -1323,6 +1324,24 @@ body {
   background: #f0f4ff;
   border: 1px solid #c7d2fe;
   border-radius: 5px;
+}
+
+.shift-location-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+}
+
+.shift-location-row label {
+  font-size: 11px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.shift-location-row .location-select {
+  flex: 1;
+  min-width: 0;
 }
 
 .time-input-group {

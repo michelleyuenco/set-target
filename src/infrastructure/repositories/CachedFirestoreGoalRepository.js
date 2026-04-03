@@ -6,6 +6,7 @@ import {
   doc,
   getDocs,
   setDoc,
+  deleteDoc,
   writeBatch,
   onSnapshot
 } from 'firebase/firestore'
@@ -96,7 +97,7 @@ export class CachedFirestoreGoalRepository extends GoalRepository {
     this._localWrites.add(day)
 
     const docRef = doc(this.goalsCollection, day)
-    setDoc(docRef, { _deleted: true }).catch((err) => {
+    deleteDoc(docRef).catch((err) => {
       console.error('Firestore delete failed:', err)
     })
   }

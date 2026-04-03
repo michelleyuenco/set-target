@@ -77,10 +77,10 @@ export class GoalService {
     return this.getGoalByDayUseCase.execute(day)
   }
 
-  getLastLockedLocation(beforeDay) {
+  getLastLockedLocation(upToDay) {
     const allGoals = this.getGoalsUseCase.execute()
     const sortedDays = Object.keys(allGoals)
-      .filter(day => day < beforeDay)
+      .filter(day => day <= upToDay)
       .sort((a, b) => b.localeCompare(a))
 
     for (const day of sortedDays) {

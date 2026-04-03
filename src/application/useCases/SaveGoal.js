@@ -13,7 +13,45 @@ export class SaveGoal {
     const overrides = Object.fromEntries(
       Object.entries(data).filter(([_, v]) => v !== undefined)
     )
-    const goal = new Goal({ ...base, ...overrides })
+    const merged = { ...base, ...overrides }
+
+    // Clear all fields for unchecked shifts so nothing lingers in Firestore
+    if (merged.morningConfirmed === false) {
+      merged.morningAmount = null
+      merged.morningActual = null
+      merged.morningBoughtBack = false
+      merged.morningCustomRate = null
+      merged.morningCustomAmount = null
+      merged.morningStartTime = null
+      merged.morningEndTime = null
+      merged.morningConfirmed = false
+      merged.morningAdminConfirmed = false
+      merged.morningLocation = null
+      merged.morningProofImages = []
+      merged.morningAllowance = null
+      merged.morningCustomWage = null
+      merged.morningIgFeaturedAmount = null
+      merged.morningIgOtherAmount = null
+    }
+    if (merged.afternoonConfirmed === false) {
+      merged.afternoonAmount = null
+      merged.afternoonActual = null
+      merged.afternoonBoughtBack = false
+      merged.afternoonCustomRate = null
+      merged.afternoonCustomAmount = null
+      merged.afternoonStartTime = null
+      merged.afternoonEndTime = null
+      merged.afternoonConfirmed = false
+      merged.afternoonAdminConfirmed = false
+      merged.afternoonLocation = null
+      merged.afternoonProofImages = []
+      merged.afternoonAllowance = null
+      merged.afternoonCustomWage = null
+      merged.afternoonIgFeaturedAmount = null
+      merged.afternoonIgOtherAmount = null
+    }
+
+    const goal = new Goal(merged)
 
     // Auto-clear buyback if actual now meets/exceeds the target —
     // the buyback is no longer needed and excess should be released
