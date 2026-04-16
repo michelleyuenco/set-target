@@ -132,6 +132,16 @@ body {
   border-color: #3b82f6;
 }
 
+.day-cell.has-actual {
+  border-color: #16a34a;
+  border-width: 2px;
+}
+
+.day-cell.no-actual {
+  border-color: #dc2626;
+  border-width: 2px;
+}
+
 .day-cell.selected {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
@@ -7273,54 +7283,37 @@ body {
   white-space: nowrap;
 }
 
-/* ── Member Manager: Disable/Enable ── */
-.member-manager-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 6px;
-}
-
-.member-disable-btn {
-  padding: 4px 10px;
-  font-size: 11px;
-  border-radius: 4px;
-  border: 1px solid #fca5a5;
-  background: #fff;
-  color: #dc2626;
+/* ── Member Manager: Visibility Toggle ── */
+.member-visibility-btn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
   cursor: pointer;
-  font-weight: 500;
-}
-
-.member-disable-btn:hover {
-  background: #fef2f2;
-}
-
-.member-enable-btn {
-  padding: 4px 10px;
-  font-size: 11px;
+  font-size: 1rem;
   border-radius: 4px;
-  border: 1px solid #86efac;
-  background: #fff;
-  color: #166534;
-  cursor: pointer;
-  font-weight: 500;
+  line-height: 1;
 }
 
-.member-enable-btn:hover {
-  background: #f0fdf4;
-}
-
-.member-manager-item.disabled {
-  opacity: 0.55;
+.member-visibility-btn:hover {
   background: #f3f4f6;
 }
 
-.member-disabled-badge {
+.member-manager-item.disabled {
+  opacity: 0.5;
+  background: #f9fafb;
+}
+
+.member-name-hidden {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+.member-hidden-badge {
   display: inline-block;
   padding: 1px 6px;
   border-radius: 3px;
-  background: #fee2e2;
-  color: #dc2626;
+  background: #f3f4f6;
+  color: #9ca3af;
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
@@ -7338,38 +7331,6 @@ body {
   padding: 10px 0 4px;
   border-top: 1px solid #e5e7eb;
   margin-top: 8px;
-}
-
-.member-disable-confirm {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-  padding: 6px 8px;
-  background: #fef2f2;
-  border-radius: 5px;
-  font-size: 11px;
-  color: #991b1b;
-}
-
-.member-disable-confirm button {
-  padding: 3px 8px;
-  font-size: 11px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
-  border: 1px solid #e5e7eb;
-}
-
-.member-disable-confirm-cancel {
-  background: #fff;
-  color: #374151;
-}
-
-.member-disable-confirm-btn {
-  background: #fee2e2;
-  color: #dc2626;
-  border-color: #fca5a5 !important;
 }
 
 /* ── Admin Dashboard ── */
@@ -7501,6 +7462,8 @@ body {
   padding: 3px 4px;
   background: #fafafa;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .all-members-cell.empty {
@@ -7562,6 +7525,16 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.all-members-day-revenue {
+  margin-top: auto;
+  padding-top: 3px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 10px;
+  font-weight: 700;
+  color: #059669;
+  text-align: right;
 }
 
 /* ── AllMembersCalendar Location Filter Tabs ── */

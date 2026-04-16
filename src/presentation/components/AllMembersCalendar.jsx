@@ -121,6 +121,12 @@ export function AllMembersCalendar({ membersGoals, loading, year, month, locatio
           const isToday = dateStr === todayStr
           const dayMembers = getDayMembers(dateStr)
 
+          const dayActualTotal = dayMembers.reduce((sum, m) => {
+            if (m.hasAM) sum += (m.goal.morningEffectiveActual || 0)
+            if (m.hasPM) sum += (m.goal.afternoonEffectiveActual || 0)
+            return sum
+          }, 0)
+
           return (
             <div
               key={dateStr}
@@ -152,6 +158,11 @@ export function AllMembersCalendar({ membersGoals, loading, year, month, locatio
                   </div>
                 ))}
               </div>
+              {dayActualTotal > 0 && (
+                <div className="all-members-day-revenue">
+                  ${Math.round(dayActualTotal).toLocaleString()}
+                </div>
+              )}
             </div>
           )
         })}

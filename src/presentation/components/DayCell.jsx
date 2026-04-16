@@ -29,9 +29,12 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
   const bothShiftsVerified = goal?.morningConfirmed && goal?.morningAdminConfirmed &&
     goal?.afternoonConfirmed && goal?.afternoonAdminConfirmed
 
+  const hasActualRevenue = (goal?.morningActual > 0) || (goal?.afternoonActual > 0)
+
   const cellClass = [
     'day-cell',
     goal?.hasGoals ? 'has-goals' : '',
+    hasActualRevenue ? 'has-actual' : (goal?.hasGoals ? 'no-actual' : ''),
     isSelected ? 'selected' : '',
     isToday ? 'today' : '',
     bothShiftsVerified ? 'day-verified' : ''

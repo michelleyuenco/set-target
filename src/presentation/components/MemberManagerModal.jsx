@@ -8,8 +8,6 @@ export function MemberManagerModal({ members, onUpdateDisplayName, onUpdateEmail
   const [editingField, setEditingField] = useState(null) // 'name', 'email', or 'password'
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
-  const [confirmDisableUid, setConfirmDisableUid] = useState(null)
-  const [toggling, setToggling] = useState(false)
   const [passwordSuccess, setPasswordSuccess] = useState(null)
 
   const nonAdminMembers = members.filter((m) => !m.isAdmin)
@@ -58,14 +56,10 @@ export function MemberManagerModal({ members, onUpdateDisplayName, onUpdateEmail
   }
 
   const handleToggleDisabled = async (uid, disabled) => {
-    setToggling(true)
     try {
       await onToggleDisabled(uid, disabled)
-      setConfirmDisableUid(null)
     } catch (err) {
       console.error('Failed to toggle member:', err)
-    } finally {
-      setToggling(false)
     }
   }
 
@@ -131,13 +125,20 @@ export function MemberManagerModal({ members, onUpdateDisplayName, onUpdateEmail
         <>
           <div className="member-manager-row">
             <div className="member-manager-info">
-              <span className="member-manager-name">
+              <span className={`member-manager-name${member.disabled ? ' member-name-hidden' : ''}`}>
                 {member.displayName || <span className="member-manager-no-name">No name set</span>}
-                {member.disabled && <span className="member-disabled-badge">Disabled</span>}
+                {member.disabled && <span className="member-hidden-badge">Hidden</span>}
               </span>
               <span className="member-manager-email">{member.email}</span>
             </div>
             <div className="member-manager-edit-btns">
+              <button
+                className={`member-visibility-btn${member.disabled ? ' hidden' : ' visible'}`}
+                onClick={() => handleToggleDisabled(member.uid, !member.disabled)}
+                title={member.disabled ? 'Show member' : 'Hide member'}
+              >
+                {member.disabled ? '🙈' : '👁'}
+              </button>
               <button
                 className="member-manager-edit-btn"
                 onClick={() => startEdit(member, 'name')}
@@ -183,45 +184,6 @@ export function MemberManagerModal({ members, onUpdateDisplayName, onUpdateEmail
           </div>
 
           {renderWages(member.uid)}
-
-          {member.disabled ? (
-            <div className="member-manager-actions">
-              <button
-                className="member-enable-btn"
-                onClick={() => handleToggleDisabled(member.uid, false)}
-                disabled={toggling}
-              >
-                {toggling ? '...' : 'Enable Member'}
-              </button>
-            </div>
-          ) : confirmDisableUid === member.uid ? (
-            <div className="member-disable-confirm">
-              <span>Hide from team lists?</span>
-              <button
-                className="member-disable-confirm-cancel"
-                onClick={() => setConfirmDisableUid(null)}
-                disabled={toggling}
-              >
-                Cancel
-              </button>
-              <button
-                className="member-disable-confirm-btn"
-                onClick={() => handleToggleDisabled(member.uid, true)}
-                disabled={toggling}
-              >
-                {toggling ? '...' : 'Confirm'}
-              </button>
-            </div>
-          ) : (
-            <div className="member-manager-actions">
-              <button
-                className="member-disable-btn"
-                onClick={() => setConfirmDisableUid(member.uid)}
-              >
-                Disable Member
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>
@@ -240,7 +202,7 @@ export function MemberManagerModal({ members, onUpdateDisplayName, onUpdateEmail
 
           {disabledMembers.length > 0 && (
             <>
-              <div className="member-manager-section-title">Disabled</div>
+              <div className="member-manager-section-title">Hidden</div>
               {disabledMembers.map(renderMember)}
             </>
           )}
