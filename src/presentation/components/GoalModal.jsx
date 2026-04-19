@@ -470,19 +470,29 @@ export function GoalModal({
                 </div>
                 <div className="input-compact">
                   <label>Actual</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={morningActualInput}
-                    onChange={(e) => {
-                      setMorningActualInput(e.target.value)
-                      const result = evaluateFormula(e.target.value)
-                      if (result !== null) setMorningActual(String(result))
-                    }}
-                    onBlur={() => handleActualBlur(morningActualInput, setMorningActual)}
-                    placeholder="0"
-                    disabled={readOnly || !morningConfirmed || morningLocked}
-                  />
+                  <div className="actual-input-wrapper">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={morningActualInput}
+                      onChange={(e) => {
+                        setMorningActualInput(e.target.value)
+                        const result = evaluateFormula(e.target.value)
+                        if (result !== null) setMorningActual(String(result))
+                      }}
+                      onBlur={() => handleActualBlur(morningActualInput, setMorningActual)}
+                      placeholder="0"
+                      disabled={readOnly || !morningConfirmed || morningLocked}
+                    />
+                    <button
+                      type="button"
+                      className="actual-add-btn"
+                      aria-label="Add"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => setMorningActualInput((prev) => (prev || '') + '+')}
+                      disabled={readOnly || !morningConfirmed || morningLocked}
+                    >+</button>
+                  </div>
                   {formulaPreview(morningActualInput) !== null && (
                     <div className="formula-preview">= {formulaPreview(morningActualInput)}</div>
                   )}
@@ -701,19 +711,29 @@ export function GoalModal({
                 </div>
                 <div className="input-compact">
                   <label>Actual</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={afternoonActualInput}
-                    onChange={(e) => {
-                      setAfternoonActualInput(e.target.value)
-                      const result = evaluateFormula(e.target.value)
-                      if (result !== null) setAfternoonActual(String(result))
-                    }}
-                    onBlur={() => handleActualBlur(afternoonActualInput, setAfternoonActual)}
-                    placeholder="0"
-                    disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                  />
+                  <div className="actual-input-wrapper">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={afternoonActualInput}
+                      onChange={(e) => {
+                        setAfternoonActualInput(e.target.value)
+                        const result = evaluateFormula(e.target.value)
+                        if (result !== null) setAfternoonActual(String(result))
+                      }}
+                      onBlur={() => handleActualBlur(afternoonActualInput, setAfternoonActual)}
+                      placeholder="0"
+                      disabled={readOnly || !afternoonConfirmed || afternoonLocked}
+                    />
+                    <button
+                      type="button"
+                      className="actual-add-btn"
+                      aria-label="Add"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => setAfternoonActualInput((prev) => (prev || '') + '+')}
+                      disabled={readOnly || !afternoonConfirmed || afternoonLocked}
+                    >+</button>
+                  </div>
                   {formulaPreview(afternoonActualInput) !== null && (
                     <div className="formula-preview">= {formulaPreview(afternoonActualInput)}</div>
                   )}

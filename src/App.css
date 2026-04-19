@@ -1199,6 +1199,50 @@ body {
   font-weight: 400;
 }
 
+.actual-input-wrapper {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+}
+
+.actual-input-wrapper input {
+  flex: 1;
+  min-width: 0;
+}
+
+.actual-add-btn {
+  flex-shrink: 0;
+  width: 28px;
+  border: 1.5px solid #3b82f6;
+  background: #3b82f6;
+  color: white;
+  border-radius: 5px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.actual-add-btn:hover:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.actual-add-btn:active:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.actual-add-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .formula-preview {
   font-size: 10px;
   color: #3b82f6;
