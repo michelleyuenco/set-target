@@ -6,6 +6,7 @@ export function ProofImages({
   pendingFiles = [],
   onUpload,
   onDelete,
+  onReplace,
   onRemovePending,
   uploading,
   disabled,
@@ -53,6 +54,15 @@ export function ProofImages({
       onDelete(item.original)
       if (previewIndex === idx) setPreviewIndex(null)
     }
+  }
+
+  const handleReplace = (e, item) => {
+    e.stopPropagation()
+    const file = e.target.files?.[0]
+    if (file && onReplace) {
+      onReplace(item.original, file)
+    }
+    e.target.value = ''
   }
 
   const handleFileSelect = (e) => {
@@ -119,6 +129,21 @@ export function ProofImages({
               onClick={() => setPreviewIndex(idx)}
             />
             {item.isPending && <span className="proof-pending-badge">Pending</span>}
+            {!readOnly && !disabled && !item.isPending && (
+              <label
+                className="proof-replace-btn"
+                title="Replace image"
+                onClick={(e) => e.stopPropagation()}
+              >
+                &#8635;
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/heic,image/webp"
+                  onChange={(e) => handleReplace(e, item)}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            )}
             {!readOnly && !disabled && (
               <button
                 className="proof-delete-btn"

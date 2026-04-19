@@ -120,6 +120,19 @@ export function GoalModal({
     }
   }
 
+  // Replace an already-uploaded image: delete old from storage, stage new file
+  const handleReplaceImage = async (shift, oldImage, newFile) => {
+    if (onDeleteFromStorage) {
+      await onDeleteFromStorage(oldImage)
+    }
+    if (shift === 'morning') {
+      setMorningProofImages(prev => prev.filter(img => img.path !== oldImage.path))
+    } else {
+      setAfternoonProofImages(prev => prev.filter(img => img.path !== oldImage.path))
+    }
+    handleStageFiles(shift, [newFile])
+  }
+
   // Remove a pending (not yet uploaded) file
   const handleRemovePending = (shift, index) => {
     if (shift === 'morning') {
@@ -663,6 +676,7 @@ export function GoalModal({
                 pendingFiles={pendingMorningFiles}
                 onUpload={(files) => handleStageFiles('morning', files)}
                 onDelete={(image) => handleDeleteUploadedImage('morning', image)}
+                onReplace={(oldImage, newFile) => handleReplaceImage('morning', oldImage, newFile)}
                 onRemovePending={(index) => handleRemovePending('morning', index)}
                 uploading={proofUploadingShift === 'morning'}
                 disabled={!morningConfirmed || morningLocked}
@@ -907,6 +921,7 @@ export function GoalModal({
                 pendingFiles={pendingAfternoonFiles}
                 onUpload={(files) => handleStageFiles('afternoon', files)}
                 onDelete={(image) => handleDeleteUploadedImage('afternoon', image)}
+                onReplace={(oldImage, newFile) => handleReplaceImage('afternoon', oldImage, newFile)}
                 onRemovePending={(index) => handleRemovePending('afternoon', index)}
                 uploading={proofUploadingShift === 'afternoon'}
                 disabled={!afternoonConfirmed || afternoonLocked}
