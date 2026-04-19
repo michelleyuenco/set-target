@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { configService } from '../../infrastructure/firebase/configService'
+import { configAppService as configService } from '../../di/container'
 
 export function useWorkingMonth() {
   const [workingMonth, setWorkingMonth] = useState(null)

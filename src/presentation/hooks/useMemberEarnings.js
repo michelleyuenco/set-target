@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { memberEarningsService } from '../../infrastructure/firebase/memberEarningsService'
+import { memberEarningsAppService as memberEarningsService } from '../../di/container'
 
 export function useMemberEarnings() {
   const [earnings, setEarnings] = useState(null)

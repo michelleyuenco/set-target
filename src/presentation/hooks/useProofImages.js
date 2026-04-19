@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { storageService } from '../../infrastructure/firebase/storageService'
+import { storageAppService as storageService } from '../../di/container'
 
 export function useProofImages(uid) {
   const [uploadingShift, setUploadingShift] = useState(null)

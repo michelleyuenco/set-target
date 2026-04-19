@@ -363,6 +363,9 @@ export function MonthlySalaryModal({
   if (fullScreen) {
     return (
       <div className="monthly-salary-fullscreen" ref={scrollContainerRef}>
+        <button className="monthly-salary-back-btn" onClick={onClose} aria-label="Back">
+          &#8592; Back
+        </button>
         <div className="monthly-salary-fullscreen-content">
           {content}
         </div>

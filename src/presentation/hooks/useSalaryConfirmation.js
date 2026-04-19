@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { salaryConfirmationService } from '../../infrastructure/firebase/salaryConfirmationService'
+import { salaryConfirmationAppService as salaryConfirmationService } from '../../di/container'
 
 export function useSalaryConfirmation(year, month, uid) {
   const [adminConfirmed, setAdminConfirmed] = useState(false)

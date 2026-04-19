@@ -1,7 +1,5 @@
 import { createContext, useState, useEffect } from 'react'
-import { authService } from '../../infrastructure/firebase/authService'
-import { adminService } from '../../infrastructure/firebase/adminService'
-import { userProfileService } from '../../infrastructure/firebase/userProfileService'
+import { authAppService } from '../../di/container'
 
 export const AuthContext = createContext(null)
 
@@ -12,20 +10,20 @@ export function AuthProvider({ children }) {
   const [profileDisplayName, setProfileDisplayName] = useState(null)
 
   useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged(async (firebaseUser) => {
+    const unsubscribe = authAppService.onAuthStateChanged(async (firebaseUser) => {
       setUser(firebaseUser)
       if (firebaseUser) {
         // Save user profile and check admin status in parallel
         const [adminResult] = await Promise.all([
-          adminService.checkIsAdmin(firebaseUser.email),
-          userProfileService.saveProfile(firebaseUser).catch((err) => {
+          authAppService.checkIsAdmin(firebaseUser.email),
+          authAppService.saveProfile(firebaseUser).catch((err) => {
             console.error('Failed to save user profile:', err)
           })
         ])
         setIsAdmin(adminResult)
         // Fetch stored displayName from Firestore profile (may differ from Firebase Auth)
         try {
-          const profile = await userProfileService.getProfile(firebaseUser.uid)
+          const profile = await authAppService.getProfile(firebaseUser.uid)
           setProfileDisplayName(profile?.displayName || null)
         } catch (err) {
           console.error('Failed to fetch user profile:', err)
@@ -40,31 +38,31 @@ export function AuthProvider({ children }) {
   }, [])
 
   const signUpWithEmail = async (email, password) => {
-    return authService.signUpWithEmail(email, password)
+    return authAppService.signUpWithEmail(email, password)
   }
 
   const signInWithEmail = async (email, password) => {
-    return authService.signInWithEmail(email, password)
+    return authAppService.signInWithEmail(email, password)
   }
 
   const signInWithGoogle = async () => {
-    return authService.signInWithGoogle()
+    return authAppService.signInWithGoogle()
   }
 
   const signOut = async () => {
-    return authService.signOut()
+    return authAppService.signOut()
   }
 
   const changeEmail = async (currentPassword, newEmail) => {
-    return authService.changeEmail(currentPassword, newEmail)
+    return authAppService.changeEmail(currentPassword, newEmail)
   }
 
   const changePassword = async (currentPassword, newPassword) => {
-    return authService.changePassword(currentPassword, newPassword)
+    return authAppService.changePassword(currentPassword, newPassword)
   }
 
   const setPassword = async (newPassword) => {
-    return authService.setPassword(newPassword)
+    return authAppService.setPassword(newPassword)
   }
 
   return (

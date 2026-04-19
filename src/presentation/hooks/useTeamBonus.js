@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { teamBonusService } from '../../infrastructure/firebase/teamBonusService'
+import { teamBonusAppService as teamBonusService } from '../../di/container'
 
 function extractBonusData(teamBonus, userUid) {
   if (!teamBonus) return { totalShare: 0, locationBreakdown: [] }

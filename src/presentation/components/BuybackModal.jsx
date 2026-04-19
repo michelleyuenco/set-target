@@ -1,20 +1,36 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { DEFAULT_MORNING_END, DEFAULT_AFTERNOON_END } from '../../domain/entities/Goal'
 
 export function BuybackModal({ goals, viewYear, viewMonth, availableExcess, onBuyback, onClose }) {
   const [selectedTargets, setSelectedTargets] = useState(new Set())
+  const [now, setNow] = useState(() => new Date())
+
+  // Real-time clock for shift-end gating
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(timer)
+  }, [])
 
   const pad = (n) => String(n).padStart(2, '0')
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
 
-  // Get all unmet targets - only for confirmed shifts
+  const isShiftEnded = (dateStr, endTime) => {
+    const [endH, endM] = endTime.split(':').map(Number)
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const shiftEnd = new Date(y, m - 1, d, endH, endM, 0, 0)
+    return now >= shiftEnd
+  }
+
+  // Get all unmet targets - only for confirmed shifts whose shift has ended
   const unmetTargets = []
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`
     const goal = goals[dateStr]
 
     if (goal?.hasGoals) {
-      // Morning shift: confirmed, unmet and not bought back
-      if (goal.morningConfirmed && goal.morningAmount && goal.morningCalculatedWage !== 80 && !goal.morningBoughtBack) {
+      // Morning shift: confirmed, unmet, not bought back, and shift has ended
+      if (goal.morningConfirmed && goal.morningAmount && goal.morningCalculatedWage !== 80 && !goal.morningBoughtBack
+        && isShiftEnded(dateStr, goal.morningEndTime || DEFAULT_MORNING_END)) {
         unmetTargets.push({
           dateStr,
           shift: 'morning',
@@ -24,8 +40,9 @@ export function BuybackModal({ goals, viewYear, viewMonth, availableExcess, onBu
         })
       }
 
-      // Afternoon shift: confirmed, unmet and not bought back
-      if (goal.afternoonConfirmed && goal.afternoonAmount && goal.afternoonCalculatedWage !== 80 && !goal.afternoonBoughtBack) {
+      // Afternoon shift: confirmed, unmet, not bought back, and shift has ended
+      if (goal.afternoonConfirmed && goal.afternoonAmount && goal.afternoonCalculatedWage !== 80 && !goal.afternoonBoughtBack
+        && isShiftEnded(dateStr, goal.afternoonEndTime || DEFAULT_AFTERNOON_END)) {
         unmetTargets.push({
           dateStr,
           shift: 'afternoon',

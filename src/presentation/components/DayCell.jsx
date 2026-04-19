@@ -1,8 +1,16 @@
-import { useState } from 'react'
-import { DEFAULT_SHIFT_HOURS } from '../../domain/entities/Goal'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { DEFAULT_SHIFT_HOURS, DEFAULT_MORNING_END, DEFAULT_AFTERNOON_END } from '../../domain/entities/Goal'
 
 export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExcess, excessAllocation, locations, onClick, onBuyback, onWageClick }) {
   const [proofPreview, setProofPreview] = useState(null) // { images, index }
+  const [now, setNow] = useState(() => new Date())
+
+  // Real-time clock for shift-end gating (re-render every minute)
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(timer)
+  }, [])
 
   const getLocationAbbr = (locationName) => {
     if (!locationName || !locations) return null
@@ -26,6 +34,19 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     e.stopPropagation()
     setProofPreview(p => ({ ...p, index: p.index < p.images.length - 1 ? p.index + 1 : 0 }))
   }
+  useEffect(() => {
+    if (!proofPreview || proofPreview.images.length <= 1) return
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        setProofPreview(p => ({ ...p, index: p.index > 0 ? p.index - 1 : p.images.length - 1 }))
+      } else if (e.key === 'ArrowRight') {
+        setProofPreview(p => ({ ...p, index: p.index < p.images.length - 1 ? p.index + 1 : 0 }))
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [proofPreview])
+
   const bothShiftsVerified = goal?.morningConfirmed && goal?.morningAdminConfirmed &&
     goal?.afternoonConfirmed && goal?.afternoonAdminConfirmed
 
@@ -51,8 +72,18 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
   const isMorningUnmet = goal?.morningConfirmed && goal?.morningAmount && goal?.morningCalculatedWage !== 80 && !goal?.morningBoughtBack
   const isAfternoonUnmet = goal?.afternoonConfirmed && goal?.afternoonAmount && goal?.afternoonCalculatedWage !== 80 && !goal?.afternoonBoughtBack
 
-  const canBuyMorning = isMorningUnmet && goal?.morningAmount <= availableExcess
-  const canBuyAfternoon = isAfternoonUnmet && goal?.afternoonAmount <= availableExcess
+  // Only allow buyback after the shift has ended
+  const isShiftEnded = (endTime) => {
+    const [endH, endM] = endTime.split(':').map(Number)
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const shiftEnd = new Date(y, m - 1, d, endH, endM, 0, 0)
+    return now >= shiftEnd
+  }
+  const morningEnded = isShiftEnded(goal?.morningEndTime || DEFAULT_MORNING_END)
+  const afternoonEnded = isShiftEnded(goal?.afternoonEndTime || DEFAULT_AFTERNOON_END)
+
+  const canBuyMorning = isMorningUnmet && goal?.morningAmount <= availableExcess && morningEnded
+  const canBuyAfternoon = isAfternoonUnmet && goal?.afternoonAmount <= availableExcess && afternoonEnded
 
   const handleBuyback = (shift, e) => {
     e.stopPropagation()
@@ -412,7 +443,7 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
         </div>
       )}
 
-      {proofPreview && (
+      {proofPreview && createPortal(
         <div className="proof-preview-overlay" onClick={closeProofPreview}>
           <div className="proof-preview-content" onClick={e => e.stopPropagation()}>
             <button className="proof-preview-close" onClick={closeProofPreview}>&times;</button>
@@ -430,7 +461,8 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
               <span>{proofPreview.images[proofPreview.index].name}</span>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

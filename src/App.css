@@ -1152,6 +1152,16 @@ body {
   align-items: center;
   gap: 8px;
   flex: 1;
+  flex-wrap: wrap;
+}
+
+.actual-expanded .input-compact-actual {
+  flex: 1 1 100%;
+  order: 3;
+}
+
+.actual-expanded .wage-compact {
+  order: 1;
 }
 
 .input-compact {
@@ -1170,7 +1180,8 @@ body {
   letter-spacing: 0.3px;
 }
 
-.input-compact input {
+.input-compact input,
+.input-compact textarea {
   width: 100%;
   padding: 4px 6px;
   border: 1.5px solid #e0e0e0;
@@ -1182,19 +1193,29 @@ body {
   appearance: textfield;
 }
 
+.input-compact textarea {
+  resize: none;
+  overflow: hidden;
+  font-family: inherit;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
 .input-compact input::-webkit-outer-spin-button,
 .input-compact input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-.input-compact input:focus {
+.input-compact input:focus,
+.input-compact textarea:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
-.input-compact input::placeholder {
+.input-compact input::placeholder,
+.input-compact textarea::placeholder {
   color: #d1d5db;
   font-weight: 400;
 }
@@ -8691,6 +8712,28 @@ body {
   max-width: 520px;
   margin: 0 auto;
   padding: 24px 20px 40px;
+}
+
+.monthly-salary-back-btn {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 12px 0 0 12px;
+  padding: 8px 14px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+}
+
+.monthly-salary-back-btn:hover {
+  background: #e5e7eb;
 }
 
 .monthly-salary-fullscreen .salary-daily-list {

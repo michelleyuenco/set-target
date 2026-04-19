@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { rosterService } from '../../infrastructure/firebase/rosterService'
+import { rosterAppService as rosterService } from '../../di/container'
 
 // year and month are 1-based (e.g., month=3 for March)
 export function useRoster(year, month, currentUserUid) {

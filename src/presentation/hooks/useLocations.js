@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { locationService } from '../../infrastructure/firebase/locationService'
+import { locationAppService as locationService } from '../../di/container'
 
 export function useLocations(ready) {
   const [locations, setLocations] = useState([])

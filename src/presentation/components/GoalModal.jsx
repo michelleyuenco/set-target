@@ -173,6 +173,12 @@ export function GoalModal({
     if (result !== null) setActual(String(result))
   }
 
+  const autoResize = (el) => {
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }
+
   const handleSave = async () => {
     setSaving(true)
     setSaveError(null)
@@ -457,7 +463,7 @@ export function GoalModal({
           </div>
           <div className={`shift-section-wrapper ${!morningConfirmed ? 'shift-unconfirmed' : ''}`}>
             <div className="shift-row">
-              <div className="shift-inputs">
+              <div className={`shift-inputs${/[+\-*/]/.test(String(morningActualInput)) ? ' actual-expanded' : ''}`}>
                 <div className="input-compact">
                   <label>Target</label>
                   <input
@@ -468,19 +474,22 @@ export function GoalModal({
                     disabled={readOnly || !morningConfirmed || morningLocked}
                   />
                 </div>
-                <div className="input-compact">
+                <div className="input-compact input-compact-actual">
                   <label>Actual</label>
                   <div className="actual-input-wrapper">
-                    <input
-                      type="text"
+                    <textarea
+                      rows="1"
                       inputMode="decimal"
                       value={morningActualInput}
                       onChange={(e) => {
                         setMorningActualInput(e.target.value)
                         const result = evaluateFormula(e.target.value)
                         if (result !== null) setMorningActual(String(result))
+                        autoResize(e.target)
                       }}
                       onBlur={() => handleActualBlur(morningActualInput, setMorningActual)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
+                      ref={(el) => autoResize(el)}
                       placeholder="0"
                       disabled={readOnly || !morningConfirmed || morningLocked}
                     />
@@ -698,7 +707,7 @@ export function GoalModal({
           </div>
           <div className={`shift-section-wrapper ${!afternoonConfirmed ? 'shift-unconfirmed' : ''}`}>
             <div className="shift-row">
-              <div className="shift-inputs">
+              <div className={`shift-inputs${/[+\-*/]/.test(String(afternoonActualInput)) ? ' actual-expanded' : ''}`}>
                 <div className="input-compact">
                   <label>Target</label>
                   <input
@@ -709,19 +718,22 @@ export function GoalModal({
                     disabled={readOnly || !afternoonConfirmed || afternoonLocked}
                   />
                 </div>
-                <div className="input-compact">
+                <div className="input-compact input-compact-actual">
                   <label>Actual</label>
                   <div className="actual-input-wrapper">
-                    <input
-                      type="text"
+                    <textarea
+                      rows="1"
                       inputMode="decimal"
                       value={afternoonActualInput}
                       onChange={(e) => {
                         setAfternoonActualInput(e.target.value)
                         const result = evaluateFormula(e.target.value)
                         if (result !== null) setAfternoonActual(String(result))
+                        autoResize(e.target)
                       }}
                       onBlur={() => handleActualBlur(afternoonActualInput, setAfternoonActual)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
+                      ref={(el) => autoResize(el)}
                       placeholder="0"
                       disabled={readOnly || !afternoonConfirmed || afternoonLocked}
                     />

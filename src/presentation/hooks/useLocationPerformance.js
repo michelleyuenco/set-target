@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { teamBonusService } from '../../infrastructure/firebase/teamBonusService'
+import { teamBonusAppService as teamBonusService } from '../../di/container'
 
 // Returns location performance stats for all members for a given month.
 // year/month follow the same 0-based month convention as the rest of App.jsx.

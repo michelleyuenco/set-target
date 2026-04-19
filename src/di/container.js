@@ -1,16 +1,41 @@
 import { LocalStorageGoalRepository } from '../infrastructure/repositories/LocalStorageGoalRepository'
 import { CachedFirestoreGoalRepository } from '../infrastructure/repositories/CachedFirestoreGoalRepository'
 import { GoalService } from '../application/services/GoalService'
+import { AuthService } from '../application/services/AuthService'
+import { MemberService } from '../application/services/MemberService'
+import { RosterService } from '../application/services/RosterService'
+import { TeamBonusService } from '../application/services/TeamBonusService'
+import { LocationService } from '../application/services/LocationService'
+import { StorageService } from '../application/services/StorageService'
+import { MemberEarningsAppService } from '../application/services/MemberEarningsAppService'
+import { SalaryConfirmationService } from '../application/services/SalaryConfirmationService'
+import { MonthlyAdjustmentsService } from '../application/services/MonthlyAdjustmentsService'
+import { ConfigAppService } from '../application/services/ConfigAppService'
 
-// localStorage-based service (always available)
+// Infrastructure adapters (concrete implementations of ports)
+import { authService as authAdapter } from '../infrastructure/firebase/authService'
+import { adminService as adminAdapter } from '../infrastructure/firebase/adminService'
+import { userProfileService as userProfileAdapter } from '../infrastructure/firebase/userProfileService'
+import { rosterService as rosterAdapter } from '../infrastructure/firebase/rosterService'
+import { teamBonusService as teamBonusAdapter } from '../infrastructure/firebase/teamBonusService'
+import { locationService as locationAdapter } from '../infrastructure/firebase/locationService'
+import { storageService as storageAdapter } from '../infrastructure/firebase/storageService'
+import { memberEarningsService as memberEarningsAdapter } from '../infrastructure/firebase/memberEarningsService'
+import { salaryConfirmationService as salaryConfirmationAdapter } from '../infrastructure/firebase/salaryConfirmationService'
+import { monthlyAdjustmentsService as monthlyAdjustmentsAdapter } from '../infrastructure/firebase/monthlyAdjustmentsService'
+import { configService as configAdapter } from '../infrastructure/firebase/configService'
+
+// Re-export ID helpers from roster adapter for use in presentation
+export { appDocId } from '../infrastructure/firebase/rosterService'
+
+// --- Goal services (existing pattern) ---
+
 const localRepository = new LocalStorageGoalRepository()
 const localGoalService = new GoalService(localRepository)
 
-// Firestore-based service (created on login)
 let firestoreRepository = null
 let firestoreGoalService = null
 
-// Admin member viewing (created when admin selects a member)
 let adminMemberRepository = null
 let adminMemberGoalService = null
 let viewingAsMember = false
@@ -76,3 +101,16 @@ export function getLocalGoalService() {
 
 // Default export for backward compatibility
 export const goalService = localGoalService
+
+// --- Application services (wired with infrastructure adapters) ---
+
+export const authAppService = new AuthService(authAdapter, adminAdapter, userProfileAdapter)
+export const memberService = new MemberService(userProfileAdapter, adminAdapter)
+export const rosterAppService = new RosterService(rosterAdapter)
+export const teamBonusAppService = new TeamBonusService(teamBonusAdapter)
+export const locationAppService = new LocationService(locationAdapter)
+export const storageAppService = new StorageService(storageAdapter)
+export const memberEarningsAppService = new MemberEarningsAppService(memberEarningsAdapter)
+export const salaryConfirmationAppService = new SalaryConfirmationService(salaryConfirmationAdapter)
+export const monthlyAdjustmentsAppService = new MonthlyAdjustmentsService(monthlyAdjustmentsAdapter)
+export const configAppService = new ConfigAppService(configAdapter)

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { teamBonusService } from '../../infrastructure/firebase/teamBonusService'
+import { teamBonusAppService as teamBonusService } from '../../di/container'
 
 export function useLocationCalendar() {
   const [membersGoals, setMembersGoals] = useState(null)

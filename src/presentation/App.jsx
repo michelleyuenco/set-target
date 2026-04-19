@@ -35,11 +35,9 @@ import { useMiscAdjustments } from './hooks/useMiscAdjustments'
 import { useWorkingMonth } from './hooks/useWorkingMonth'
 import { useSalaryConfirmation } from './hooks/useSalaryConfirmation'
 import { useUpdateChecker } from './hooks/useUpdateChecker'
-import { salaryConfirmationService } from '../infrastructure/firebase/salaryConfirmationService'
-import { authService } from '../infrastructure/firebase/authService'
-import { initFirestoreService, clearFirestoreService, getLocalGoalService, getFirestoreRepository, initAdminMemberService, clearAdminMemberService, subscribeAdminMemberGoals } from '../di/container'
+import { salaryConfirmationAppService as salaryConfirmationService, authAppService as authService, initFirestoreService, clearFirestoreService, getLocalGoalService, getFirestoreRepository, initAdminMemberService, clearAdminMemberService, subscribeAdminMemberGoals } from '../di/container'
 import { DataMigrationService } from '../application/services/DataMigrationService'
-import { DEFAULT_SHIFT_HOURS } from '../domain/entities/Goal'
+import { DEFAULT_SHIFT_HOURS, DEFAULT_MORNING_END, DEFAULT_AFTERNOON_END } from '../domain/entities/Goal'
 import '../App.css'
 
 const MONTH_NAMES = [
@@ -468,6 +466,15 @@ export function App() {
   const handleQuickBuyback = (dateStr, shift) => {
     // Block buyback when viewing a member in read-only mode
     if (adminViewingUid && !adminEditMode) return
+    // Block buyback if the shift hasn't ended yet
+    const goal = goals[dateStr]
+    const endTime = shift === 'morning'
+      ? (goal?.morningEndTime || DEFAULT_MORNING_END)
+      : (goal?.afternoonEndTime || DEFAULT_AFTERNOON_END)
+    const [endH, endM] = endTime.split(':').map(Number)
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const shiftEnd = new Date(y, m - 1, d, endH, endM, 0, 0)
+    if (new Date() < shiftEnd) return
     buybackTarget(dateStr, shift)
   }
 

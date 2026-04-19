@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { monthlyAdjustmentsService } from '../../infrastructure/firebase/monthlyAdjustmentsService'
+import { monthlyAdjustmentsAppService as monthlyAdjustmentsService } from '../../di/container'
 
 export function useMiscAdjustments(year, month, uid) {
   const [items, setItems] = useState([])

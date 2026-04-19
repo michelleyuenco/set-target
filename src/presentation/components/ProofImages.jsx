@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 export function ProofImages({
   images = [],
@@ -29,6 +30,19 @@ export function ProofImages({
     e.stopPropagation()
     setPreviewIndex(prev => (prev < allItems.length - 1 ? prev + 1 : 0))
   }
+
+  useEffect(() => {
+    if (previewIndex === null || allItems.length <= 1) return
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        setPreviewIndex(prev => (prev > 0 ? prev - 1 : allItems.length - 1))
+      } else if (e.key === 'ArrowRight') {
+        setPreviewIndex(prev => (prev < allItems.length - 1 ? prev + 1 : 0))
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [previewIndex, allItems.length])
 
   const handleDelete = (e, item, idx) => {
     e.stopPropagation()
@@ -118,7 +132,7 @@ export function ProofImages({
         ))}
       </div>
 
-      {previewItem && (
+      {previewItem && createPortal(
         <div className="proof-preview-overlay" onClick={() => setPreviewIndex(null)}>
           <div className="proof-preview-content" onClick={e => e.stopPropagation()}>
             <button className="proof-preview-close" onClick={() => setPreviewIndex(null)}>
@@ -139,7 +153,8 @@ export function ProofImages({
               {previewItem.isPending && <span className="proof-preview-pending-note">Not saved yet</span>}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

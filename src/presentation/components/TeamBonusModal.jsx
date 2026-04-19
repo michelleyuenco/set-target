@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { teamBonusService } from '../../infrastructure/firebase/teamBonusService'
+import { teamBonusAppService as teamBonusService } from '../../di/container'
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',

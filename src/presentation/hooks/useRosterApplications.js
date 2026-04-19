@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { rosterService, appDocId } from '../../infrastructure/firebase/rosterService'
+import { rosterAppService as rosterService, appDocId } from '../../di/container'
 
 export function useRosterApplications(year, month, currentUserUid, isAdmin) {
   const [applications, setApplications] = useState([])
