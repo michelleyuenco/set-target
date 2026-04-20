@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Goal, DEFAULT_MORNING_START, DEFAULT_MORNING_END, DEFAULT_AFTERNOON_START, DEFAULT_AFTERNOON_END } from '../../domain/entities/Goal'
 import { ProofImages } from './ProofImages'
 
@@ -53,6 +54,7 @@ export function GoalModal({
   const [pendingAfternoonFiles, setPendingAfternoonFiles] = useState([])
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
+  const [previewIndex, setPreviewIndex] = useState(null)
 
   useEffect(() => {
     // Revoke any pending object URLs from the previous open
@@ -153,8 +155,49 @@ export function GoalModal({
     pendingAfternoonFiles.forEach(p => URL.revokeObjectURL(p.localUrl))
     setPendingMorningFiles([])
     setPendingAfternoonFiles([])
+    setPreviewIndex(null)
     onCancel()
   }
+
+  // Combined preview list across both shifts — enables arrow-key navigation from
+  // Shift A images into Shift B images within the same day.
+  const morningItems = useMemo(() => [
+    ...morningProofImages.map(img => ({ url: img.url, name: img.name, isPending: false, shiftLabel: 'A' })),
+    ...pendingMorningFiles.map(pf => ({ url: pf.localUrl, name: pf.name, isPending: true, shiftLabel: 'A' }))
+  ], [morningProofImages, pendingMorningFiles])
+
+  const afternoonItems = useMemo(() => [
+    ...afternoonProofImages.map(img => ({ url: img.url, name: img.name, isPending: false, shiftLabel: 'B' })),
+    ...pendingAfternoonFiles.map(pf => ({ url: pf.localUrl, name: pf.name, isPending: true, shiftLabel: 'B' }))
+  ], [afternoonProofImages, pendingAfternoonFiles])
+
+  const combinedItems = useMemo(() => [...morningItems, ...afternoonItems], [morningItems, afternoonItems])
+  const afternoonOffset = morningItems.length
+
+  useEffect(() => {
+    if (previewIndex !== null && previewIndex >= combinedItems.length) {
+      setPreviewIndex(null)
+    }
+  }, [previewIndex, combinedItems.length])
+
+  useEffect(() => {
+    if (previewIndex === null || combinedItems.length <= 1) return
+    const onKey = (e) => {
+      if (e.key === 'ArrowLeft') {
+        setPreviewIndex(prev => (prev > 0 ? prev - 1 : combinedItems.length - 1))
+      } else if (e.key === 'ArrowRight') {
+        setPreviewIndex(prev => (prev < combinedItems.length - 1 ? prev + 1 : 0))
+      } else if (e.key === 'Escape') {
+        setPreviewIndex(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [previewIndex, combinedItems.length])
+
+  const goPrev = (e) => { e.stopPropagation(); setPreviewIndex(prev => (prev > 0 ? prev - 1 : combinedItems.length - 1)) }
+  const goNext = (e) => { e.stopPropagation(); setPreviewIndex(prev => (prev < combinedItems.length - 1 ? prev + 1 : 0)) }
+  const previewItem = previewIndex !== null ? combinedItems[previewIndex] : null
 
   const evaluateFormula = (expr) => {
     if (!expr || String(expr).trim() === '') return null
@@ -681,6 +724,7 @@ export function GoalModal({
                 uploading={proofUploadingShift === 'morning'}
                 disabled={!morningConfirmed || morningLocked}
                 readOnly={readOnly}
+                onOpenPreview={(idx) => setPreviewIndex(idx)}
               />
             </div>
           </div>
@@ -926,6 +970,7 @@ export function GoalModal({
                 uploading={proofUploadingShift === 'afternoon'}
                 disabled={!afternoonConfirmed || afternoonLocked}
                 readOnly={readOnly}
+                onOpenPreview={(idx) => setPreviewIndex(afternoonOffset + idx)}
               />
             </div>
           </div>
@@ -956,6 +1001,31 @@ export function GoalModal({
           </div>
         )}
       </div>
+      {previewItem && createPortal(
+        <div className="proof-preview-overlay" onClick={() => setPreviewIndex(null)}>
+          <div className="proof-preview-content" onClick={e => e.stopPropagation()}>
+            <button className="proof-preview-close" onClick={() => setPreviewIndex(null)}>&times;</button>
+            {combinedItems.length > 1 && (
+              <>
+                <button className="proof-preview-nav proof-preview-prev" onClick={goPrev}>&#8249;</button>
+                <button className="proof-preview-nav proof-preview-next" onClick={goNext}>&#8250;</button>
+              </>
+            )}
+            <img src={previewItem.url} alt={previewItem.name} />
+            <div className="proof-preview-info">
+              <div className="proof-preview-info-row">
+                <span className={`proof-preview-shift-label shift-${previewItem.shiftLabel === 'A' ? 'a' : 'b'}`}>Shift {previewItem.shiftLabel}</span>
+                {combinedItems.length > 1 && (
+                  <span className="proof-preview-counter">{previewIndex + 1} / {combinedItems.length}</span>
+                )}
+              </div>
+              <span>{previewItem.name}</span>
+              {previewItem.isPending && <span className="proof-preview-pending-note">Not saved yet</span>}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

@@ -2051,6 +2051,30 @@ body {
   font-weight: 600;
 }
 
+.proof-preview-info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.proof-preview-shift-label {
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #94a3b8;
+}
+
+.proof-preview-shift-label.shift-a {
+  background: #f59e0b;
+}
+
+.proof-preview-shift-label.shift-b {
+  background: #6366f1;
+}
+
 /* Responsive adjustments */
 @media (max-width: 800px) {
   .modal-compact {
@@ -2548,11 +2572,10 @@ body {
     width: 0;
   }
 
-  /* Prevent iOS zoom on input focus (requires font-size >= 16px) */
-  .modal input,
-  .modal select,
-  .modal textarea,
-  .login-form .form-group input {
+  /* Prevent iOS Safari auto-zoom on input focus (requires font-size >= 16px) */
+  input,
+  select,
+  textarea {
     font-size: 16px !important;
   }
 

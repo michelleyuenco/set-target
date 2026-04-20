@@ -10,8 +10,10 @@ export function ProofImages({
   onRemovePending,
   uploading,
   disabled,
-  readOnly
+  readOnly,
+  onOpenPreview
 }) {
+  const controlled = typeof onOpenPreview === 'function'
   const [previewIndex, setPreviewIndex] = useState(null)
 
   // Combine uploaded + pending into one list for the lightbox
@@ -20,7 +22,7 @@ export function ProofImages({
     ...pendingFiles.map((pf, i) => ({ url: pf.localUrl, name: pf.name, isPending: true, pendingIndex: i }))
   ]
 
-  const previewItem = previewIndex !== null ? allItems[previewIndex] : null
+  const previewItem = !controlled && previewIndex !== null ? allItems[previewIndex] : null
 
   const goToPrev = (e) => {
     e.stopPropagation()
@@ -33,7 +35,7 @@ export function ProofImages({
   }
 
   useEffect(() => {
-    if (previewIndex === null || allItems.length <= 1) return
+    if (controlled || previewIndex === null || allItems.length <= 1) return
     const handleKeyDown = (e) => {
       if (e.key === 'ArrowLeft') {
         setPreviewIndex(prev => (prev > 0 ? prev - 1 : allItems.length - 1))
@@ -43,16 +45,16 @@ export function ProofImages({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [previewIndex, allItems.length])
+  }, [controlled, previewIndex, allItems.length])
 
   const handleDelete = (e, item, idx) => {
     e.stopPropagation()
     if (item.isPending) {
       onRemovePending(item.pendingIndex)
-      if (previewIndex === idx) setPreviewIndex(null)
+      if (!controlled && previewIndex === idx) setPreviewIndex(null)
     } else {
       onDelete(item.original)
-      if (previewIndex === idx) setPreviewIndex(null)
+      if (!controlled && previewIndex === idx) setPreviewIndex(null)
     }
   }
 
@@ -126,7 +128,7 @@ export function ProofImages({
             <img
               src={item.url}
               alt={item.name}
-              onClick={() => setPreviewIndex(idx)}
+              onClick={() => (controlled ? onOpenPreview(idx) : setPreviewIndex(idx))}
             />
             {item.isPending && <span className="proof-pending-badge">Pending</span>}
             {!readOnly && !disabled && !item.isPending && (

@@ -18,34 +18,42 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     return loc?.abbr || locationName
   }
 
-  const openProofPreview = (images, index, e) => {
+  // Combined proof image list across both shifts — arrow keys navigate across shifts.
+  const combinedProofImages = [
+    ...(goal?.morningProofImages || []).map(img => ({ ...img, shiftLabel: 'A' })),
+    ...(goal?.afternoonProofImages || []).map(img => ({ ...img, shiftLabel: 'B' }))
+  ]
+  const afternoonProofOffset = (goal?.morningProofImages || []).length
+
+  const openProofPreview = (shift, index, e) => {
     e.stopPropagation()
-    setProofPreview({ images, index })
+    const offset = shift === 'morning' ? 0 : afternoonProofOffset
+    setProofPreview({ index: offset + index })
   }
 
   const closeProofPreview = () => setProofPreview(null)
 
   const prevProof = (e) => {
     e.stopPropagation()
-    setProofPreview(p => ({ ...p, index: p.index > 0 ? p.index - 1 : p.images.length - 1 }))
+    setProofPreview(p => ({ ...p, index: p.index > 0 ? p.index - 1 : combinedProofImages.length - 1 }))
   }
 
   const nextProof = (e) => {
     e.stopPropagation()
-    setProofPreview(p => ({ ...p, index: p.index < p.images.length - 1 ? p.index + 1 : 0 }))
+    setProofPreview(p => ({ ...p, index: p.index < combinedProofImages.length - 1 ? p.index + 1 : 0 }))
   }
   useEffect(() => {
-    if (!proofPreview || proofPreview.images.length <= 1) return
+    if (!proofPreview || combinedProofImages.length <= 1) return
     const handleKeyDown = (e) => {
       if (e.key === 'ArrowLeft') {
-        setProofPreview(p => ({ ...p, index: p.index > 0 ? p.index - 1 : p.images.length - 1 }))
+        setProofPreview(p => ({ ...p, index: p.index > 0 ? p.index - 1 : combinedProofImages.length - 1 }))
       } else if (e.key === 'ArrowRight') {
-        setProofPreview(p => ({ ...p, index: p.index < p.images.length - 1 ? p.index + 1 : 0 }))
+        setProofPreview(p => ({ ...p, index: p.index < combinedProofImages.length - 1 ? p.index + 1 : 0 }))
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [proofPreview])
+  }, [proofPreview, combinedProofImages.length])
 
   const bothShiftsVerified = goal?.morningConfirmed && goal?.morningAdminConfirmed &&
     goal?.afternoonConfirmed && goal?.afternoonAdminConfirmed
@@ -305,7 +313,7 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                     </span>
                   )}
                   {goal.morningProofImages?.length > 0 && (
-                    <span className="proof-icon proof-icon-clickable" title={`${goal.morningProofImages.length} proof image${goal.morningProofImages.length > 1 ? 's' : ''} — click to preview`} onClick={(e) => openProofPreview(goal.morningProofImages, 0, e)}>&#128247;</span>
+                    <span className="proof-icon proof-icon-clickable" title={`${goal.morningProofImages.length} proof image${goal.morningProofImages.length > 1 ? 's' : ''} — click to preview`} onClick={(e) => openProofPreview('morning', 0, e)}>&#128247;</span>
                   )}
                   <span className={`shift-wage ${wageClass(goal.morningWage, goal.morningCustomWage)}`}>${goal.morningWage}<span className="wage-suffix">/hr</span></span>
                 </div>
@@ -385,7 +393,7 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                     </span>
                   )}
                   {goal.afternoonProofImages?.length > 0 && (
-                    <span className="proof-icon proof-icon-clickable" title={`${goal.afternoonProofImages.length} proof image${goal.afternoonProofImages.length > 1 ? 's' : ''} — click to preview`} onClick={(e) => openProofPreview(goal.afternoonProofImages, 0, e)}>&#128247;</span>
+                    <span className="proof-icon proof-icon-clickable" title={`${goal.afternoonProofImages.length} proof image${goal.afternoonProofImages.length > 1 ? 's' : ''} — click to preview`} onClick={(e) => openProofPreview('afternoon', 0, e)}>&#128247;</span>
                   )}
                   <span className={`shift-wage ${wageClass(goal.afternoonWage, goal.afternoonCustomWage)}`}>${goal.afternoonWage}<span className="wage-suffix">/hr</span></span>
                 </div>
@@ -443,22 +451,25 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
         </div>
       )}
 
-      {proofPreview && createPortal(
+      {proofPreview && combinedProofImages[proofPreview.index] && createPortal(
         <div className="proof-preview-overlay" onClick={closeProofPreview}>
           <div className="proof-preview-content" onClick={e => e.stopPropagation()}>
             <button className="proof-preview-close" onClick={closeProofPreview}>&times;</button>
-            {proofPreview.images.length > 1 && (
+            {combinedProofImages.length > 1 && (
               <>
                 <button className="proof-preview-nav proof-preview-prev" onClick={prevProof}>&#8249;</button>
                 <button className="proof-preview-nav proof-preview-next" onClick={nextProof}>&#8250;</button>
               </>
             )}
-            <img src={proofPreview.images[proofPreview.index].url} alt={proofPreview.images[proofPreview.index].name} />
+            <img src={combinedProofImages[proofPreview.index].url} alt={combinedProofImages[proofPreview.index].name} />
             <div className="proof-preview-info">
-              {proofPreview.images.length > 1 && (
-                <span className="proof-preview-counter">{proofPreview.index + 1} / {proofPreview.images.length}</span>
-              )}
-              <span>{proofPreview.images[proofPreview.index].name}</span>
+              <div className="proof-preview-info-row">
+                <span className={`proof-preview-shift-label shift-${combinedProofImages[proofPreview.index].shiftLabel === 'A' ? 'a' : 'b'}`}>Shift {combinedProofImages[proofPreview.index].shiftLabel}</span>
+                {combinedProofImages.length > 1 && (
+                  <span className="proof-preview-counter">{proofPreview.index + 1} / {combinedProofImages.length}</span>
+                )}
+              </div>
+              <span>{combinedProofImages[proofPreview.index].name}</span>
             </div>
           </div>
         </div>,
