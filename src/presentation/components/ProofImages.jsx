@@ -16,10 +16,38 @@ export function ProofImages({
   const controlled = typeof onOpenPreview === 'function'
   const [previewIndex, setPreviewIndex] = useState(null)
 
-  // Combine uploaded + pending into one list for the lightbox
+  // Pending files split into two kinds: replacements (sit in the original
+  // image's slot via `replacingPath`) and pure additions (appended at end).
+  const replacementsByPath = new Map()
+  const additions = []
+  pendingFiles.forEach((pf, i) => {
+    const tagged = { ...pf, pendingIndex: i }
+    if (pf.replacingPath) replacementsByPath.set(pf.replacingPath, tagged)
+    else additions.push(tagged)
+  })
+
+  const positionedItems = images.map(img => {
+    const r = replacementsByPath.get(img.path)
+    if (r) {
+      return {
+        url: r.localUrl,
+        name: r.name,
+        isPending: true,
+        pendingIndex: r.pendingIndex,
+        original: img
+      }
+    }
+    return { url: img.url, name: img.name, isPending: false, original: img }
+  })
+
   const allItems = [
-    ...images.map(img => ({ url: img.url, name: img.name, isPending: false, original: img })),
-    ...pendingFiles.map((pf, i) => ({ url: pf.localUrl, name: pf.name, isPending: true, pendingIndex: i }))
+    ...positionedItems,
+    ...additions.map(pf => ({
+      url: pf.localUrl,
+      name: pf.name,
+      isPending: true,
+      pendingIndex: pf.pendingIndex
+    }))
   ]
 
   const previewItem = !controlled && previewIndex !== null ? allItems[previewIndex] : null
@@ -49,13 +77,17 @@ export function ProofImages({
 
   const handleDelete = (e, item, idx) => {
     e.stopPropagation()
-    if (item.isPending) {
+    // × on a pending replacement removes the pending file AND deletes the
+    // underlying image — × always means "remove this slot from my proof set".
+    if (item.isPending && item.original) {
       onRemovePending(item.pendingIndex)
-      if (!controlled && previewIndex === idx) setPreviewIndex(null)
+      onDelete(item.original)
+    } else if (item.isPending) {
+      onRemovePending(item.pendingIndex)
     } else {
       onDelete(item.original)
-      if (!controlled && previewIndex === idx) setPreviewIndex(null)
     }
+    if (!controlled && previewIndex === idx) setPreviewIndex(null)
   }
 
   const handleReplace = (e, item) => {
@@ -122,7 +154,7 @@ export function ProofImages({
       <div className="proof-thumbnails">
         {allItems.map((item, idx) => (
           <div
-            key={item.isPending ? `pending-${item.pendingIndex}` : (item.original.path || idx)}
+            key={item.original ? (item.original.path || `idx-${idx}`) : `pending-${item.pendingIndex}`}
             className={`proof-thumbnail${item.isPending ? ' proof-thumbnail-pending' : ''}`}
           >
             <img
@@ -131,7 +163,7 @@ export function ProofImages({
               onClick={() => (controlled ? onOpenPreview(idx) : setPreviewIndex(idx))}
             />
             {item.isPending && <span className="proof-pending-badge">Pending</span>}
-            {!readOnly && !disabled && !item.isPending && (
+            {!readOnly && !disabled && item.original && (
               <label
                 className="proof-replace-btn"
                 title="Replace image"
@@ -150,7 +182,7 @@ export function ProofImages({
               <button
                 className="proof-delete-btn"
                 onClick={(e) => handleDelete(e, item, idx)}
-                title={item.isPending ? 'Remove (not yet saved)' : 'Delete image'}
+                title={item.isPending && !item.original ? 'Remove (not yet saved)' : 'Delete image'}
               >
                 &times;
               </button>

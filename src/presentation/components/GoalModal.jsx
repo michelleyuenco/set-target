@@ -110,29 +110,42 @@ export function GoalModal({
     }
   }
 
-  // Delete an already-uploaded image from Firebase Storage immediately
+  // Delete an already-uploaded image from Firebase Storage immediately.
+  // Optimistic: hide the tile right away, restore + surface the error if the
+  // storage delete fails so the user knows to retry.
   const handleDeleteUploadedImage = async (shift, image) => {
-    if (onDeleteFromStorage) {
+    const setter = shift === 'morning' ? setMorningProofImages : setAfternoonProofImages
+    setter(prev => prev.filter(img => img.path !== image.path))
+    if (!onDeleteFromStorage) return
+    try {
       await onDeleteFromStorage(image)
-    }
-    if (shift === 'morning') {
-      setMorningProofImages(prev => prev.filter(img => img.path !== image.path))
-    } else {
-      setAfternoonProofImages(prev => prev.filter(img => img.path !== image.path))
+    } catch (err) {
+      setter(prev => prev.some(img => img.path === image.path) ? prev : [...prev, image])
+      setSaveError(err?.message || 'Failed to delete image')
     }
   }
 
-  // Replace an already-uploaded image: delete old from storage, stage new file
-  const handleReplaceImage = async (shift, oldImage, newFile) => {
-    if (onDeleteFromStorage) {
-      await onDeleteFromStorage(oldImage)
-    }
-    if (shift === 'morning') {
-      setMorningProofImages(prev => prev.filter(img => img.path !== oldImage.path))
-    } else {
-      setAfternoonProofImages(prev => prev.filter(img => img.path !== oldImage.path))
-    }
-    handleStageFiles(shift, [newFile])
+  // Stage a replacement for an already-uploaded image. We don't touch storage
+  // until Save — that way the original is restored on Cancel and the pending
+  // tile can sit in the original's position via `replacingPath`.
+  const handleReplaceImage = (shift, oldImage, newFile) => {
+    const setter = shift === 'morning' ? setPendingMorningFiles : setPendingAfternoonFiles
+    setter(prev => {
+      const staged = {
+        file: newFile,
+        localUrl: URL.createObjectURL(newFile),
+        name: newFile.name,
+        replacingPath: oldImage.path
+      }
+      const existingIdx = prev.findIndex(p => p.replacingPath === oldImage.path)
+      if (existingIdx >= 0) {
+        URL.revokeObjectURL(prev[existingIdx].localUrl)
+        const next = [...prev]
+        next[existingIdx] = staged
+        return next
+      }
+      return [...prev, staged]
+    })
   }
 
   // Remove a pending (not yet uploaded) file
@@ -160,16 +173,33 @@ export function GoalModal({
   }
 
   // Combined preview list across both shifts — enables arrow-key navigation from
-  // Shift A images into Shift B images within the same day.
-  const morningItems = useMemo(() => [
-    ...morningProofImages.map(img => ({ url: img.url, name: img.name, isPending: false, shiftLabel: 'A' })),
-    ...pendingMorningFiles.map(pf => ({ url: pf.localUrl, name: pf.name, isPending: true, shiftLabel: 'A' }))
-  ], [morningProofImages, pendingMorningFiles])
+  // Shift A images into Shift B images within the same day. Pending replacements
+  // sit in the position of the image they replace; pure additions go at the end.
+  const buildShiftItems = (images, pendingFiles, shiftLabel) => {
+    const replacementsByPath = new Map()
+    const additions = []
+    pendingFiles.forEach(pf => {
+      if (pf.replacingPath) replacementsByPath.set(pf.replacingPath, pf)
+      else additions.push(pf)
+    })
+    const positioned = images.map(img => {
+      const r = replacementsByPath.get(img.path)
+      if (r) return { url: r.localUrl, name: r.name, isPending: true, shiftLabel }
+      return { url: img.url, name: img.name, isPending: false, shiftLabel }
+    })
+    const additionItems = additions.map(pf => ({ url: pf.localUrl, name: pf.name, isPending: true, shiftLabel }))
+    return [...positioned, ...additionItems]
+  }
 
-  const afternoonItems = useMemo(() => [
-    ...afternoonProofImages.map(img => ({ url: img.url, name: img.name, isPending: false, shiftLabel: 'B' })),
-    ...pendingAfternoonFiles.map(pf => ({ url: pf.localUrl, name: pf.name, isPending: true, shiftLabel: 'B' }))
-  ], [afternoonProofImages, pendingAfternoonFiles])
+  const morningItems = useMemo(
+    () => buildShiftItems(morningProofImages, pendingMorningFiles, 'A'),
+    [morningProofImages, pendingMorningFiles]
+  )
+
+  const afternoonItems = useMemo(
+    () => buildShiftItems(afternoonProofImages, pendingAfternoonFiles, 'B'),
+    [afternoonProofImages, pendingAfternoonFiles]
+  )
 
   const combinedItems = useMemo(() => [...morningItems, ...afternoonItems], [morningItems, afternoonItems])
   const afternoonOffset = morningItems.length
@@ -235,26 +265,46 @@ export function GoalModal({
     el.style.height = el.scrollHeight + 'px'
   }
 
+  // Resolve pending files for a shift: delete replaced originals from storage,
+  // upload all pending files, then weave the new uploads into the original
+  // positions (replacements) or append at end (additions).
+  const resolveShiftPending = async (shift, existingImages, pendingFiles) => {
+    if (pendingFiles.length === 0 || !onUploadFiles) return existingImages
+
+    const replacements = pendingFiles.filter(p => p.replacingPath)
+
+    if (onDeleteFromStorage && replacements.length > 0) {
+      // Failed deletes leave an orphaned file in storage but should not block save.
+      await Promise.all(replacements.map(r => {
+        const old = existingImages.find(img => img.path === r.replacingPath)
+        return old ? Promise.resolve(onDeleteFromStorage(old)).catch(() => {}) : Promise.resolve()
+      }))
+    }
+
+    const uploaded = await onUploadFiles(shift, pendingFiles.map(p => p.file))
+
+    const uploadedByReplacingPath = new Map()
+    const newAdditions = []
+    pendingFiles.forEach((pf, idx) => {
+      if (pf.replacingPath) uploadedByReplacingPath.set(pf.replacingPath, uploaded[idx])
+      else newAdditions.push(uploaded[idx])
+    })
+
+    const positioned = existingImages.map(img => uploadedByReplacingPath.get(img.path) || img)
+    return [...positioned, ...newAdditions]
+  }
+
   const handleSave = async () => {
     setSaving(true)
     setSaveError(null)
     try {
-      let finalMorningImages = morningProofImages
-      let finalAfternoonImages = afternoonProofImages
+      const finalMorningImages = await resolveShiftPending('morning', morningProofImages, pendingMorningFiles)
+      const finalAfternoonImages = await resolveShiftPending('afternoon', afternoonProofImages, pendingAfternoonFiles)
 
-      if (pendingMorningFiles.length > 0 && onUploadFiles) {
-        const files = pendingMorningFiles.map(p => p.file)
-        finalMorningImages = await onUploadFiles('morning', files, morningProofImages)
-        pendingMorningFiles.forEach(p => URL.revokeObjectURL(p.localUrl))
-        setPendingMorningFiles([])
-      }
-
-      if (pendingAfternoonFiles.length > 0 && onUploadFiles) {
-        const files = pendingAfternoonFiles.map(p => p.file)
-        finalAfternoonImages = await onUploadFiles('afternoon', files, afternoonProofImages)
-        pendingAfternoonFiles.forEach(p => URL.revokeObjectURL(p.localUrl))
-        setPendingAfternoonFiles([])
-      }
+      pendingMorningFiles.forEach(p => URL.revokeObjectURL(p.localUrl))
+      pendingAfternoonFiles.forEach(p => URL.revokeObjectURL(p.localUrl))
+      setPendingMorningFiles([])
+      setPendingAfternoonFiles([])
 
       onSave({
         morningAmount: morningGoal,

@@ -375,10 +375,12 @@ export function App() {
     }
   }
 
-  // Upload files to Firebase Storage only (no Firestore save) — called from GoalModal on Save
-  const handleUploadFilesOnly = async (shift, files, existingImages) => {
-    if (!selectedDay) return existingImages || []
-    return uploadProofImages(selectedDay, shift, files, existingImages || [])
+  // Upload files to Firebase Storage only (no Firestore save) — called from
+  // GoalModal on Save. Returns new uploaded images in input order; the modal
+  // is responsible for merging them with existing images positionally.
+  const handleUploadFilesOnly = async (shift, files) => {
+    if (!selectedDay) return []
+    return uploadProofImages(selectedDay, shift, files)
   }
 
   // Delete an image from Firebase Storage only (no Firestore save) — called from GoalModal on X click
