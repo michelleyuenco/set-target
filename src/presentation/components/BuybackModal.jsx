@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react'
 import { DEFAULT_MORNING_END, DEFAULT_AFTERNOON_END } from '../../domain/entities/Goal'
+import {
+  getShiftData,
+  isShiftUnmet,
+  isShiftEnded,
+  COMMISSION_RATES,
+} from '../../application/services/earningsCalculator'
 
 export function BuybackModal({ goals, viewYear, viewMonth, availableExcess, onBuyback, onClose }) {
   const [selectedTargets, setSelectedTargets] = useState(new Set())
@@ -14,43 +20,26 @@ export function BuybackModal({ goals, viewYear, viewMonth, availableExcess, onBu
   const pad = (n) => String(n).padStart(2, '0')
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
 
-  const isShiftEnded = (dateStr, endTime) => {
-    const [endH, endM] = endTime.split(':').map(Number)
-    const [y, m, d] = dateStr.split('-').map(Number)
-    const shiftEnd = new Date(y, m - 1, d, endH, endM, 0, 0)
-    return now >= shiftEnd
-  }
-
-  // Get all unmet targets - only for confirmed shifts whose shift has ended
+  // Get all unmet targets — only for confirmed shifts whose shift has ended
   const unmetTargets = []
+  const shiftLabel = { morning: 'A', afternoon: 'B' }
+  const defaultEndTime = { morning: DEFAULT_MORNING_END, afternoon: DEFAULT_AFTERNOON_END }
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`
     const goal = goals[dateStr]
+    if (!goal?.hasGoals) continue
 
-    if (goal?.hasGoals) {
-      // Morning shift: confirmed, unmet, not bought back, and shift has ended
-      if (goal.morningConfirmed && goal.morningAmount && goal.morningCalculatedWage !== 80 && !goal.morningBoughtBack
-        && isShiftEnded(dateStr, goal.morningEndTime || DEFAULT_MORNING_END)) {
-        unmetTargets.push({
-          dateStr,
-          shift: 'morning',
-          amount: goal.morningAmount,
-          label: `${viewMonth + 1}/${day} Shift A`,
-          displayAmount: `$${goal.morningAmount.toLocaleString()}`
-        })
-      }
-
-      // Afternoon shift: confirmed, unmet, not bought back, and shift has ended
-      if (goal.afternoonConfirmed && goal.afternoonAmount && goal.afternoonCalculatedWage !== 80 && !goal.afternoonBoughtBack
-        && isShiftEnded(dateStr, goal.afternoonEndTime || DEFAULT_AFTERNOON_END)) {
-        unmetTargets.push({
-          dateStr,
-          shift: 'afternoon',
-          amount: goal.afternoonAmount,
-          label: `${viewMonth + 1}/${day} Shift B`,
-          displayAmount: `$${goal.afternoonAmount.toLocaleString()}`
-        })
-      }
+    for (const shift of ['morning', 'afternoon']) {
+      const s = getShiftData(goal, shift)
+      if (!isShiftUnmet(s)) continue
+      if (!isShiftEnded(dateStr, s.endTime || defaultEndTime[shift], now)) continue
+      unmetTargets.push({
+        dateStr,
+        shift,
+        amount: s.amount,
+        label: `${viewMonth + 1}/${day} Shift ${shiftLabel[shift]}`,
+        displayAmount: `$${s.amount.toLocaleString()}`,
+      })
     }
   }
 
@@ -77,7 +66,7 @@ export function BuybackModal({ goals, viewYear, viewMonth, availableExcess, onBu
   }
 
   const calculateCommission = () => {
-    return calculateTotalCost() * 0.035
+    return calculateTotalCost() * COMMISSION_RATES.buyback
   }
 
   const totalCost = calculateTotalCost()
@@ -129,7 +118,7 @@ export function BuybackModal({ goals, viewYear, viewMonth, availableExcess, onBu
                     <div className="target-details">
                       <div className="target-amount">{target.displayAmount}</div>
                       <div className="target-commission">
-                        +${(target.amount * 0.035).toFixed(2)} (3.5%)
+                        +${(target.amount * COMMISSION_RATES.buyback).toFixed(2)} (3.5%)
                       </div>
                     </div>
                   </div>

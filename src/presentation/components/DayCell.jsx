@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { DEFAULT_SHIFT_HOURS, DEFAULT_MORNING_END, DEFAULT_AFTERNOON_END } from '../../domain/entities/Goal'
+import { DEFAULT_MORNING_END, DEFAULT_AFTERNOON_END } from '../../domain/entities/Goal'
+import {
+  getShiftData,
+  calculateShiftEarnings,
+  isShiftUnmet,
+  isShiftEnded,
+  TARGET_HIT_WAGE,
+} from '../../application/services/earningsCalculator'
 
 export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExcess, excessAllocation, locations, onClick, onBuyback, onWageClick }) {
   const [proofPreview, setProofPreview] = useState(null) // { images, index }
@@ -76,19 +83,17 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     return 'wage-none'
   }
 
-  // Only check unmet for confirmed shifts (use calculated wage, ignoring custom overrides)
-  const isMorningUnmet = goal?.morningConfirmed && goal?.morningAmount && goal?.morningCalculatedWage !== 80 && !goal?.morningBoughtBack
-  const isAfternoonUnmet = goal?.afternoonConfirmed && goal?.afternoonAmount && goal?.afternoonCalculatedWage !== 80 && !goal?.afternoonBoughtBack
+  // Shift earnings — single source of truth
+  const morningShift = getShiftData(goal, 'morning')
+  const afternoonShift = getShiftData(goal, 'afternoon')
+  const morningEarnings = calculateShiftEarnings(morningShift)
+  const afternoonEarnings = calculateShiftEarnings(afternoonShift)
 
-  // Only allow buyback after the shift has ended
-  const isShiftEnded = (endTime) => {
-    const [endH, endM] = endTime.split(':').map(Number)
-    const [y, m, d] = dateStr.split('-').map(Number)
-    const shiftEnd = new Date(y, m - 1, d, endH, endM, 0, 0)
-    return now >= shiftEnd
-  }
-  const morningEnded = isShiftEnded(goal?.morningEndTime || DEFAULT_MORNING_END)
-  const afternoonEnded = isShiftEnded(goal?.afternoonEndTime || DEFAULT_AFTERNOON_END)
+  const isMorningUnmet = morningShift && isShiftUnmet(morningShift)
+  const isAfternoonUnmet = afternoonShift && isShiftUnmet(afternoonShift)
+
+  const morningEnded = isShiftEnded(dateStr, goal?.morningEndTime || DEFAULT_MORNING_END, now)
+  const afternoonEnded = isShiftEnded(dateStr, goal?.afternoonEndTime || DEFAULT_AFTERNOON_END, now)
 
   const canBuyMorning = isMorningUnmet && goal?.morningAmount <= availableExcess && morningEnded
   const canBuyAfternoon = isAfternoonUnmet && goal?.afternoonAmount <= availableExcess && afternoonEnded
@@ -105,107 +110,21 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     }
   }
 
-  // Use actual shift hours from goal, falling back to default
-  const morningShiftHours = goal?.morningShiftHours ?? DEFAULT_SHIFT_HOURS
-  const afternoonShiftHours = goal?.afternoonShiftHours ?? DEFAULT_SHIFT_HOURS
-
-  const calculateLaborCost = () => {
-    if (!goal?.hasGoals) return 0
-    let cost = 0
-    if (goal.morningConfirmed) {
-      cost += Math.round((goal.morningWage || 65) * morningShiftHours * 100) / 100
-    }
-    if (goal.afternoonConfirmed) {
-      cost += Math.round((goal.afternoonWage || 65) * afternoonShiftHours * 100) / 100
-    }
-    return cost
-  }
-
-  // IG detection
-  const morningHasIg = goal?.morningConfirmed && ((goal?.morningIgFeaturedAmount || 0) > 0 || (goal?.morningIgOtherAmount || 0) > 0)
-  const afternoonHasIg = goal?.afternoonConfirmed && ((goal?.afternoonIgFeaturedAmount || 0) > 0 || (goal?.afternoonIgOtherAmount || 0) > 0)
-
-  const getMorningIgCommission = () => {
-    if (!morningHasIg) return 0
-    return Math.round(((goal.morningIgFeaturedAmount || 0) * 0.07 + (goal.morningIgOtherAmount || 0) * 0.05) * 100) / 100
-  }
-
-  const getAfternoonIgCommission = () => {
-    if (!afternoonHasIg) return 0
-    return Math.round(((goal.afternoonIgFeaturedAmount || 0) * 0.07 + (goal.afternoonIgOtherAmount || 0) * 0.05) * 100) / 100
-  }
-
-  const getMorningCommission = () => {
-    if (morningHasIg) return 0 // IG replaces standard commission
-    if (goal?.morningConfirmed && goal?.morningCalculatedWage === 80 && goal?.morningActual > 0) {
-      return Math.round(goal.morningAmount * 0.045 * 100) / 100
-    }
-    return 0
-  }
-
-  const getAfternoonCommission = () => {
-    if (afternoonHasIg) return 0 // IG replaces standard commission
-    if (goal?.afternoonConfirmed && goal?.afternoonCalculatedWage === 80 && goal?.afternoonActual > 0) {
-      return Math.round(goal.afternoonAmount * 0.045 * 100) / 100
-    }
-    return 0
-  }
-
-  const getMorningBuyback = () => {
-    if (goal?.morningConfirmed && goal?.morningBoughtBack && goal?.morningAmount) {
-      return {
-        amount: goal.morningAmount,
-        commission: morningHasIg ? 0 : Math.round(goal.morningAmount * 0.035 * 100) / 100
-      }
-    }
-    return { amount: 0, commission: 0 }
-  }
-
-  const getAfternoonBuyback = () => {
-    if (goal?.afternoonConfirmed && goal?.afternoonBoughtBack && goal?.afternoonAmount) {
-      return {
-        amount: goal.afternoonAmount,
-        commission: afternoonHasIg ? 0 : Math.round(goal.afternoonAmount * 0.035 * 100) / 100
-      }
-    }
-    return { amount: 0, commission: 0 }
-  }
-
-  const getMorningCustomCommission = () => {
-    if (goal?.morningConfirmed && goal?.morningCustomRate && goal?.morningCustomAmount) {
-      return Math.round(goal.morningCustomAmount * (goal.morningCustomRate / 100) * 100) / 100
-    }
-    return 0
-  }
-
-  const getAfternoonCustomCommission = () => {
-    if (goal?.afternoonConfirmed && goal?.afternoonCustomRate && goal?.afternoonCustomAmount) {
-      return Math.round(goal.afternoonCustomAmount * (goal.afternoonCustomRate / 100) * 100) / 100
-    }
-    return 0
-  }
-
-  const laborCost = calculateLaborCost()
-  const morningCommission = getMorningCommission()
-  const afternoonCommission = getAfternoonCommission()
-  const morningIgCommission = getMorningIgCommission()
-  const afternoonIgCommission = getAfternoonIgCommission()
-  const morningBuyback = getMorningBuyback()
-  const afternoonBuyback = getAfternoonBuyback()
-  const morningCustomCommission = getMorningCustomCommission()
-  const afternoonCustomCommission = getAfternoonCustomCommission()
-  const totalBuybackCommission = morningBuyback.commission + afternoonBuyback.commission
-  const totalCustomCommission = morningCustomCommission + afternoonCustomCommission
-  const totalIgCommission = morningIgCommission + afternoonIgCommission
-  const totalCommission = morningCommission + afternoonCommission + totalBuybackCommission + totalCustomCommission + totalIgCommission
-  const morningAllowance = goal?.morningConfirmed && goal?.morningAllowance ? goal.morningAllowance : 0
-  const afternoonAllowance = goal?.afternoonConfirmed && goal?.afternoonAllowance ? goal.afternoonAllowance : 0
-  const totalAllowance = morningAllowance + afternoonAllowance
-  const totalEarnings = Math.round((laborCost + totalCommission + totalAllowance) * 100) / 100
+  const morningCommission = morningEarnings.standardCommission
+  const afternoonCommission = afternoonEarnings.standardCommission
+  const morningIgCommission = morningEarnings.ig.total
+  const afternoonIgCommission = afternoonEarnings.ig.total
+  const morningBuyback = { amount: morningEarnings.buybackAmount, commission: morningEarnings.buybackCommission }
+  const afternoonBuyback = { amount: afternoonEarnings.buybackAmount, commission: afternoonEarnings.buybackCommission }
+  const morningCustomCommission = morningEarnings.customCommission
+  const afternoonCustomCommission = afternoonEarnings.customCommission
+  const morningAllowance = morningEarnings.allowance
+  const afternoonAllowance = afternoonEarnings.allowance
+  const totalEarnings = Math.round((morningEarnings.total + afternoonEarnings.total) * 100) / 100
 
   // Shift state detection (use calculated wage, ignoring custom overrides)
-  const isMorningMet = goal?.morningConfirmed && goal?.morningCalculatedWage === 80 && !goal?.morningBoughtBack
-  const isAfternoonMet = goal?.afternoonConfirmed && goal?.afternoonCalculatedWage === 80 && !goal?.afternoonBoughtBack
+  const isMorningMet = goal?.morningConfirmed && goal?.morningCalculatedWage === TARGET_HIT_WAGE && !goal?.morningBoughtBack
+  const isAfternoonMet = goal?.afternoonConfirmed && goal?.afternoonCalculatedWage === TARGET_HIT_WAGE && !goal?.afternoonBoughtBack
   const isMorningBoughtBack = goal?.morningConfirmed && goal?.morningBoughtBack
   const isAfternoonBoughtBack = goal?.afternoonConfirmed && goal?.afternoonBoughtBack
 

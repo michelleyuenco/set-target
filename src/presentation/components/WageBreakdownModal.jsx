@@ -1,4 +1,4 @@
-import { DEFAULT_SHIFT_HOURS } from '../../domain/entities/Goal'
+import { calculateDayEarnings, getShiftData } from '../../application/services/earningsCalculator'
 
 export function WageBreakdownModal({ day, goal, onClose }) {
   if (!goal?.hasGoals) return null
@@ -8,9 +8,14 @@ export function WageBreakdownModal({ day, goal, onClose }) {
 
   if (!hasMorning && !hasAfternoon) return null
 
-  // Use actual shift hours from goal, falling back to default
-  const morningHours = goal.morningShiftHours ?? DEFAULT_SHIFT_HOURS
-  const afternoonHours = goal.afternoonShiftHours ?? DEFAULT_SHIFT_HOURS
+  const morningShift = getShiftData(goal, 'morning')
+  const afternoonShift = getShiftData(goal, 'afternoon')
+  const { morning, afternoon, totals } = calculateDayEarnings(goal)
+
+  const morningHours = morningShift.hours
+  const afternoonHours = afternoonShift.hours
+  const morningWage = morningShift.wage
+  const afternoonWage = afternoonShift.wage
 
   const formatTime12 = (time24) => {
     const [h, m] = time24.split(':').map(Number)
@@ -26,116 +31,26 @@ export function WageBreakdownModal({ day, goal, onClose }) {
   const morningTimeLabel = `${formatTime12(goal.morningStartTime)} - ${formatTime12(goal.morningEndTime)}`
   const afternoonTimeLabel = `${formatTime12(goal.afternoonStartTime)} - ${formatTime12(goal.afternoonEndTime)}`
 
-  const morningWage = goal.morningWage || 65
-  const afternoonWage = goal.afternoonWage || 65
-  const morningLabor = hasMorning ? Math.round(morningWage * morningHours * 100) / 100 : 0
-  const afternoonLabor = hasAfternoon ? Math.round(afternoonWage * afternoonHours * 100) / 100 : 0
+  const morningLabor = morning.labor
+  const afternoonLabor = afternoon.labor
+  const morningCommission = morning.standardCommission
+  const afternoonCommission = afternoon.standardCommission
+  const morningIg = morning.ig
+  const afternoonIg = afternoon.ig
+  const morningBuyback = { amount: morning.buybackAmount, commission: morning.buybackCommission }
+  const afternoonBuyback = { amount: afternoon.buybackAmount, commission: afternoon.buybackCommission }
+  const morningCustom = { rate: morning.customRate, amount: morning.customAmount, commission: morning.customCommission }
+  const afternoonCustom = { rate: afternoon.customRate, amount: afternoon.customAmount, commission: afternoon.customCommission }
+  const morningAllowance = morning.allowance
+  const afternoonAllowance = afternoon.allowance
 
-  // IG detection
-  const morningHasIg = hasMorning && ((goal.morningIgFeaturedAmount || 0) > 0 || (goal.morningIgOtherAmount || 0) > 0)
-  const afternoonHasIg = hasAfternoon && ((goal.afternoonIgFeaturedAmount || 0) > 0 || (goal.afternoonIgOtherAmount || 0) > 0)
-
-  const getMorningIgCommission = () => {
-    if (!morningHasIg) return { featured: 0, other: 0, featuredCommission: 0, otherCommission: 0, total: 0 }
-    const featured = goal.morningIgFeaturedAmount || 0
-    const other = goal.morningIgOtherAmount || 0
-    return {
-      featured, other,
-      featuredCommission: Math.round(featured * 0.07 * 100) / 100,
-      otherCommission: Math.round(other * 0.05 * 100) / 100,
-      total: Math.round((featured * 0.07 + other * 0.05) * 100) / 100
-    }
-  }
-
-  const getAfternoonIgCommission = () => {
-    if (!afternoonHasIg) return { featured: 0, other: 0, featuredCommission: 0, otherCommission: 0, total: 0 }
-    const featured = goal.afternoonIgFeaturedAmount || 0
-    const other = goal.afternoonIgOtherAmount || 0
-    return {
-      featured, other,
-      featuredCommission: Math.round(featured * 0.07 * 100) / 100,
-      otherCommission: Math.round(other * 0.05 * 100) / 100,
-      total: Math.round((featured * 0.07 + other * 0.05) * 100) / 100
-    }
-  }
-
-  const getMorningCommission = () => {
-    if (morningHasIg) return 0
-    if (hasMorning && goal.morningCalculatedWage === 80 && goal.morningActual > 0) {
-      return Math.round(goal.morningAmount * 0.045 * 100) / 100
-    }
-    return 0
-  }
-
-  const getAfternoonCommission = () => {
-    if (afternoonHasIg) return 0
-    if (hasAfternoon && goal.afternoonCalculatedWage === 80 && goal.afternoonActual > 0) {
-      return Math.round(goal.afternoonAmount * 0.045 * 100) / 100
-    }
-    return 0
-  }
-
-  const getMorningBuyback = () => {
-    if (hasMorning && goal.morningBoughtBack && goal.morningAmount) {
-      return {
-        amount: goal.morningAmount,
-        commission: morningHasIg ? 0 : Math.round(goal.morningAmount * 0.035 * 100) / 100
-      }
-    }
-    return { amount: 0, commission: 0 }
-  }
-
-  const getAfternoonBuyback = () => {
-    if (hasAfternoon && goal.afternoonBoughtBack && goal.afternoonAmount) {
-      return {
-        amount: goal.afternoonAmount,
-        commission: afternoonHasIg ? 0 : Math.round(goal.afternoonAmount * 0.035 * 100) / 100
-      }
-    }
-    return { amount: 0, commission: 0 }
-  }
-
-  const getMorningCustomCommission = () => {
-    if (hasMorning && goal.morningCustomRate && goal.morningCustomAmount) {
-      return {
-        rate: goal.morningCustomRate,
-        amount: goal.morningCustomAmount,
-        commission: Math.round(goal.morningCustomAmount * (goal.morningCustomRate / 100) * 100) / 100
-      }
-    }
-    return { rate: 0, amount: 0, commission: 0 }
-  }
-
-  const getAfternoonCustomCommission = () => {
-    if (hasAfternoon && goal.afternoonCustomRate && goal.afternoonCustomAmount) {
-      return {
-        rate: goal.afternoonCustomRate,
-        amount: goal.afternoonCustomAmount,
-        commission: Math.round(goal.afternoonCustomAmount * (goal.afternoonCustomRate / 100) * 100) / 100
-      }
-    }
-    return { rate: 0, amount: 0, commission: 0 }
-  }
-
-  const morningCommission = getMorningCommission()
-  const afternoonCommission = getAfternoonCommission()
-  const morningIg = getMorningIgCommission()
-  const afternoonIg = getAfternoonIgCommission()
-  const morningBuyback = getMorningBuyback()
-  const afternoonBuyback = getAfternoonBuyback()
-  const morningCustom = getMorningCustomCommission()
-  const afternoonCustom = getAfternoonCustomCommission()
-
-  const morningAllowance = (hasMorning && goal.morningAllowance) ? goal.morningAllowance : 0
-  const afternoonAllowance = (hasAfternoon && goal.afternoonAllowance) ? goal.afternoonAllowance : 0
-  const totalAllowance = Math.round((morningAllowance + afternoonAllowance) * 100) / 100
-
-  const totalLabor = Math.round((morningLabor + afternoonLabor) * 100) / 100
-  const totalCommission45 = Math.round((morningCommission + afternoonCommission) * 100) / 100
-  const totalIgCommission = Math.round((morningIg.total + afternoonIg.total) * 100) / 100
-  const totalBuybackCommission = Math.round((morningBuyback.commission + afternoonBuyback.commission) * 100) / 100
-  const totalCustomCommission = Math.round((morningCustom.commission + afternoonCustom.commission) * 100) / 100
-  const grandTotal = Math.round((totalLabor + totalCommission45 + totalIgCommission + totalBuybackCommission + totalCustomCommission + totalAllowance) * 100) / 100
+  const totalLabor = totals.labor
+  const totalCommission45 = totals.standardCommission
+  const totalIgCommission = totals.igCommission
+  const totalBuybackCommission = totals.buybackCommission
+  const totalCustomCommission = totals.customCommission
+  const totalAllowance = totals.allowance
+  const grandTotal = totals.total
 
   return (
     <div className="modal-overlay" onClick={onClose}>

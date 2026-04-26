@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 export function ProofImages({
   images = [],
   pendingFiles = [],
+  pendingDeletePaths = [],
   onUpload,
   onDelete,
   onReplace,
@@ -16,8 +17,8 @@ export function ProofImages({
   const controlled = typeof onOpenPreview === 'function'
   const [previewIndex, setPreviewIndex] = useState(null)
 
-  // Pending files split into two kinds: replacements (sit in the original
-  // image's slot via `replacingPath`) and pure additions (appended at end).
+  // Pending files split into two kinds: replacements (paired with the original
+  // they replace via `replacingPath`) and pure additions (appended at end).
   const replacementsByPath = new Map()
   const additions = []
   pendingFiles.forEach((pf, i) => {
@@ -26,29 +27,39 @@ export function ProofImages({
     else additions.push(tagged)
   })
 
-  const positionedItems = images.map(img => {
+  // Originals stay in their slot (tagged pendingDelete/pendingReplace as needed).
+  // A pending replacement renders as a separate tile right after its original.
+  const allItems = []
+  images.forEach(img => {
+    const pendingDelete = pendingDeletePaths.includes(img.path)
     const r = replacementsByPath.get(img.path)
-    if (r) {
-      return {
+    allItems.push({
+      url: img.url,
+      name: img.name,
+      isPending: false,
+      pendingDelete,
+      pendingReplace: !!r && !pendingDelete,
+      original: img
+    })
+    if (r && !pendingDelete) {
+      allItems.push({
         url: r.localUrl,
         name: r.name,
         isPending: true,
+        isReplacement: true,
         pendingIndex: r.pendingIndex,
         original: img
-      }
+      })
     }
-    return { url: img.url, name: img.name, isPending: false, original: img }
   })
-
-  const allItems = [
-    ...positionedItems,
-    ...additions.map(pf => ({
+  additions.forEach(pf => {
+    allItems.push({
       url: pf.localUrl,
       name: pf.name,
       isPending: true,
       pendingIndex: pf.pendingIndex
-    }))
-  ]
+    })
+  })
 
   const previewItem = !controlled && previewIndex !== null ? allItems[previewIndex] : null
 
@@ -77,12 +88,11 @@ export function ProofImages({
 
   const handleDelete = (e, item, idx) => {
     e.stopPropagation()
-    // × on a pending replacement removes the pending file AND deletes the
-    // underlying image — × always means "remove this slot from my proof set".
-    if (item.isPending && item.original) {
-      onRemovePending(item.pendingIndex)
-      onDelete(item.original)
-    } else if (item.isPending) {
+    // × on the new replacement tile cancels the pending file (keeps original).
+    // × on a pure pending addition removes the staged file.
+    // × on an uploaded original toggles the pending-deletion mark — Save will
+    // commit the storage delete; clicking × again before Save undoes the mark.
+    if (item.isPending) {
       onRemovePending(item.pendingIndex)
     } else {
       onDelete(item.original)
@@ -152,43 +162,65 @@ export function ProofImages({
       </div>
 
       <div className="proof-thumbnails">
-        {allItems.map((item, idx) => (
-          <div
-            key={item.original ? (item.original.path || `idx-${idx}`) : `pending-${item.pendingIndex}`}
-            className={`proof-thumbnail${item.isPending ? ' proof-thumbnail-pending' : ''}`}
-          >
-            <img
-              src={item.url}
-              alt={item.name}
-              onClick={() => (controlled ? onOpenPreview(idx) : setPreviewIndex(idx))}
-            />
-            {item.isPending && <span className="proof-pending-badge">Pending</span>}
-            {!readOnly && !disabled && item.original && (
-              <label
-                className="proof-replace-btn"
-                title="Replace image"
-                onClick={(e) => e.stopPropagation()}
-              >
-                &#8635;
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/heic,image/webp"
-                  onChange={(e) => handleReplace(e, item)}
-                  style={{ display: 'none' }}
-                />
-              </label>
-            )}
-            {!readOnly && !disabled && (
-              <button
-                className="proof-delete-btn"
-                onClick={(e) => handleDelete(e, item, idx)}
-                title={item.isPending && !item.original ? 'Remove (not yet saved)' : 'Delete image'}
-              >
-                &times;
-              </button>
-            )}
-          </div>
-        ))}
+        {allItems.map((item, idx) => {
+          const tileKey = item.isReplacement
+            ? `replacement-${item.pendingIndex}`
+            : item.isPending
+              ? `pending-${item.pendingIndex}`
+              : (item.original?.path || `idx-${idx}`)
+          const showReplaceBtn = !readOnly && !disabled && !item.isPending && !item.pendingDelete && !item.pendingReplace
+          const showDeleteBtn = !readOnly && !disabled
+          const deleteTitle = item.pendingDelete
+            ? 'Undo delete'
+            : item.isReplacement
+              ? 'Cancel replacement'
+              : item.isPending
+                ? 'Remove (not yet saved)'
+                : 'Delete image'
+          return (
+            <div
+              key={tileKey}
+              className={`proof-thumbnail${
+                item.isPending ? ' proof-thumbnail-pending' : ''
+              }${item.pendingDelete ? ' proof-thumbnail-pending-delete' : ''
+              }${item.pendingReplace ? ' proof-thumbnail-pending-replace' : ''}`}
+            >
+              <img
+                src={item.url}
+                alt={item.name}
+                onClick={() => (controlled ? onOpenPreview(idx) : setPreviewIndex(idx))}
+              />
+              {item.pendingDelete && <span className="proof-pending-delete-badge">Pending Delete</span>}
+              {item.pendingReplace && <span className="proof-pending-replace-badge">To be replaced</span>}
+              {item.isPending && item.isReplacement && <span className="proof-pending-badge">New</span>}
+              {item.isPending && !item.isReplacement && <span className="proof-pending-badge">Pending</span>}
+              {showReplaceBtn && (
+                <label
+                  className="proof-replace-btn"
+                  title="Replace image"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  &#8635;
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/heic,image/webp"
+                    onChange={(e) => handleReplace(e, item)}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              )}
+              {showDeleteBtn && (
+                <button
+                  className={`proof-delete-btn${item.pendingDelete ? ' proof-delete-btn-undo' : ''}`}
+                  onClick={(e) => handleDelete(e, item, idx)}
+                  title={deleteTitle}
+                >
+                  {item.pendingDelete ? <>&#8634;</> : <>&times;</>}
+                </button>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {previewItem && createPortal(
@@ -209,7 +241,10 @@ export function ProofImages({
                 <span className="proof-preview-counter">{previewIndex + 1} / {allItems.length}</span>
               )}
               <span>{previewItem.name}</span>
-              {previewItem.isPending && <span className="proof-preview-pending-note">Not saved yet</span>}
+              {previewItem.pendingDelete && <span className="proof-preview-pending-note">Will be deleted on save</span>}
+              {previewItem.pendingReplace && <span className="proof-preview-pending-note">Will be replaced on save</span>}
+              {previewItem.isReplacement && <span className="proof-preview-pending-note">New replacement — not saved yet</span>}
+              {previewItem.isPending && !previewItem.isReplacement && <span className="proof-preview-pending-note">Not saved yet</span>}
             </div>
           </div>
         </div>,

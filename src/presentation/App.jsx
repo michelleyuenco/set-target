@@ -37,7 +37,18 @@ import { useSalaryConfirmation } from './hooks/useSalaryConfirmation'
 import { useUpdateChecker } from './hooks/useUpdateChecker'
 import { salaryConfirmationAppService as salaryConfirmationService, authAppService as authService, initFirestoreService, clearFirestoreService, getLocalGoalService, getFirestoreRepository, initAdminMemberService, clearAdminMemberService, subscribeAdminMemberGoals } from '../di/container'
 import { DataMigrationService } from '../application/services/DataMigrationService'
-import { DEFAULT_SHIFT_HOURS, DEFAULT_MORNING_END, DEFAULT_AFTERNOON_END } from '../domain/entities/Goal'
+import { DEFAULT_MORNING_END, DEFAULT_AFTERNOON_END } from '../domain/entities/Goal'
+import {
+  getShiftData,
+  shiftHasIg,
+  effectiveActual,
+  calculateShiftLabor,
+  calculateIgCommission,
+  calculateStandardCommission,
+  calculateBuybackCommission,
+  calculateCustomCommission,
+  TARGET_HIT_WAGE,
+} from '../application/services/earningsCalculator'
 import '../App.css'
 
 const MONTH_NAMES = [
@@ -549,103 +560,57 @@ export function App() {
     const pad = (n) => String(n).padStart(2, '0')
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
 
+    const shiftLabel = { morning: 'A', afternoon: 'B' }
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`
       const goal = goals[dateStr]
-      if (goal?.hasGoals) {
-        if (goal.morningActual) totalActual += goal.morningActual
-        if (goal.afternoonActual) totalActual += goal.afternoonActual
+      if (!goal?.hasGoals) continue
 
-        // Only calculate wages for confirmed shifts
-        if (goal.morningConfirmed) {
-          const morningWage = goal.morningWage || 65
-          const morningHours = goal.morningShiftHours ?? DEFAULT_SHIFT_HOURS
-          wages += Math.round(morningWage * morningHours * 100) / 100
+      if (goal.morningActual) totalActual += goal.morningActual
+      if (goal.afternoonActual) totalActual += goal.afternoonActual
 
-          const morningIgFeatured = goal.morningIgFeaturedAmount || 0
-          const morningIgOther = goal.morningIgOtherAmount || 0
-          const morningHasIg = morningIgFeatured > 0 || morningIgOther > 0
-          const morningEffectiveActual = (goal.morningActual || 0) + morningIgFeatured + morningIgOther
+      for (const shift of ['morning', 'afternoon']) {
+        const s = getShiftData(goal, shift)
+        if (!s.confirmed) continue
 
-          if (morningHasIg) {
-            // IG commission replaces standard 4.5%/3.5%
-            commissionIg += morningIgFeatured * 0.07 + morningIgOther * 0.05
-            // Excess still tracked using effective actual
-            if (goal.morningCalculatedWage === 80 && goal.morningAmount && morningEffectiveActual > goal.morningAmount) {
-              const excess = morningEffectiveActual - goal.morningAmount
-              excessRevenue += excess
-              excessSources.push({ key: `${dateStr}:morning`, dateStr, day, shift: 'morning', shiftLabel: 'A', target: goal.morningAmount, actual: morningEffectiveActual, excess })
-            }
-            if (goal.morningBoughtBack && goal.morningAmount) {
-              totalBuybackCost += goal.morningAmount
-              buybackTargets.push({ key: `${dateStr}:morning`, dateStr, day, shift: 'morning', shiftLabel: 'A', amount: goal.morningAmount, actual: morningEffectiveActual })
-            }
-          } else {
-            if (goal.morningCalculatedWage === 80 && goal.morningActual > 0) {
-              commission45 += goal.morningAmount * 0.045
-              if (goal.morningAmount && goal.morningActual > goal.morningAmount) {
-                const excess = goal.morningActual - goal.morningAmount
-                excessRevenue += excess
-                excessSources.push({ key: `${dateStr}:morning`, dateStr, day, shift: 'morning', shiftLabel: 'A', target: goal.morningAmount, actual: goal.morningActual, excess })
-              }
-            } else if (goal.morningBoughtBack && goal.morningAmount) {
-              commission35 += goal.morningAmount * 0.035
-              totalBuybackCost += goal.morningAmount
-              buybackTargets.push({ key: `${dateStr}:morning`, dateStr, day, shift: 'morning', shiftLabel: 'A', amount: goal.morningAmount, actual: goal.morningActual || 0 })
-            }
+        wages += calculateShiftLabor(s)
+        commissionIg += calculateIgCommission(s).total
+
+        const targetHit = s.calculatedWage === TARGET_HIT_WAGE
+        const hasIg = shiftHasIg(s)
+        const revenueForExcess = hasIg ? effectiveActual(s) : s.actual
+
+        if (hasIg) {
+          // IG suppresses 4.5%/3.5% commission; excess + buyback bookkeeping still happens
+          if (targetHit && s.amount > 0 && revenueForExcess > s.amount) {
+            const excess = revenueForExcess - s.amount
+            excessRevenue += excess
+            excessSources.push({ key: `${dateStr}:${shift}`, dateStr, day, shift, shiftLabel: shiftLabel[shift], target: s.amount, actual: revenueForExcess, excess })
           }
-
-          if (goal.morningCustomRate && goal.morningCustomAmount) {
-            commissionCustom += goal.morningCustomAmount * (goal.morningCustomRate / 100)
-            customRates.add(Number(goal.morningCustomRate))
-            totalActual += goal.morningCustomAmount
+          if (s.boughtBack && s.amount) {
+            totalBuybackCost += s.amount
+            buybackTargets.push({ key: `${dateStr}:${shift}`, dateStr, day, shift, shiftLabel: shiftLabel[shift], amount: s.amount, actual: revenueForExcess })
           }
-          if (goal.morningAllowance) totalAllowance += goal.morningAllowance
+        } else if (targetHit && s.actual > 0) {
+          commission45 += calculateStandardCommission(s)
+          if (s.amount && s.actual > s.amount) {
+            const excess = s.actual - s.amount
+            excessRevenue += excess
+            excessSources.push({ key: `${dateStr}:${shift}`, dateStr, day, shift, shiftLabel: shiftLabel[shift], target: s.amount, actual: s.actual, excess })
+          }
+        } else if (s.boughtBack && s.amount) {
+          commission35 += calculateBuybackCommission(s)
+          totalBuybackCost += s.amount
+          buybackTargets.push({ key: `${dateStr}:${shift}`, dateStr, day, shift, shiftLabel: shiftLabel[shift], amount: s.amount, actual: s.actual || 0 })
         }
 
-        if (goal.afternoonConfirmed) {
-          const afternoonWage = goal.afternoonWage || 65
-          const afternoonHours = goal.afternoonShiftHours ?? DEFAULT_SHIFT_HOURS
-          wages += Math.round(afternoonWage * afternoonHours * 100) / 100
-
-          const afternoonIgFeatured = goal.afternoonIgFeaturedAmount || 0
-          const afternoonIgOther = goal.afternoonIgOtherAmount || 0
-          const afternoonHasIg = afternoonIgFeatured > 0 || afternoonIgOther > 0
-          const afternoonEffectiveActual = (goal.afternoonActual || 0) + afternoonIgFeatured + afternoonIgOther
-
-          if (afternoonHasIg) {
-            commissionIg += afternoonIgFeatured * 0.07 + afternoonIgOther * 0.05
-            if (goal.afternoonCalculatedWage === 80 && goal.afternoonAmount && afternoonEffectiveActual > goal.afternoonAmount) {
-              const excess = afternoonEffectiveActual - goal.afternoonAmount
-              excessRevenue += excess
-              excessSources.push({ key: `${dateStr}:afternoon`, dateStr, day, shift: 'afternoon', shiftLabel: 'B', target: goal.afternoonAmount, actual: afternoonEffectiveActual, excess })
-            }
-            if (goal.afternoonBoughtBack && goal.afternoonAmount) {
-              totalBuybackCost += goal.afternoonAmount
-              buybackTargets.push({ key: `${dateStr}:afternoon`, dateStr, day, shift: 'afternoon', shiftLabel: 'B', amount: goal.afternoonAmount, actual: afternoonEffectiveActual })
-            }
-          } else {
-            if (goal.afternoonCalculatedWage === 80 && goal.afternoonActual > 0) {
-              commission45 += goal.afternoonAmount * 0.045
-              if (goal.afternoonAmount && goal.afternoonActual > goal.afternoonAmount) {
-                const excess = goal.afternoonActual - goal.afternoonAmount
-                excessRevenue += excess
-                excessSources.push({ key: `${dateStr}:afternoon`, dateStr, day, shift: 'afternoon', shiftLabel: 'B', target: goal.afternoonAmount, actual: goal.afternoonActual, excess })
-              }
-            } else if (goal.afternoonBoughtBack && goal.afternoonAmount) {
-              commission35 += goal.afternoonAmount * 0.035
-              totalBuybackCost += goal.afternoonAmount
-              buybackTargets.push({ key: `${dateStr}:afternoon`, dateStr, day, shift: 'afternoon', shiftLabel: 'B', amount: goal.afternoonAmount, actual: goal.afternoonActual || 0 })
-            }
-          }
-
-          if (goal.afternoonCustomRate && goal.afternoonCustomAmount) {
-            commissionCustom += goal.afternoonCustomAmount * (goal.afternoonCustomRate / 100)
-            customRates.add(Number(goal.afternoonCustomRate))
-            totalActual += goal.afternoonCustomAmount
-          }
-          if (goal.afternoonAllowance) totalAllowance += goal.afternoonAllowance
+        const custom = calculateCustomCommission(s)
+        if (custom > 0) {
+          commissionCustom += custom
+          customRates.add(Number(s.customRate))
+          totalActual += s.customAmount
         }
+        totalAllowance += s.allowance
       }
     }
 

@@ -1903,6 +1903,63 @@ body {
   letter-spacing: 0.3px;
 }
 
+.proof-thumbnail-pending-delete {
+  border: 1.5px dashed #dc2626;
+}
+
+.proof-thumbnail-pending-delete img {
+  opacity: 0.45;
+  filter: grayscale(0.5);
+}
+
+.proof-pending-delete-badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(220, 38, 38, 0.9);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  text-align: center;
+  padding: 2px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.proof-thumbnail-pending-replace {
+  border: 1.5px dashed #94a3b8;
+}
+
+.proof-thumbnail-pending-replace img {
+  opacity: 0.5;
+  filter: grayscale(0.4);
+}
+
+.proof-pending-replace-badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(100, 116, 139, 0.9);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  text-align: center;
+  padding: 2px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.proof-delete-btn-undo {
+  background: rgba(34, 197, 94, 0.9);
+  font-size: 13px;
+}
+
+.proof-delete-btn-undo:hover {
+  background: #16a34a;
+}
+
 .proof-preview-pending-note {
   color: #f59e0b;
   font-size: 11px;

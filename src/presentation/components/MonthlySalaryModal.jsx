@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { DEFAULT_SHIFT_HOURS } from '../../domain/entities/Goal'
+import { calculateDayEarnings, calculateMpf, getShiftData } from '../../application/services/earningsCalculator'
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
@@ -44,59 +44,11 @@ export function MonthlySalaryModal({
     const hasAfternoon = goal.afternoonConfirmed
     if (!hasMorning && !hasAfternoon) continue
 
-    const morningHours = hasMorning ? (goal.morningShiftHours ?? DEFAULT_SHIFT_HOURS) : 0
-    const afternoonHours = hasAfternoon ? (goal.afternoonShiftHours ?? DEFAULT_SHIFT_HOURS) : 0
+    const { totals } = calculateDayEarnings(goal)
+    const morningHours = hasMorning ? getShiftData(goal, 'morning').hours : 0
+    const afternoonHours = hasAfternoon ? getShiftData(goal, 'afternoon').hours : 0
     const dayHours = morningHours + afternoonHours
-
-    // Labor
-    let dayLabor = 0
-    if (hasMorning) dayLabor += Math.round((goal.morningWage || 65) * morningHours * 100) / 100
-    if (hasAfternoon) dayLabor += Math.round((goal.afternoonWage || 65) * afternoonHours * 100) / 100
-
-    // Commissions
-    let dayCommission = 0
-    // Morning IG or standard commission
-    const morningIgF = hasMorning ? (goal.morningIgFeaturedAmount || 0) : 0
-    const morningIgO = hasMorning ? (goal.morningIgOtherAmount || 0) : 0
-    const morningHasIg = morningIgF > 0 || morningIgO > 0
-    if (morningHasIg) {
-      dayCommission += Math.round((morningIgF * 0.07 + morningIgO * 0.05) * 100) / 100
-    } else {
-      if (hasMorning && goal.morningCalculatedWage === 80 && goal.morningActual > 0) {
-        dayCommission += Math.round(goal.morningAmount * 0.045 * 100) / 100
-      }
-      if (hasMorning && goal.morningBoughtBack && goal.morningAmount) {
-        dayCommission += Math.round(goal.morningAmount * 0.035 * 100) / 100
-      }
-    }
-    // Afternoon IG or standard commission
-    const afternoonIgF = hasAfternoon ? (goal.afternoonIgFeaturedAmount || 0) : 0
-    const afternoonIgO = hasAfternoon ? (goal.afternoonIgOtherAmount || 0) : 0
-    const afternoonHasIg = afternoonIgF > 0 || afternoonIgO > 0
-    if (afternoonHasIg) {
-      dayCommission += Math.round((afternoonIgF * 0.07 + afternoonIgO * 0.05) * 100) / 100
-    } else {
-      if (hasAfternoon && goal.afternoonCalculatedWage === 80 && goal.afternoonActual > 0) {
-        dayCommission += Math.round(goal.afternoonAmount * 0.045 * 100) / 100
-      }
-      if (hasAfternoon && goal.afternoonBoughtBack && goal.afternoonAmount) {
-        dayCommission += Math.round(goal.afternoonAmount * 0.035 * 100) / 100
-      }
-    }
-    // Custom commission (always applies regardless of IG)
-    if (hasMorning && goal.morningCustomRate && goal.morningCustomAmount) {
-      dayCommission += Math.round(goal.morningCustomAmount * (goal.morningCustomRate / 100) * 100) / 100
-    }
-    if (hasAfternoon && goal.afternoonCustomRate && goal.afternoonCustomAmount) {
-      dayCommission += Math.round(goal.afternoonCustomAmount * (goal.afternoonCustomRate / 100) * 100) / 100
-    }
-
-    // Allowance
-    const dayAllowance = (hasMorning && goal.morningAllowance ? goal.morningAllowance : 0)
-      + (hasAfternoon && goal.afternoonAllowance ? goal.afternoonAllowance : 0)
-
-    const dayTotal = Math.round((dayLabor + dayCommission + dayAllowance) * 100) / 100
-
+    const dayTotal = totals.total
     const shifts = hasMorning && hasAfternoon ? 'A+B' : hasMorning ? 'A' : 'B'
     const shiftCount = (hasMorning ? 1 : 0) + (hasAfternoon ? 1 : 0)
 
@@ -111,14 +63,12 @@ export function MonthlySalaryModal({
     const afternoonLoc = hasAfternoon ? goal.afternoonLocation : null
     let location = null
     if (hasMorning && hasAfternoon) {
-      // Both shifts — need to show per-shift detail if they differ or one is missing
       if (morningLoc && afternoonLoc && morningLoc === afternoonLoc) {
         location = morningLoc
       } else {
         location = `A: ${morningLoc || '—'} / B: ${afternoonLoc || '—'}`
       }
     } else {
-      // Single shift — show location directly or nothing
       location = morningLoc || afternoonLoc
     }
 
@@ -135,9 +85,7 @@ export function MonthlySalaryModal({
   }
 
   const grossTotal = Math.round((wages + commission45 + commission35 + commissionCustom + (commissionIg || 0) + totalAllowance + myBonusShare + miscTotal) * 100) / 100
-  const hasMpf = grossTotal > 7000
-  const mpfDeduction = hasMpf ? Math.round(grossTotal * 0.05 * 100) / 100 : 0
-  const takeHome = hasMpf ? Math.round((grossTotal - mpfDeduction) * 100) / 100 : grossTotal
+  const { hasMpf, deduction: mpfDeduction, takeHome } = calculateMpf(grossTotal)
 
   // Members can only see salary details after admin has published
   const canViewDetails = isAdmin || adminConfirmed
