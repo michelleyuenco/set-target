@@ -96,13 +96,15 @@ export function AdminDashboard({
             {MONTH_NAMES[pickerMonth]} {pickerYear}
           </span>
           <button className="nav-btn" onClick={handlePickerNext} disabled={pickerIsCurrentMonth}>&rarr;</button>
-          <button
-            className="working-month-set-btn"
-            onClick={handleSetWorkingMonth}
-            disabled={saving || isAlreadySet}
-          >
-            {saving ? 'Saving...' : 'Set'}
-          </button>
+          {!isAlreadySet && (
+            <button
+              className="working-month-set-btn"
+              onClick={handleSetWorkingMonth}
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Set'}
+            </button>
+          )}
         </div>
         {workingMonth !== null && workingMonth !== undefined && (
           <div className="working-month-current">
