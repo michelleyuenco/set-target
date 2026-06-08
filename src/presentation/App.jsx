@@ -15,6 +15,9 @@ import { ChangeEmailModal } from './components/ChangeEmailModal'
 import { ChangePasswordModal } from './components/ChangePasswordModal'
 import { AuthButton } from './components/AuthButton'
 import { AdminBar } from './components/AdminBar'
+import { AutoHideHeader } from './components/AutoHideHeader'
+import { LoadingScreen } from './components/LoadingScreen'
+import { OfflineBanner } from './components/OfflineBanner'
 import { TeamBonusModal } from './components/TeamBonusModal'
 import { LocationManagerModal } from './components/LocationManagerModal'
 import { RosterModal } from './components/RosterModal'
@@ -33,6 +36,7 @@ import { useMemberEarnings } from './hooks/useMemberEarnings'
 import { MiscAdjustmentsSection } from './components/MiscAdjustmentsSection'
 import { useMiscAdjustments } from './hooks/useMiscAdjustments'
 import { useWorkingMonth } from './hooks/useWorkingMonth'
+import { useOnlineStatus, useStalledFlag } from './hooks/useNetworkStatus'
 import { useSalaryConfirmation } from './hooks/useSalaryConfirmation'
 import { useUpdateChecker } from './hooks/useUpdateChecker'
 import { salaryConfirmationAppService as salaryConfirmationService, authAppService as authService, initFirestoreService, clearFirestoreService, getLocalGoalService, getFirestoreRepository, initAdminMemberService, clearAdminMemberService, subscribeAdminMemberGoals } from '../di/container'
@@ -63,6 +67,7 @@ export function App() {
 
   const { user, loading: authLoading, isAdmin, profileDisplayName, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, changeEmail, changePassword, setPassword } = useAuth()
   const { workingMonth: configMonth, workingYear: configYear, loading: workingMonthLoading, saveWorkingMonth } = useWorkingMonth()
+  const online = useOnlineStatus()
   const { members, loading: membersLoading, updateMemberDisplayName, toggleMemberDisabled, updateMemberColor, updateMemberEmail } = useAdminMembers(isAdmin, !!user)
   const { earnings: memberEarnings, loading: memberEarningsLoading, loadEarnings: loadMemberEarnings } = useMemberEarnings()
   const [initialSalaryUrl] = useState(() => {
@@ -688,16 +693,26 @@ export function App() {
   }
   const confirmationProgress = adminViewingUid ? getConfirmationProgress() : null
 
-  if (authLoading || (!initialMonthApplied && workingMonthLoading)) {
+  const isLoading = authLoading || (!initialMonthApplied && workingMonthLoading)
+  // Firestore silently queues requests while offline rather than rejecting, so a
+  // load that hangs past this threshold almost always means the network is down.
+  const loadStalled = useStalledFlag(isLoading, 8000)
+
+  if (isLoading) {
     return (
       <div className="app">
-        <div className="loading-screen">Loading...</div>
+        <LoadingScreen
+          online={online}
+          stalled={loadStalled}
+          onRetry={() => window.location.reload()}
+        />
       </div>
     )
   }
 
   return (
     <div className="app">
+      {!online && <OfflineBanner />}
       {(!user || !isAdmin) && (
         <div className="app-header">
           {user && !isAdmin && (
@@ -761,6 +776,7 @@ export function App() {
       ) : (
         <>
           {isAdmin && (
+            <AutoHideHeader>
             <AdminBar
               members={members}
               membersLoading={membersLoading}
@@ -779,7 +795,6 @@ export function App() {
               onChangePassword={() => setShowChangePasswordModal(true)}
               onSetPassword={() => setShowChangePasswordModal(true)}
             />
-          )}
 
           {adminViewingUid && viewingMember && (
             <div className="admin-viewing-banner">
@@ -840,6 +855,8 @@ export function App() {
                 adminUid={user?.uid}
               />
             </div>
+          )}
+            </AutoHideHeader>
           )}
 
           {(syncing || adminSwitching) && (

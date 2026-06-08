@@ -196,6 +196,11 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
     <div className={cellClass} onClick={onClick}>
       <div className="day-header-row">
         <span className="day-number">{day}</span>
+        {goal?.hasGoals && hasAnyConfirmed && (
+          <div className="labor-total" onClick={handleWageClick} style={{ cursor: 'pointer' }}>
+            ${totalEarnings.toLocaleString()}
+          </div>
+        )}
         {sameLocation && (
           <span className="day-location-badge" title={goal.morningLocation}>{sameLocation}</span>
         )}
@@ -204,7 +209,7 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
         <div className="goals-display">
           <div className="shift-wages">
             {goal.morningConfirmed && (
-              <div className={`shift ${shiftStateClass('morning')}${goal.morningAdminConfirmed && !bothShiftsVerified ? ' shift-verified' : ''}`}>
+              <div className={`shift ${shiftStateClass('morning')}${goal.morningAdminConfirmed ? ' shift-verified' : ''}`}>
                 <div className="shift-primary">
                   <span className={`shift-pill ${pillClass('morning')}`} title={goal.morningAdminConfirmed ? `Verified${goal.morningLocation ? ` - ${goal.morningLocation}` : ''}` : (goal.morningLocation || undefined)}>A</span>
                   {!sameLocation && morningLocAbbr && (
@@ -284,7 +289,7 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
               </div>
             )}
             {goal.afternoonConfirmed && (
-              <div className={`shift ${shiftStateClass('afternoon')}${goal.afternoonAdminConfirmed && !bothShiftsVerified ? ' shift-verified' : ''}`}>
+              <div className={`shift ${shiftStateClass('afternoon')}${goal.afternoonAdminConfirmed ? ' shift-verified' : ''}`}>
                 <div className="shift-primary">
                   <span className={`shift-pill ${pillClass('afternoon')}`} title={goal.afternoonAdminConfirmed ? `Verified${goal.afternoonLocation ? ` - ${goal.afternoonLocation}` : ''}` : (goal.afternoonLocation || undefined)}>B</span>
                   {!sameLocation && afternoonLocAbbr && (
@@ -363,9 +368,6 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
                 )}
               </div>
             )}
-          </div>
-          <div className="labor-total" onClick={handleWageClick} style={{ cursor: 'pointer' }}>
-            ${totalEarnings.toLocaleString()}
           </div>
         </div>
       )}

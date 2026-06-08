@@ -22,10 +22,30 @@ a:hover {
   color: #535bf2;
 }
 
+html {
+  /* Disable double-tap-to-zoom anywhere on the page (pinch-zoom is already
+     blocked via the viewport meta). */
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  touch-action: manipulation;
+}
+
+/* iOS Safari auto-zooms when a focused field's font-size is < 16px. Force 16px
+   on every form control on touch devices (any viewport width — covers phones
+   in landscape and tablets, which the width-based rule missed). */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 h1 {

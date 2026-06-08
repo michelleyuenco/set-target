@@ -1,0 +1,112 @@
+/* Auto-hiding top toolbar. The bars slide out of view and the calendar
+   reclaims their vertical space; hovering the top edge (or the pull-tab)
+   slides them back in. The tab also pins them open for sustained editing. */
+
+.autohide {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  z-index: 150;
+}
+
+/* Always-present, transparent hover catcher spanning the whole top edge. */
+.hotzone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 14px;
+}
+
+.panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: linear-gradient(180deg, rgba(245, 243, 255, 0.97) 0%, rgba(237, 233, 254, 0.95) 100%);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #c4b5fd;
+  box-shadow: 0 8px 24px rgba(76, 29, 149, 0.18);
+  transform: translateY(-100%);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* Pull-tab handle: lives at the bottom of the panel, so it peeks at the top
+   edge when the panel is collapsed and hangs just below it when open. */
+.tab {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0;
+  width: 64px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-bottom-left-radius: 11px;
+  border-bottom-right-radius: 11px;
+  background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(76, 29, 149, 0.32);
+  transition: background 0.15s ease;
+}
+
+.tab:hover {
+  background: linear-gradient(135deg, #5b21b6 0%, #6d28d9 100%);
+}
+
+.chevron {
+  font-size: 15px;
+  line-height: 1;
+  margin-top: -3px;
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Reserve the sliver of flow space the collapsed tab/hotzone overlaps so the
+   month navigation never sits underneath it. */
+.spacer {
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* Revealed: on hover of the top edge / panel / tab, on keyboard focus within
+   the bars, or when pinned. */
+.autohide:hover .panel,
+.autohide:focus-within .panel,
+.autohide.pinned .panel {
+  transform: translateY(0);
+}
+
+.autohide:hover .chevron,
+.autohide:focus-within .chevron,
+.autohide.pinned .chevron {
+  transform: rotate(180deg);
+}
+
+/* Once open, the transparent hotzone must not eat clicks on the bar buttons
+   sitting beneath it. The panel/tab keep the hover alive on their own. */
+.autohide:hover .hotzone,
+.autohide:focus-within .hotzone,
+.autohide.pinned .hotzone {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .tab,
+  .chevron {
+    transition: none;
+  }
+}
