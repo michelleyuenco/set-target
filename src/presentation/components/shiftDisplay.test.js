@@ -27,6 +27,11 @@ describe('getDefaultShiftKey', () => {
     expect(getDefaultShiftKey(goal, false)).toBe('afternoon')
   })
 
+  it("member: treats actual='0' as entered", () => {
+    const goal = { morningConfirmed: true, morningActual: '0', afternoonConfirmed: true, afternoonActual: '' }
+    expect(getDefaultShiftKey(goal, false)).toBe('afternoon')
+  })
+
   it('falls back to morning when nothing needs attention', () => {
     const goal = {
       morningConfirmed: true, morningAdminConfirmed: true, morningActual: '5000',
@@ -95,5 +100,13 @@ describe('buildExtrasChips', () => {
   it('orders chips IG, Comm, Allowance, Wage', () => {
     expect(buildExtrasChips({ ...empty, igFeatured: '120', customRate: '5', allowance: '50', customWage: '70' }))
       .toEqual(['IG $120', 'Comm 5%', 'Allowance $50', 'Wage $70/hr'])
+  })
+
+  it('rounds fractional IG sums for display', () => {
+    expect(buildExtrasChips({ ...empty, igFeatured: '1.1', igOther: '2.2' })).toEqual(['IG $3.3'])
+  })
+
+  it('ignores non-numeric strings', () => {
+    expect(buildExtrasChips({ ...empty, igFeatured: 'abc', customRate: 'xyz' })).toEqual([])
   })
 })

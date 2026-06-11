@@ -1,5 +1,8 @@
 // Pure display helpers for the day dialog (GoalModal). No React, no I/O.
 
+const num = (v) => (v === '' || v === null || v === undefined) ? 0 : (Number(v) || 0)
+const isSet = (v) => v !== '' && v !== null && v !== undefined && !isNaN(Number(v))
+
 const shiftStatus = (goal, prefix) => ({
   confirmed: !!goal?.[prefix + 'Confirmed'],
   verified: !!goal?.[prefix + 'AdminConfirmed'],
@@ -22,11 +25,8 @@ export function getShiftBadge(status, isAdminViewing) {
 }
 
 export function buildExtrasChips({ igFeatured, igOther, customRate, customAmount, allowance, customWage, isAdminViewing }) {
-  const num = (v) => (v === '' || v === null || v === undefined) ? 0 : (Number(v) || 0)
-  const isSet = (v) => v !== '' && v !== null && v !== undefined && !isNaN(Number(v))
-
   const chips = []
-  const ig = num(igFeatured) + num(igOther)
+  const ig = Math.round((num(igFeatured) + num(igOther)) * 100) / 100
   if (ig > 0) chips.push(`IG $${ig}`)
   if (num(customRate) > 0) chips.push(`Comm ${num(customRate)}%`)
   else if (num(customAmount) > 0) chips.push(`Comm $${num(customAmount)}`)
