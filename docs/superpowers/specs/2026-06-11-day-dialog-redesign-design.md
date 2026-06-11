@@ -16,14 +16,16 @@ duplicates the entire shift JSX for morning and afternoon.
 
 ### Responsive layout
 
-- **Wide screens (dialog wider than the app's existing ~600px mobile breakpoint):**
+- **Wide screens (viewport wider than 800px — the existing breakpoint where the
+  two-column `.shifts-compact` layout currently collapses to a stack):**
   Shift A and Shift B render side by side as two equal columns. Both shifts are always
   visible; no tabs.
-- **Narrow screens:** a segmented tab control (`Shift A | Shift B`) sits directly under
-  the date header. Only the active shift renders. Switching uses presentation state only;
-  form state lives in GoalModal, so unsaved edits survive tab switches.
-- Mode is chosen via `matchMedia` against the existing 600px breakpoint, reacting to
-  resize/orientation changes.
+- **Narrow screens (≤800px):** a segmented tab control (`Shift A | Shift B`) sits
+  directly under the date header. Only the active shift renders. Switching uses
+  presentation state only; form state lives in GoalModal, so unsaved edits survive tab
+  switches.
+- Mode is chosen via `matchMedia('(min-width: 801px)')`, reacting to resize/orientation
+  changes.
 
 ### Default tab (narrow mode)
 
