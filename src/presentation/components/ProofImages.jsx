@@ -240,7 +240,6 @@ export function ProofImages({
               {allItems.length > 1 && (
                 <span className="proof-preview-counter">{previewIndex + 1} / {allItems.length}</span>
               )}
-              <span>{previewItem.name}</span>
               {previewItem.pendingDelete && <span className="proof-preview-pending-note">Will be deleted on save</span>}
               {previewItem.pendingReplace && <span className="proof-preview-pending-note">Will be replaced on save</span>}
               {previewItem.isReplacement && <span className="proof-preview-pending-note">New replacement — not saved yet</span>}

@@ -752,7 +752,6 @@ export function GoalModal({
                   <span className="proof-preview-counter">{previewIndex + 1} / {combinedItems.length}</span>
                 )}
               </div>
-              <span>{previewItem.name}</span>
               {previewItem.pendingDelete && <span className="proof-preview-pending-note">Will be deleted on save</span>}
               {previewItem.pendingReplace && <span className="proof-preview-pending-note">Will be replaced on save</span>}
               {previewItem.isReplacement && <span className="proof-preview-pending-note">New replacement — not saved yet</span>}
