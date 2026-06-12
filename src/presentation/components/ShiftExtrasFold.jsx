@@ -1,7 +1,7 @@
 import styles from './ShiftExtrasFold.module.css'
 
 export function ShiftExtrasFold({
-  expanded, onToggle, chips, dimmed,
+  expanded, onToggle, chips = [], dimmed,
   showIg, setShowIg, igFeatured, setIgFeatured, igOther, setIgOther,
   showCustom, setShowCustom, customRate, setCustomRate, customAmount, setCustomAmount,
   showAdminFields, allowance, setAllowance, customWage, setCustomWage,
