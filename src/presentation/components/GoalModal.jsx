@@ -5,6 +5,7 @@ import { ShiftSection } from './ShiftSection'
 import { ShiftTabs } from './ShiftTabs'
 import { buildExtrasChips, getDefaultShiftKey, getShiftBadge } from './shiftDisplay'
 import { useMediaQuery } from '../hooks/useMediaQuery'
+import styles from './GoalModal.module.css'
 
 export function GoalModal({
   day,
@@ -19,7 +20,10 @@ export function GoalModal({
   onUploadFiles,
   onDeleteFromStorage,
   proofUploadingShift,
-  readOnly = false
+  readOnly = false,
+  onNavigateDay,
+  canPrevDay = false,
+  canNextDay = false
 }) {
   const [morningGoal, setMorningGoal] = useState('')
   const [afternoonGoal, setAfternoonGoal] = useState('')
@@ -683,7 +687,27 @@ export function GoalModal({
         <div className="modal-sticky-header">
           {isMobile && <div className="modal-drag-handle" />}
           <div className="modal-header-row">
+            {onNavigateDay && (
+              <button
+                type="button"
+                className={styles.dayNavBtn}
+                onClick={() => onNavigateDay(-1)}
+                disabled={!canPrevDay || hasChanges || saving}
+                aria-label="Previous day"
+                title={hasChanges ? 'Save or cancel changes first' : 'Previous day'}
+              >&#8249;</button>
+            )}
             <h2>{day}{readOnly && <span className="read-only-badge-inline">View Only</span>}</h2>
+            {onNavigateDay && (
+              <button
+                type="button"
+                className={styles.dayNavBtn}
+                onClick={() => onNavigateDay(1)}
+                disabled={!canNextDay || hasChanges || saving}
+                aria-label="Next day"
+                title={hasChanges ? 'Save or cancel changes first' : 'Next day'}
+              >&#8250;</button>
+            )}
             {!readOnly && (hasChanges || saving) && contentOverflows ? (
               <button className="modal-save-btn-top" onClick={handleSave} disabled={saving}>
                 {saving ? '...' : 'Save'}

@@ -356,6 +356,20 @@ export function App() {
     setEditingGoal(goal)
   }
 
+  // Prev/next day from inside the day dialog, clamped to the viewed month
+  const selectedDayNumber = selectedDay ? Number(selectedDay.split('-')[2]) : 0
+  const selectedMonthDays = selectedDay
+    ? new Date(Number(selectedDay.split('-')[0]), Number(selectedDay.split('-')[1]), 0).getDate()
+    : 0
+
+  const handleNavigateDay = (delta) => {
+    if (!selectedDay) return
+    const [y, m, d] = selectedDay.split('-').map(Number)
+    const target = d + delta
+    if (target < 1 || target > selectedMonthDays) return
+    handleDayClick(`${y}-${String(m).padStart(2, '0')}-${String(target).padStart(2, '0')}`)
+  }
+
   const doSaveGoal = (data) => {
     // When member edits their own data, clear admin confirmations (requires re-verification)
     // When admin edits member data, preserve existing admin confirmations
@@ -1076,6 +1090,7 @@ export function App() {
 
       {selectedDay && (
         <GoalModal
+          key={selectedDay}
           day={formatSelectedDay(selectedDay)}
           goal={editingGoal}
           isAdminViewing={!!adminViewingUid}
@@ -1089,6 +1104,9 @@ export function App() {
           onDeleteFromStorage={handleDeleteFromStorage}
           proofUploadingShift={proofUploadingShift}
           readOnly={!!adminViewingUid && !adminEditMode}
+          onNavigateDay={handleNavigateDay}
+          canPrevDay={selectedDayNumber > 1}
+          canNextDay={selectedDayNumber < selectedMonthDays}
         />
       )}
 
