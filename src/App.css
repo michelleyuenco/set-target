@@ -1407,11 +1407,7 @@ body {
 
 .shift-section-wrapper.shift-unconfirmed .shift-row,
 .shift-section-wrapper.shift-unconfirmed .shift-time-row,
-.shift-section-wrapper.shift-unconfirmed .shift-location-row,
-.shift-section-wrapper.shift-unconfirmed .custom-commission-toggle,
-.shift-section-wrapper.shift-unconfirmed .custom-commission-inputs,
-.shift-section-wrapper.shift-unconfirmed .commission-toggles-row,
-.shift-section-wrapper.shift-unconfirmed .commission-expanded-inputs {
+.shift-section-wrapper.shift-unconfirmed .shift-location-row {
   opacity: 0.35;
 }
 
@@ -1495,74 +1491,6 @@ body {
   text-align: center;
 }
 
-/* Commission toggles row (IG + Custom on same line) */
-.commission-toggles-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 8px;
-}
-
-.commission-toggle-label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  cursor: pointer;
-  user-select: none;
-}
-
-.commission-toggle-label input[type="checkbox"] {
-  width: 15px;
-  height: 15px;
-  cursor: pointer;
-}
-
-.commission-expanded-inputs {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.custom-commission-toggle {
-  padding: 0 10px;
-}
-
-.custom-commission-toggle label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  cursor: pointer;
-}
-
-.custom-commission-toggle input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
-.custom-commission-toggle span {
-  user-select: none;
-}
-
-.custom-commission-inputs {
-  display: flex;
-  gap: 8px;
-  padding: 4px 8px;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  border-radius: 5px;
-}
-
-.ig-commission-inputs {
-  background: #ede9fe;
-  border-color: #8b5cf6;
-}
 
 .monthly-summary {
   flex-shrink: 0;
@@ -2740,30 +2668,6 @@ body {
   .wage-compact {
     padding: 4px 8px;
     font-size: 11px;
-  }
-
-  .commission-toggle-label {
-    font-size: 11px;
-    gap: 4px;
-  }
-
-  .commission-toggle-label input[type="checkbox"] {
-    width: 14px;
-    height: 14px;
-  }
-
-  .commission-expanded-inputs {
-    gap: 3px;
-  }
-
-  .custom-commission-toggle label {
-    font-size: 11px;
-    gap: 6px;
-  }
-
-  .custom-commission-toggle input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
   }
 
   .shift-proof-inline {
@@ -4313,47 +4217,6 @@ body {
   font-size: 11px;
   font-weight: 700;
   color: #059669;
-}
-
-/* ========== Admin Allowance / Custom Wage (inline per shift) ========== */
-
-.admin-allowance-inline {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.admin-allowance-field {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.admin-allowance-field label {
-  font-size: 9px;
-  font-weight: 600;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.admin-allowance-field input {
-  width: 100%;
-  padding: 4px 6px;
-  border: 1.5px solid #d1d5db;
-  border-radius: 5px;
-  font-size: 13px;
-  color: #374151;
-  background: white;
-  box-sizing: border-box;
-}
-
-.admin-allowance-field input:focus {
-  outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
 .location-select {
