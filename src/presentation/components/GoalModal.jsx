@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { Goal, DEFAULT_MORNING_START, DEFAULT_MORNING_END, DEFAULT_AFTERNOON_START, DEFAULT_AFTERNOON_END } from '../../domain/entities/Goal'
-import { ProofImages } from './ProofImages'
+import { ShiftSection } from './ShiftSection'
+import { buildExtrasChips } from './shiftDisplay'
 
 export function GoalModal({
   day,
@@ -57,6 +58,7 @@ export function GoalModal({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [previewIndex, setPreviewIndex] = useState(null)
+  const [extrasExpanded, setExtrasExpanded] = useState({ morning: false, afternoon: false })
 
   useEffect(() => {
     // Revoke any pending object URLs from the previous open
@@ -65,6 +67,7 @@ export function GoalModal({
     setMorningPendingDeletes([])
     setAfternoonPendingDeletes([])
     setSaveError(null)
+    setExtrasExpanded({ morning: false, afternoon: false })
 
     setMorningGoal(goal?.morningAmount || '')
     setAfternoonGoal(goal?.afternoonAmount || '')
@@ -555,6 +558,95 @@ export function GoalModal({
     return () => { ro.disconnect(); cancelAnimationFrame(raf) }
   }, [])
 
+  const morningShift = {
+    key: 'morning',
+    label: 'Shift A (Morning)',
+    stickyClass: 'shift-confirm-sticky-a',
+    confirmed: morningConfirmed, setConfirmed: setMorningConfirmed,
+    locked: morningLocked,
+    adminConfirmed: !!goal?.morningAdminConfirmed,
+    goalValue: morningGoal, setGoalValue: setMorningGoal,
+    setActual: setMorningActual,
+    actualInput: morningActualInput, setActualInput: setMorningActualInput,
+    startTime: morningStartTime, setStartTime: setMorningStartTime,
+    endTime: morningEndTime, setEndTime: setMorningEndTime,
+    location: morningLocation, setLocation: setMorningLocation,
+    fallbackLocation: afternoonLocation,
+    showIg: showMorningIg, setShowIg: setShowMorningIg,
+    igFeatured: morningIgFeatured, setIgFeatured: setMorningIgFeatured,
+    igOther: morningIgOther, setIgOther: setMorningIgOther,
+    showCustom: showMorningCustom, setShowCustom: setShowMorningCustom,
+    customRate: morningCustomRate, setCustomRate: setMorningCustomRate,
+    customAmount: morningCustomAmount, setCustomAmount: setMorningCustomAmount,
+    allowance: morningAllowance, setAllowance: setMorningAllowance,
+    customWage: morningCustomWage, setCustomWage: setMorningCustomWage,
+    wage: morningWage,
+    hours: morningHours,
+    proofImages: morningProofImages,
+    pendingFiles: pendingMorningFiles,
+    pendingDeletes: morningPendingDeletes,
+    previewOffset: 0,
+    extrasExpanded: extrasExpanded.morning,
+    onToggleExtras: () => setExtrasExpanded(prev => ({ ...prev, morning: !prev.morning })),
+    extrasChips: buildExtrasChips({
+      igFeatured: morningIgFeatured, igOther: morningIgOther,
+      customRate: morningCustomRate, customAmount: morningCustomAmount,
+      allowance: morningAllowance, customWage: morningCustomWage,
+      isAdminViewing: isAdminViewing && morningConfirmed
+    })
+  }
+
+  const afternoonShift = {
+    key: 'afternoon',
+    label: 'Shift B (Afternoon)',
+    stickyClass: 'shift-confirm-sticky-b',
+    confirmed: afternoonConfirmed, setConfirmed: setAfternoonConfirmed,
+    locked: afternoonLocked,
+    adminConfirmed: !!goal?.afternoonAdminConfirmed,
+    goalValue: afternoonGoal, setGoalValue: setAfternoonGoal,
+    setActual: setAfternoonActual,
+    actualInput: afternoonActualInput, setActualInput: setAfternoonActualInput,
+    startTime: afternoonStartTime, setStartTime: setAfternoonStartTime,
+    endTime: afternoonEndTime, setEndTime: setAfternoonEndTime,
+    location: afternoonLocation, setLocation: setAfternoonLocation,
+    fallbackLocation: morningLocation,
+    showIg: showAfternoonIg, setShowIg: setShowAfternoonIg,
+    igFeatured: afternoonIgFeatured, setIgFeatured: setAfternoonIgFeatured,
+    igOther: afternoonIgOther, setIgOther: setAfternoonIgOther,
+    showCustom: showAfternoonCustom, setShowCustom: setShowAfternoonCustom,
+    customRate: afternoonCustomRate, setCustomRate: setAfternoonCustomRate,
+    customAmount: afternoonCustomAmount, setCustomAmount: setAfternoonCustomAmount,
+    allowance: afternoonAllowance, setAllowance: setAfternoonAllowance,
+    customWage: afternoonCustomWage, setCustomWage: setAfternoonCustomWage,
+    wage: afternoonWage,
+    hours: afternoonHours,
+    proofImages: afternoonProofImages,
+    pendingFiles: pendingAfternoonFiles,
+    pendingDeletes: afternoonPendingDeletes,
+    previewOffset: afternoonOffset,
+    extrasExpanded: extrasExpanded.afternoon,
+    onToggleExtras: () => setExtrasExpanded(prev => ({ ...prev, afternoon: !prev.afternoon })),
+    extrasChips: buildExtrasChips({
+      igFeatured: afternoonIgFeatured, igOther: afternoonIgOther,
+      customRate: afternoonCustomRate, customAmount: afternoonCustomAmount,
+      allowance: afternoonAllowance, customWage: afternoonCustomWage,
+      isAdminViewing: isAdminViewing && afternoonConfirmed
+    })
+  }
+
+  const shiftCtx = {
+    readOnly, isAdminViewing, locations, autoLocation,
+    hasChanges, contentOverflows, modalRef,
+    onSave: handleSave,
+    onConfirmShift, onUnconfirmShift,
+    evaluateFormula, formulaPreview, handleActualBlur, autoResize, formatHours, wageClass,
+    onStageFiles: handleStageFiles,
+    onDeleteUploadedImage: handleDeleteUploadedImage,
+    onReplaceImage: handleReplaceImage,
+    onRemovePending: handleRemovePending,
+    proofUploadingShift, setPreviewIndex
+  }
+
   return (
     <div className="modal-overlay" onClick={handleCancel}>
       <div
@@ -578,503 +670,9 @@ export function GoalModal({
         </div>
 
         <div className="shifts-compact">
-          <div className="shift-group">
-          <div
-            className={`shift-confirm-toggle${contentOverflows ? ' shift-confirm-sticky shift-confirm-sticky-a' : ''}${!morningConfirmed ? ' shift-toggle-dimmed' : ''}`}
-            onClick={contentOverflows ? (e) => {
-              // Only scroll to top if clicking the header bar itself, not child buttons/labels
-              if (e.target === e.currentTarget) {
-                modalRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-              }
-            } : undefined}
-          >
-            <label className="shift-confirm">
-              <input
-                type="checkbox"
-                checked={morningConfirmed}
-                onChange={(e) => {
-                  setMorningConfirmed(e.target.checked)
-                  if (e.target.checked && !morningLocation) {
-                    setMorningLocation(afternoonLocation || autoLocation || null)
-                  }
-                }}
-                disabled={readOnly || morningLocked}
-              />
-              <span>Shift A (Morning)</span>
-            </label>
-            {morningConfirmed && goal?.morningAdminConfirmed && (
-              <span className="shift-verified-tag"><span className="verified-icon">&#10003;</span><span className="verified-text"> Verified</span></span>
-            )}
-            {isAdminViewing && morningConfirmed && (
-              goal?.morningAdminConfirmed ? (
-                <button className="admin-unconfirm-btn" onClick={() => onUnconfirmShift('morning')}>Undo</button>
-              ) : (
-                hasChanges
-                  ? <span className="shift-save-first-hint" onClick={handleSave}>Save before verify</span>
-                  : <button className="admin-confirm-btn shift-verify-btn" onClick={() => onConfirmShift('morning')}>&#10003; Verify</button>
-              )
-            )}
-          </div>
-          <div className={`shift-section-wrapper ${!morningConfirmed ? 'shift-unconfirmed' : ''}`}>
-            <div className="shift-row">
-              <div className={`shift-inputs${/[+\-*/]/.test(String(morningActualInput)) ? ' actual-expanded' : ''}`}>
-                <div className="input-compact">
-                  <label>Target</label>
-                  <input
-                    type="number"
-                    value={morningGoal}
-                    onChange={(e) => setMorningGoal(e.target.value)}
-                    placeholder="0"
-                    disabled={readOnly || !morningConfirmed || morningLocked}
-                  />
-                </div>
-                <div className="input-compact input-compact-actual">
-                  <label>Actual</label>
-                  <div className="actual-input-wrapper">
-                    <textarea
-                      rows="1"
-                      inputMode="decimal"
-                      value={morningActualInput}
-                      onChange={(e) => {
-                        setMorningActualInput(e.target.value)
-                        const result = evaluateFormula(e.target.value)
-                        if (result !== null) setMorningActual(String(result))
-                        autoResize(e.target)
-                      }}
-                      onBlur={() => handleActualBlur(morningActualInput, setMorningActual)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
-                      ref={(el) => autoResize(el)}
-                      placeholder="0"
-                      disabled={readOnly || !morningConfirmed || morningLocked}
-                    />
-                    <button
-                      type="button"
-                      className="actual-add-btn"
-                      aria-label="Add"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => setMorningActualInput((prev) => (prev || '') + '+')}
-                      disabled={readOnly || !morningConfirmed || morningLocked}
-                    >+</button>
-                  </div>
-                  {formulaPreview(morningActualInput) !== null && (
-                    <div className="formula-preview">= {formulaPreview(morningActualInput)}</div>
-                  )}
-                </div>
-                <div className={`wage-compact ${wageClass(morningWage, morningCustomWage)}`}>
-                  ${morningWage}/hr
-                </div>
-              </div>
-            </div>
-            <div className="shift-time-row">
-              <div className="time-input-group">
-                <label>Start</label>
-                <input
-                  type="time"
-                  value={morningStartTime}
-                  onChange={(e) => setMorningStartTime(e.target.value)}
-                  disabled={readOnly || !morningConfirmed || morningLocked}
-                />
-              </div>
-              <div className="time-input-group">
-                <label>End</label>
-                <input
-                  type="time"
-                  value={morningEndTime}
-                  onChange={(e) => setMorningEndTime(e.target.value)}
-                  disabled={readOnly || !morningConfirmed || morningLocked}
-                />
-              </div>
-              <div className="shift-duration">
-                {formatHours(morningHours)}
-              </div>
-            </div>
-            {morningConfirmed && locations && locations.length > 0 && (
-              <div className="shift-location-row">
-                <label>Location</label>
-                <select
-                  className="location-select"
-                  value={morningLocation || ''}
-                  onChange={(e) => setMorningLocation(e.target.value || null)}
-                  disabled={readOnly || morningLocked}
-                >
-                  <option value="">— None —</option>
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.name}>{loc.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="commission-toggles-row">
-              <label className="commission-toggle-label">
-                <input
-                  type="checkbox"
-                  checked={showMorningIg}
-                  disabled={readOnly || !morningConfirmed || morningLocked}
-                  onChange={(e) => {
-                    setShowMorningIg(e.target.checked)
-                    if (!e.target.checked) { setMorningIgFeatured(''); setMorningIgOther('') }
-                  }}
-                />
-                <span>IG Sales</span>
-              </label>
-              <label className="commission-toggle-label">
-                <input
-                  type="checkbox"
-                  checked={showMorningCustom}
-                  disabled={readOnly || !morningConfirmed || morningLocked}
-                  onChange={(e) => {
-                    setShowMorningCustom(e.target.checked)
-                    if (!e.target.checked) { setMorningCustomRate(''); setMorningCustomAmount('') }
-                  }}
-                />
-                <span>Custom Comm.</span>
-              </label>
-            </div>
-            {(showMorningIg || showMorningCustom) && (
-              <div className="commission-expanded-inputs">
-                {showMorningIg && (
-                  <div className="custom-commission-inputs ig-commission-inputs">
-                    <div className="input-compact">
-                      <label>IG Featured ($)</label>
-                      <input
-                        type="number"
-                        value={morningIgFeatured}
-                        onChange={(e) => setMorningIgFeatured(e.target.value)}
-                        placeholder="0"
-                        disabled={readOnly || !morningConfirmed || morningLocked}
-                      />
-                    </div>
-                    <div className="input-compact">
-                      <label>IG Other ($)</label>
-                      <input
-                        type="number"
-                        value={morningIgOther}
-                        onChange={(e) => setMorningIgOther(e.target.value)}
-                        placeholder="0"
-                        disabled={readOnly || !morningConfirmed || morningLocked}
-                      />
-                    </div>
-                  </div>
-                )}
-                {showMorningCustom && (
-                  <div className="custom-commission-inputs">
-                    <div className="input-compact">
-                      <label>Rate (%)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={morningCustomRate}
-                        onChange={(e) => setMorningCustomRate(e.target.value)}
-                        placeholder="5"
-                        disabled={readOnly || !morningConfirmed || morningLocked}
-                      />
-                    </div>
-                    <div className="input-compact">
-                      <label>Amount ($)</label>
-                      <input
-                        type="number"
-                        value={morningCustomAmount}
-                        onChange={(e) => setMorningCustomAmount(e.target.value)}
-                        placeholder="1000"
-                        disabled={readOnly || !morningConfirmed || morningLocked}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            {isAdminViewing && morningConfirmed && (
-              <div className="admin-allowance-inline">
-                <div className="admin-allowance-field">
-                  <label>Allowance ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={morningAllowance}
-                    onChange={(e) => setMorningAllowance(e.target.value)}
-                    placeholder="0"
-                    disabled={readOnly || morningLocked}
-                  />
-                </div>
-                <div className="admin-allowance-field">
-                  <label>Custom Wage ($/hr)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={morningCustomWage}
-                    onChange={(e) => setMorningCustomWage(e.target.value)}
-                    placeholder="Auto"
-                    disabled={readOnly || morningLocked}
-                  />
-                </div>
-              </div>
-            )}
-            <div className={`shift-proof-inline${!morningConfirmed ? ' shift-unconfirmed' : ''}`}>
-              <ProofImages
-                images={morningProofImages}
-                pendingFiles={pendingMorningFiles}
-                pendingDeletePaths={morningPendingDeletes}
-                onUpload={(files) => handleStageFiles('morning', files)}
-                onDelete={(image) => handleDeleteUploadedImage('morning', image)}
-                onReplace={(oldImage, newFile) => handleReplaceImage('morning', oldImage, newFile)}
-                onRemovePending={(index) => handleRemovePending('morning', index)}
-                uploading={proofUploadingShift === 'morning'}
-                disabled={!morningConfirmed || morningLocked}
-                readOnly={readOnly}
-                onOpenPreview={(idx) => setPreviewIndex(idx)}
-              />
-            </div>
-          </div>
-          </div>
-
+          <ShiftSection shift={morningShift} ctx={shiftCtx} />
           <div className="shift-group-divider" />
-
-          <div className="shift-group">
-          <div
-            className={`shift-confirm-toggle${contentOverflows ? ' shift-confirm-sticky shift-confirm-sticky-b' : ''}${!afternoonConfirmed ? ' shift-toggle-dimmed' : ''}`}
-          >
-            <label className="shift-confirm">
-              <input
-                type="checkbox"
-                checked={afternoonConfirmed}
-                onChange={(e) => {
-                  setAfternoonConfirmed(e.target.checked)
-                  if (e.target.checked && !afternoonLocation) {
-                    setAfternoonLocation(morningLocation || autoLocation || null)
-                  }
-                }}
-                disabled={readOnly || afternoonLocked}
-              />
-              <span>Shift B (Afternoon)</span>
-            </label>
-            {afternoonConfirmed && goal?.afternoonAdminConfirmed && (
-              <span className="shift-verified-tag"><span className="verified-icon">&#10003;</span><span className="verified-text"> Verified</span></span>
-            )}
-            {isAdminViewing && afternoonConfirmed && (
-              goal?.afternoonAdminConfirmed ? (
-                <button className="admin-unconfirm-btn" onClick={() => onUnconfirmShift('afternoon')}>Undo</button>
-              ) : (
-                hasChanges
-                  ? <span className="shift-save-first-hint" onClick={handleSave}>Save before verify</span>
-                  : <button className="admin-confirm-btn shift-verify-btn" onClick={() => onConfirmShift('afternoon')}>&#10003; Verify</button>
-              )
-            )}
-          </div>
-          <div className={`shift-section-wrapper ${!afternoonConfirmed ? 'shift-unconfirmed' : ''}`}>
-            <div className="shift-row">
-              <div className={`shift-inputs${/[+\-*/]/.test(String(afternoonActualInput)) ? ' actual-expanded' : ''}`}>
-                <div className="input-compact">
-                  <label>Target</label>
-                  <input
-                    type="number"
-                    value={afternoonGoal}
-                    onChange={(e) => setAfternoonGoal(e.target.value)}
-                    placeholder="0"
-                    disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                  />
-                </div>
-                <div className="input-compact input-compact-actual">
-                  <label>Actual</label>
-                  <div className="actual-input-wrapper">
-                    <textarea
-                      rows="1"
-                      inputMode="decimal"
-                      value={afternoonActualInput}
-                      onChange={(e) => {
-                        setAfternoonActualInput(e.target.value)
-                        const result = evaluateFormula(e.target.value)
-                        if (result !== null) setAfternoonActual(String(result))
-                        autoResize(e.target)
-                      }}
-                      onBlur={() => handleActualBlur(afternoonActualInput, setAfternoonActual)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
-                      ref={(el) => autoResize(el)}
-                      placeholder="0"
-                      disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                    />
-                    <button
-                      type="button"
-                      className="actual-add-btn"
-                      aria-label="Add"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => setAfternoonActualInput((prev) => (prev || '') + '+')}
-                      disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                    >+</button>
-                  </div>
-                  {formulaPreview(afternoonActualInput) !== null && (
-                    <div className="formula-preview">= {formulaPreview(afternoonActualInput)}</div>
-                  )}
-                </div>
-                <div className={`wage-compact ${wageClass(afternoonWage, afternoonCustomWage)}`}>
-                  ${afternoonWage}/hr
-                </div>
-              </div>
-            </div>
-            <div className="shift-time-row">
-              <div className="time-input-group">
-                <label>Start</label>
-                <input
-                  type="time"
-                  value={afternoonStartTime}
-                  onChange={(e) => setAfternoonStartTime(e.target.value)}
-                  disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                />
-              </div>
-              <div className="time-input-group">
-                <label>End</label>
-                <input
-                  type="time"
-                  value={afternoonEndTime}
-                  onChange={(e) => setAfternoonEndTime(e.target.value)}
-                  disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                />
-              </div>
-              <div className="shift-duration">
-                {formatHours(afternoonHours)}
-              </div>
-            </div>
-            {afternoonConfirmed && locations && locations.length > 0 && (
-              <div className="shift-location-row">
-                <label>Location</label>
-                <select
-                  className="location-select"
-                  value={afternoonLocation || ''}
-                  onChange={(e) => setAfternoonLocation(e.target.value || null)}
-                  disabled={readOnly || afternoonLocked}
-                >
-                  <option value="">— None —</option>
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.name}>{loc.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="commission-toggles-row">
-              <label className="commission-toggle-label">
-                <input
-                  type="checkbox"
-                  checked={showAfternoonIg}
-                  disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                  onChange={(e) => {
-                    setShowAfternoonIg(e.target.checked)
-                    if (!e.target.checked) { setAfternoonIgFeatured(''); setAfternoonIgOther('') }
-                  }}
-                />
-                <span>IG Sales</span>
-              </label>
-              <label className="commission-toggle-label">
-                <input
-                  type="checkbox"
-                  checked={showAfternoonCustom}
-                  disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                  onChange={(e) => {
-                    setShowAfternoonCustom(e.target.checked)
-                    if (!e.target.checked) { setAfternoonCustomRate(''); setAfternoonCustomAmount('') }
-                  }}
-                />
-                <span>Custom Comm.</span>
-              </label>
-            </div>
-            {(showAfternoonIg || showAfternoonCustom) && (
-              <div className="commission-expanded-inputs">
-                {showAfternoonIg && (
-                  <div className="custom-commission-inputs ig-commission-inputs">
-                    <div className="input-compact">
-                      <label>IG Featured ($)</label>
-                      <input
-                        type="number"
-                        value={afternoonIgFeatured}
-                        onChange={(e) => setAfternoonIgFeatured(e.target.value)}
-                        placeholder="0"
-                        disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                      />
-                    </div>
-                    <div className="input-compact">
-                      <label>IG Other ($)</label>
-                      <input
-                        type="number"
-                        value={afternoonIgOther}
-                        onChange={(e) => setAfternoonIgOther(e.target.value)}
-                        placeholder="0"
-                        disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                      />
-                    </div>
-                  </div>
-                )}
-                {showAfternoonCustom && (
-                  <div className="custom-commission-inputs">
-                    <div className="input-compact">
-                      <label>Rate (%)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={afternoonCustomRate}
-                        onChange={(e) => setAfternoonCustomRate(e.target.value)}
-                        placeholder="5"
-                        disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                      />
-                    </div>
-                    <div className="input-compact">
-                      <label>Amount ($)</label>
-                      <input
-                        type="number"
-                        value={afternoonCustomAmount}
-                        onChange={(e) => setAfternoonCustomAmount(e.target.value)}
-                        placeholder="1000"
-                        disabled={readOnly || !afternoonConfirmed || afternoonLocked}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            {isAdminViewing && afternoonConfirmed && (
-              <div className="admin-allowance-inline">
-                <div className="admin-allowance-field">
-                  <label>Allowance ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={afternoonAllowance}
-                    onChange={(e) => setAfternoonAllowance(e.target.value)}
-                    placeholder="0"
-                    disabled={readOnly || afternoonLocked}
-                  />
-                </div>
-                <div className="admin-allowance-field">
-                  <label>Custom Wage ($/hr)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={afternoonCustomWage}
-                    onChange={(e) => setAfternoonCustomWage(e.target.value)}
-                    placeholder="Auto"
-                    disabled={readOnly || afternoonLocked}
-                  />
-                </div>
-              </div>
-            )}
-            <div className={`shift-proof-inline${!afternoonConfirmed ? ' shift-unconfirmed' : ''}`}>
-              <ProofImages
-                images={afternoonProofImages}
-                pendingFiles={pendingAfternoonFiles}
-                pendingDeletePaths={afternoonPendingDeletes}
-                onUpload={(files) => handleStageFiles('afternoon', files)}
-                onDelete={(image) => handleDeleteUploadedImage('afternoon', image)}
-                onReplace={(oldImage, newFile) => handleReplaceImage('afternoon', oldImage, newFile)}
-                onRemovePending={(index) => handleRemovePending('afternoon', index)}
-                uploading={proofUploadingShift === 'afternoon'}
-                disabled={!afternoonConfirmed || afternoonLocked}
-                readOnly={readOnly}
-                onOpenPreview={(idx) => setPreviewIndex(afternoonOffset + idx)}
-              />
-            </div>
-          </div>
-          </div>
+          <ShiftSection shift={afternoonShift} ctx={shiftCtx} />
         </div>
 
         {saveError && <div className="login-error" style={{ margin: '8px 0 0' }}>{saveError}</div>}
