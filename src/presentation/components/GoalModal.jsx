@@ -66,7 +66,9 @@ export function GoalModal({
   const [previewIndex, setPreviewIndex] = useState(null)
   const [extrasExpanded, setExtrasExpanded] = useState({ morning: false, afternoon: false })
   const [activeShiftKey, setActiveShiftKey] = useState('morning')
-  const isWide = useMediaQuery('(min-width: 801px)')
+  // Exact complement of App.css's `@media (max-width: 800px)` so the JS
+  // layout mode can never disagree with the CSS at fractional widths
+  const isWide = useMediaQuery('not all and (max-width: 800px)')
 
   useEffect(() => {
     // Revoke any pending object URLs from the previous open
@@ -608,7 +610,8 @@ export function GoalModal({
   const afternoonShift = {
     key: 'afternoon',
     label: 'Shift B (Afternoon)',
-    stickyClass: 'shift-confirm-sticky-b',
+    // In tab mode Shift B renders alone, so it sticks at Shift A's offset
+    stickyClass: isWide ? 'shift-confirm-sticky-b' : 'shift-confirm-sticky-a',
     confirmed: afternoonConfirmed, setConfirmed: setAfternoonConfirmed,
     locked: afternoonLocked,
     adminConfirmed: !!goal?.afternoonAdminConfirmed,
