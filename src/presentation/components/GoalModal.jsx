@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { Goal, DEFAULT_MORNING_START, DEFAULT_MORNING_END, DEFAULT_AFTERNOON_START, DEFAULT_AFTERNOON_END } from '../../domain/entities/Goal'
 import { ShiftSection } from './ShiftSection'
-import { buildExtrasChips } from './shiftDisplay'
+import { ShiftTabs } from './ShiftTabs'
+import { buildExtrasChips, getDefaultShiftKey, getShiftBadge } from './shiftDisplay'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 
 export function GoalModal({
   day,
@@ -59,6 +61,8 @@ export function GoalModal({
   const [saveError, setSaveError] = useState(null)
   const [previewIndex, setPreviewIndex] = useState(null)
   const [extrasExpanded, setExtrasExpanded] = useState({ morning: false, afternoon: false })
+  const [activeShiftKey, setActiveShiftKey] = useState('morning')
+  const isWide = useMediaQuery('(min-width: 801px)')
 
   useEffect(() => {
     // Revoke any pending object URLs from the previous open
@@ -68,6 +72,7 @@ export function GoalModal({
     setAfternoonPendingDeletes([])
     setSaveError(null)
     setExtrasExpanded({ morning: false, afternoon: false })
+    setActiveShiftKey(getDefaultShiftKey(goal, isAdminViewing))
 
     setMorningGoal(goal?.morningAmount || '')
     setAfternoonGoal(goal?.afternoonAmount || '')
@@ -101,7 +106,7 @@ export function GoalModal({
     setAfternoonCustomWage(goal?.afternoonCustomWage ?? '')
     setMorningLocation(goal?.morningLocation || autoLocation || null)
     setAfternoonLocation(goal?.afternoonLocation || autoLocation || null)
-  }, [goal, autoLocation])
+  }, [goal, autoLocation, isAdminViewing])
 
   // Stage files locally — no upload until Save
   const handleStageFiles = (shift, files) => {
@@ -647,6 +652,27 @@ export function GoalModal({
     proofUploadingShift, setPreviewIndex
   }
 
+  const shiftTabs = [
+    {
+      key: 'morning',
+      label: 'Shift A',
+      badge: getShiftBadge({
+        confirmed: morningConfirmed,
+        verified: !!goal?.morningAdminConfirmed,
+        hasActual: String(morningActual ?? '').trim() !== ''
+      }, isAdminViewing)
+    },
+    {
+      key: 'afternoon',
+      label: 'Shift B',
+      badge: getShiftBadge({
+        confirmed: afternoonConfirmed,
+        verified: !!goal?.afternoonAdminConfirmed,
+        hasActual: String(afternoonActual ?? '').trim() !== ''
+      }, isAdminViewing)
+    }
+  ]
+
   return (
     <div className="modal-overlay" onClick={handleCancel}>
       <div
@@ -670,9 +696,18 @@ export function GoalModal({
         </div>
 
         <div className="shifts-compact">
-          <ShiftSection shift={morningShift} ctx={shiftCtx} />
-          <div className="shift-group-divider" />
-          <ShiftSection shift={afternoonShift} ctx={shiftCtx} />
+          {isWide ? (
+            <>
+              <ShiftSection shift={morningShift} ctx={shiftCtx} />
+              <div className="shift-group-divider" />
+              <ShiftSection shift={afternoonShift} ctx={shiftCtx} />
+            </>
+          ) : (
+            <>
+              <ShiftTabs tabs={shiftTabs} activeKey={activeShiftKey} onChange={setActiveShiftKey} />
+              <ShiftSection shift={activeShiftKey === 'morning' ? morningShift : afternoonShift} ctx={shiftCtx} />
+            </>
+          )}
         </div>
 
         {saveError && <div className="login-error" style={{ margin: '8px 0 0' }}>{saveError}</div>}
