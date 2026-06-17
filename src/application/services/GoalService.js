@@ -77,6 +77,26 @@ export class GoalService {
     return this.getGoalByDayUseCase.execute(day)
   }
 
+  // Carry-forward defaults: the most recent activated shift's target before
+  // `beforeDay`, resolved independently per shift. Used to pre-fill the target
+  // when a shift is newly activated on a day that has no target yet.
+  getLatestActivatedShiftTargets(beforeDay) {
+    const allGoals = this.getGoalsUseCase.execute()
+    const sortedDays = Object.keys(allGoals)
+      .filter(day => day < beforeDay)
+      .sort((a, b) => b.localeCompare(a))
+
+    let morningAmount = null
+    let afternoonAmount = null
+    for (const day of sortedDays) {
+      const goal = allGoals[day]
+      if (!morningAmount && goal.morningConfirmed && goal.morningAmount) morningAmount = goal.morningAmount
+      if (!afternoonAmount && goal.afternoonConfirmed && goal.afternoonAmount) afternoonAmount = goal.afternoonAmount
+      if (morningAmount && afternoonAmount) break
+    }
+    return { morningAmount, afternoonAmount }
+  }
+
   getLastLockedLocation(upToDay) {
     const allGoals = this.getGoalsUseCase.execute()
     const sortedDays = Object.keys(allGoals)

@@ -22,8 +22,13 @@ export function ShiftSection({ shift, ctx }) {
             checked={shift.confirmed}
             onChange={(e) => {
               shift.setConfirmed(e.target.checked)
-              if (e.target.checked && !shift.location) {
-                shift.setLocation(shift.fallbackLocation || ctx.autoLocation || null)
+              if (e.target.checked) {
+                if (!shift.location) {
+                  shift.setLocation(shift.fallbackLocation || ctx.autoLocation || null)
+                }
+                if (!String(shift.goalValue ?? '').trim() && shift.defaultTarget) {
+                  shift.setGoalValue(String(shift.defaultTarget))
+                }
               }
             }}
             disabled={ctx.readOnly || shift.locked}

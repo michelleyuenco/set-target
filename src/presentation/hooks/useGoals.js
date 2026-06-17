@@ -109,6 +109,11 @@ export function useGoals(authUser) {
     return service.getLastLockedLocation(beforeDay)
   }, [])
 
+  const getLatestActivatedShiftTargets = useCallback((beforeDay) => {
+    const service = getActiveGoalService()
+    return service.getLatestActivatedShiftTargets(beforeDay)
+  }, [])
+
   return {
     goals,
     saveGoal,
@@ -121,6 +126,7 @@ export function useGoals(authUser) {
     bulkUpdateAllowances,
     exportData,
     loadGoals,
-    getLastLockedLocation
+    getLastLockedLocation,
+    getLatestActivatedShiftTargets
   }
 }

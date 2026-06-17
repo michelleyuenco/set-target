@@ -108,7 +108,7 @@ export function App() {
   const [displayNameDraft, setDisplayNameDraft] = useState('')
   const [displayNameSaving, setDisplayNameSaving] = useState(false)
 
-  const { goals, saveGoal, getGoalByDay, buybackTarget, confirmShift, unconfirmShift, bulkUpdateLocations, bulkVerifyShifts, bulkUpdateAllowances, exportData, loadGoals, getLastLockedLocation } = useGoals(user)
+  const { goals, saveGoal, getGoalByDay, buybackTarget, confirmShift, unconfirmShift, bulkUpdateLocations, bulkVerifyShifts, bulkUpdateAllowances, exportData, loadGoals, getLastLockedLocation, getLatestActivatedShiftTargets } = useGoals(user)
   const [selectedDay, setSelectedDay] = useState(null)
   const [editingGoal, setEditingGoal] = useState(null)
   const [showBuybackModal, setShowBuybackModal] = useState(false)
@@ -1096,6 +1096,7 @@ export function App() {
           isAdminViewing={!!adminViewingUid}
           locations={visibleLocations}
           autoLocation={getLastLockedLocation(selectedDay)}
+          defaultTargets={getLatestActivatedShiftTargets(selectedDay)}
           onSave={handleSave}
           onCancel={handleCancel}
           onConfirmShift={handleAdminConfirmShift}
