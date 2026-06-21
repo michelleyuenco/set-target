@@ -23,3 +23,36 @@
   opacity: 0.35;
   cursor: default;
 }
+
+/* Tab-mode shift pane: animate when the active shift swaps (e.g. auto-advance
+   to Shift B after verifying Shift A). Keyed remount replays the animation. */
+.shiftPane {
+  animation: shiftPaneIn 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slideFwd {
+  animation-name: shiftPaneInFwd;
+}
+
+.slideBack {
+  animation-name: shiftPaneInBack;
+}
+
+@keyframes shiftPaneIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shiftPaneInFwd {
+  from { opacity: 0; transform: translateX(26px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shiftPaneInBack {
+  from { opacity: 0; transform: translateX(-26px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shiftPane { animation: none; }
+}

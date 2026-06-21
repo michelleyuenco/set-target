@@ -67,6 +67,12 @@ export function GoalModal({
   const [previewIndex, setPreviewIndex] = useState(null)
   const [extrasExpanded, setExtrasExpanded] = useState({ morning: false, afternoon: false })
   const [activeShiftKey, setActiveShiftKey] = useState('morning')
+  // Direction of the tab-mode pane animation. prevShiftKeyRef trails by one
+  // render (updated in an effect), so this reflects the in-flight transition.
+  const SHIFT_ORDER = { morning: 0, afternoon: 1 }
+  const prevShiftKeyRef = useRef(activeShiftKey)
+  const slideDir = SHIFT_ORDER[activeShiftKey] >= SHIFT_ORDER[prevShiftKeyRef.current] ? 'fwd' : 'back'
+  useEffect(() => { prevShiftKeyRef.current = activeShiftKey }, [activeShiftKey])
   // Exact complement of App.css's `@media (max-width: 800px)` so the JS
   // layout mode can never disagree with the CSS at fractional widths
   const isWide = useMediaQuery('not all and (max-width: 800px)')
@@ -735,7 +741,12 @@ export function GoalModal({
           ) : (
             <>
               <ShiftTabs tabs={shiftTabs} activeKey={activeShiftKey} onChange={setActiveShiftKey} />
-              <ShiftSection shift={activeShiftKey === 'morning' ? morningShift : afternoonShift} ctx={shiftCtx} />
+              <div
+                key={activeShiftKey}
+                className={`${styles.shiftPane} ${slideDir === 'fwd' ? styles.slideFwd : styles.slideBack}`}
+              >
+                <ShiftSection shift={activeShiftKey === 'morning' ? morningShift : afternoonShift} ctx={shiftCtx} />
+              </div>
             </>
           )}
         </div>
