@@ -672,6 +672,7 @@ export function GoalModal({
     {
       key: 'morning',
       label: 'Shift A',
+      count: morningItems.length,
       badge: getShiftBadge({
         confirmed: morningConfirmed,
         verified: !!goal?.morningAdminConfirmed,
@@ -681,6 +682,7 @@ export function GoalModal({
     {
       key: 'afternoon',
       label: 'Shift B',
+      count: afternoonItems.length,
       badge: getShiftBadge({
         confirmed: afternoonConfirmed,
         verified: !!goal?.afternoonAdminConfirmed,

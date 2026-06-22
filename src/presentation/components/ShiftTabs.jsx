@@ -13,6 +13,7 @@ export function ShiftTabs({ tabs, activeKey, onChange }) {
           onClick={() => onChange(tab.key)}
         >
           {tab.label}
+          {tab.count > 0 && <span className={styles.count}>({tab.count})</span>}
           {tab.badge === 'verified' && <span className={styles.badgeVerified}>&#10003;</span>}
           {tab.badge === 'attention' && <span className={styles.badgeAttention}>&bull;</span>}
         </button>

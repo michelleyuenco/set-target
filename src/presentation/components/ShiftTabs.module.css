@@ -32,6 +32,16 @@
   color: white;
 }
 
+.count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.active .count {
+  color: #ddd6fe;
+}
+
 .badgeVerified {
   color: #22c55e;
   font-weight: 700;
