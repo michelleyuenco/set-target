@@ -27,8 +27,8 @@ export class Goal {
     this.afternoonAdminConfirmed = !!data.afternoonAdminConfirmed
     this.morningLocation = data.morningLocation || null
     this.afternoonLocation = data.afternoonLocation || null
-    this.morningProofImages = Array.isArray(data.morningProofImages) ? data.morningProofImages : []
-    this.afternoonProofImages = Array.isArray(data.afternoonProofImages) ? data.afternoonProofImages : []
+    this.morningProofImages = Goal.dedupeProofImages(data.morningProofImages)
+    this.afternoonProofImages = Goal.dedupeProofImages(data.afternoonProofImages)
     this.morningAllowance = this.parseAmount(data.morningAllowance)
     this.afternoonAllowance = this.parseAmount(data.afternoonAllowance)
     this.morningCustomWage = this.parseAmount(data.morningCustomWage)
@@ -37,6 +37,24 @@ export class Goal {
     this.morningIgOtherAmount = this.parseAmount(data.morningIgOtherAmount)
     this.afternoonIgFeaturedAmount = this.parseAmount(data.afternoonIgFeaturedAmount)
     this.afternoonIgOtherAmount = this.parseAmount(data.afternoonIgOtherAmount)
+  }
+
+  // Proof images are a set — the same upload must never appear twice. Dedupe on
+  // both storage path and download url (either matching means the same file) so
+  // existing duplicates self-heal on read and on the next save.
+  static dedupeProofImages(images) {
+    if (!Array.isArray(images)) return []
+    const seenPaths = new Set()
+    const seenUrls = new Set()
+    const result = []
+    for (const img of images) {
+      if (!img) continue
+      if ((img.path && seenPaths.has(img.path)) || (img.url && seenUrls.has(img.url))) continue
+      if (img.path) seenPaths.add(img.path)
+      if (img.url) seenUrls.add(img.url)
+      result.push(img)
+    }
+    return result
   }
 
   parseAmount(value) {

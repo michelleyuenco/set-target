@@ -1,0 +1,255 @@
+.loading,
+.emptyState {
+  text-align: center;
+  padding: 32px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+/* ── Location filter tabs ── */
+.locTabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.locTab {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.locTab:hover {
+  border-color: #7c3aed;
+  color: #7c3aed;
+  background: #faf5ff;
+}
+
+.locTab.active {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: white;
+}
+
+/* ── Weekday header ── */
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 3px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  padding: 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ── Calendar grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.cell {
+  min-height: 64px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 4px 5px;
+  background: #fafafa;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.cell.empty {
+  border: none;
+  background: transparent;
+}
+
+.cell.weekend {
+  background: #f6f7f9;
+}
+
+.cell.hasMembers {
+  background: #fff;
+  border-color: #d1d5db;
+}
+
+.cell.today {
+  border-color: #7c3aed;
+  border-width: 1.5px;
+  background: #faf5ff;
+  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.15);
+}
+
+.dayNum {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.cell.today .dayNum {
+  color: #7c3aed;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.name {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #1f2937;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pills {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* Override the shared .shift-pill (which is absolutely-positioned for the
+   day cell corners) so pills sit inline and legibly in this calendar. */
+.pill {
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  font-size: 9px !important;
+  padding: 1px 5px !important;
+  border-radius: 4px !important;
+}
+
+.dayRevenue {
+  margin-top: auto;
+  padding-top: 4px;
+  border-top: 1px solid #eef0f2;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.dayRevenueLabel {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.dayRevenueValue {
+  font-size: 11px;
+  font-weight: 700;
+  color: #059669;
+}
+
+/* ── Monthly wages summary ── */
+.summary {
+  margin-top: 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.summaryTitle {
+  background: #f3f4f6;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  padding: 7px 14px;
+  gap: 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.summaryRow:last-of-type {
+  border-bottom: none;
+}
+
+.summaryName {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.summaryShifts {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.summaryWages {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f2937;
+  min-width: 64px;
+  text-align: right;
+}
+
+.summaryTotal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f3f4f6;
+  border-top: 2px solid #e5e7eb;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+@media (max-width: 500px) {
+  .cell {
+    min-height: 52px;
+    padding: 3px 4px;
+  }
+
+  .name {
+    font-size: 9.5px;
+  }
+
+  .dayNum {
+    font-size: 10px;
+  }
+
+  .locTab {
+    font-size: 11px;
+    padding: 3px 10px;
+  }
+}

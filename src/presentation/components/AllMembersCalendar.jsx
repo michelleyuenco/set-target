@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { DEFAULT_SHIFT_HOURS } from '../../domain/entities/Goal'
+import styles from './AllMembersCalendar.module.css'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WEEKEND = new Set([0, 6])
 
 function calcMemberWages(memberData, year, month, locationFilter) {
   const pad = (n) => String(n).padStart(2, '0')
@@ -84,41 +86,42 @@ export function AllMembersCalendar({ membersGoals, loading, year, month, locatio
   const grandTotal = Math.round(memberTotals.reduce((s, m) => s + m.wages, 0) * 100) / 100
 
   if (loading) {
-    return <div className="all-members-loading">Loading all members data...</div>
+    return <div className={styles.loading}>Loading all members data...</div>
   }
 
   return (
-    <div className="all-members-calendar">
+    <div>
       {locations && locations.length > 0 && (
-        <div className="all-members-loc-tabs">
+        <div className={styles.locTabs}>
           <button
-            className={`all-members-loc-tab${!selectedLocation ? ' active' : ''}`}
+            className={`${styles.locTab}${!selectedLocation ? ` ${styles.active}` : ''}`}
             onClick={() => setSelectedLocation(null)}
           >All</button>
           {locations.map((loc) => (
             <button
               key={loc.name}
-              className={`all-members-loc-tab${selectedLocation === loc.name ? ' active' : ''}`}
+              className={`${styles.locTab}${selectedLocation === loc.name ? ` ${styles.active}` : ''}`}
               onClick={() => setSelectedLocation(loc.name)}
             >{loc.abbr || loc.name}</button>
           ))}
         </div>
       )}
 
-      <div className="all-members-weekdays">
+      <div className={styles.weekdays}>
         {WEEKDAYS.map((d) => (
-          <div key={d} className="all-members-weekday">{d}</div>
+          <div key={d} className={styles.weekday}>{d}</div>
         ))}
       </div>
 
-      <div className="all-members-grid">
+      <div className={styles.grid}>
         {Array.from({ length: firstDayOfWeek }, (_, i) => (
-          <div key={`empty-${i}`} className="all-members-cell empty" />
+          <div key={`empty-${i}`} className={`${styles.cell} ${styles.empty}`} />
         ))}
         {Array.from({ length: daysInMonth }, (_, i) => {
           const dayNum = i + 1
           const dateStr = `${year}-${pad(month + 1)}-${pad(dayNum)}`
           const isToday = dateStr === todayStr
+          const isWeekend = WEEKEND.has((firstDayOfWeek + i) % 7)
           const dayMembers = getDayMembers(dateStr)
 
           const dayActualTotal = dayMembers.reduce((sum, m) => {
@@ -131,26 +134,27 @@ export function AllMembersCalendar({ membersGoals, loading, year, month, locatio
             <div
               key={dateStr}
               className={[
-                'all-members-cell',
-                isToday ? 'today' : '',
-                dayMembers.length > 0 ? 'has-members' : '',
+                styles.cell,
+                isToday ? styles.today : '',
+                isWeekend ? styles.weekend : '',
+                dayMembers.length > 0 ? styles.hasMembers : '',
               ].filter(Boolean).join(' ')}
             >
-              <div className="all-members-day-num">{dayNum}</div>
-              <div className="all-members-list">
+              <div className={styles.dayNum}>{dayNum}</div>
+              <div className={styles.list}>
                 {dayMembers.map((m) => (
-                  <div key={m.uid} className="all-members-entry">
-                    <span className="all-members-name">{m.displayName}</span>
-                    <span className="all-members-shift-pills">
+                  <div key={m.uid} className={styles.entry}>
+                    <span className={styles.name}>{m.displayName}</span>
+                    <span className={styles.pills}>
                       {m.hasAM && (
                         <span
-                          className={`shift-pill all-members-pill ${shiftPillClass(m.goal, 'morning')}${m.goal.morningAdminConfirmed ? ' pill-verified' : ''}`}
+                          className={`shift-pill ${styles.pill} ${shiftPillClass(m.goal, 'morning')}${m.goal.morningAdminConfirmed ? ' pill-verified' : ''}`}
                           title={m.goal.morningLocation || ''}
                         >A</span>
                       )}
                       {m.hasPM && (
                         <span
-                          className={`shift-pill all-members-pill ${shiftPillClass(m.goal, 'afternoon')}${m.goal.afternoonAdminConfirmed ? ' pill-verified' : ''}`}
+                          className={`shift-pill ${styles.pill} ${shiftPillClass(m.goal, 'afternoon')}${m.goal.afternoonAdminConfirmed ? ' pill-verified' : ''}`}
                           title={m.goal.afternoonLocation || ''}
                         >B</span>
                       )}
@@ -159,8 +163,11 @@ export function AllMembersCalendar({ membersGoals, loading, year, month, locatio
                 ))}
               </div>
               {dayActualTotal > 0 && (
-                <div className="all-members-day-revenue">
-                  ${Math.round(dayActualTotal).toLocaleString()}
+                <div className={styles.dayRevenue}>
+                  <span className={styles.dayRevenueLabel}>Rev</span>
+                  <span className={styles.dayRevenueValue}>
+                    ${Math.round(dayActualTotal).toLocaleString()}
+                  </span>
                 </div>
               )}
             </div>
@@ -169,18 +176,18 @@ export function AllMembersCalendar({ membersGoals, loading, year, month, locatio
       </div>
 
       {memberTotals.length > 0 && (
-        <div className="all-members-summary">
-          <div className="all-members-summary-title">
+        <div className={styles.summary}>
+          <div className={styles.summaryTitle}>
             Monthly Wages{selectedLocation ? ` — ${selectedLocation}` : ''}
           </div>
           {memberTotals.map((m) => (
-            <div key={m.uid} className="all-members-summary-row">
-              <span className="all-members-summary-name">{m.displayName}</span>
-              <span className="all-members-summary-shifts">{m.shifts} shift{m.shifts !== 1 ? 's' : ''}</span>
-              <span className="all-members-summary-wages">${m.wages.toLocaleString()}</span>
+            <div key={m.uid} className={styles.summaryRow}>
+              <span className={styles.summaryName}>{m.displayName}</span>
+              <span className={styles.summaryShifts}>{m.shifts} shift{m.shifts !== 1 ? 's' : ''}</span>
+              <span className={styles.summaryWages}>${m.wages.toLocaleString()}</span>
             </div>
           ))}
-          <div className="all-members-summary-total">
+          <div className={styles.summaryTotal}>
             <span>Total</span>
             <span>${grandTotal.toLocaleString()}</span>
           </div>
@@ -188,7 +195,7 @@ export function AllMembersCalendar({ membersGoals, loading, year, month, locatio
       )}
 
       {!membersGoals && !loading && (
-        <div className="all-members-empty">No data loaded yet.</div>
+        <div className={styles.emptyState}>No data loaded yet.</div>
       )}
     </div>
   )
