@@ -8,6 +8,7 @@ import {
   isShiftEnded,
   TARGET_HIT_WAGE,
 } from '../../application/services/earningsCalculator'
+import { downloadImage } from '../utils/downloadImage'
 
 export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExcess, excessAllocation, locations, onClick, onBuyback, onWageClick }) {
   const [proofPreview, setProofPreview] = useState(null) // { images, index }
@@ -375,6 +376,16 @@ export function DayCell({ day, dateStr, goal, isSelected, isToday, availableExce
       {proofPreview && combinedProofImages[proofPreview.index] && createPortal(
         <div className="proof-preview-overlay" onClick={closeProofPreview}>
           <div className="proof-preview-content" onClick={e => e.stopPropagation()}>
+            <button
+              className="proof-preview-download"
+              title="Save image to device"
+              aria-label="Save image to device"
+              onClick={(e) => { e.stopPropagation(); downloadImage(combinedProofImages[proofPreview.index].url, combinedProofImages[proofPreview.index].name) }}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" />
+              </svg>
+            </button>
             <button className="proof-preview-close" onClick={closeProofPreview}>&times;</button>
             {combinedProofImages.length > 1 && (
               <>

@@ -1,0 +1,15 @@
+.draggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.dragOver {
+  outline: 2px dashed #6366f1;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
